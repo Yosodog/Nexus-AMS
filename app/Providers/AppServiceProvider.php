@@ -37,6 +37,7 @@ use App\Observers\OffshoreGuardrailObserver;
 use App\Observers\OffshoreObserver;
 use App\Observers\StaffWorkQueueCacheObserver;
 use App\Services\AuditLogger;
+use App\Services\MainBankCredentialService;
 use App\Services\PendingRequestsService;
 use App\Services\PWHealthService;
 use App\Services\PWMessageService;
@@ -85,6 +86,7 @@ class AppServiceProvider extends ServiceProvider
         $this->app->bind(FederationTransport::class, DirectHttpTransport::class);
         $this->app->singleton(FederationOperationGuard::class);
         $this->app->singleton(AuditLogger::class);
+        $this->app->scoped(MainBankCredentialService::class);
         $this->app->singleton(StaffWorkQueueRegistry::class, fn ($app): StaffWorkQueueRegistry => new StaffWorkQueueRegistry([
             $app->make(ApplicationWorkQueueSource::class),
             $app->make(CityGrantWorkQueueSource::class),

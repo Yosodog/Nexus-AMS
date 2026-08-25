@@ -33,12 +33,18 @@ class QueryService
 
     protected ?string $mutationKey = null;
 
+    private ?MainBankCredentialService $mainBankCredentialService;
+
     protected int $maxConcurrency = 5;
 
-    public function __construct(?string $apiKey = null, ?string $mutationKey = null)
-    {
+    public function __construct(
+        ?string $apiKey = null,
+        ?string $mutationKey = null,
+        ?MainBankCredentialService $mainBankCredentialService = null,
+    ) {
         $this->apiKey = $apiKey;
         $this->mutationKey = $mutationKey;
+        $this->mainBankCredentialService = $mainBankCredentialService;
     }
 
     /**
@@ -50,11 +56,10 @@ class QueryService
             return $this->apiKey;
         }
 
-        $key = config('services.pw.api_key');
+        $key = $this->mainBankCredentialService()->apiKey();
 
         if (blank($key)) {
-            // Throw only when the service is actually USED to call the API.
-            throw new Exception('Env value PW_API_KEY not set');
+            throw new Exception('Main bank API key is not configured');
         }
 
         return $this->apiKey = $key;
@@ -66,8 +71,12 @@ class QueryService
             return $this->mutationKey;
         }
 
-        // Use config(), not env()
-        return $this->mutationKey = config('services.pw.mutation_key');
+        return $this->mutationKey = $this->mainBankCredentialService()->mutationKey();
+    }
+
+    private function mainBankCredentialService(): MainBankCredentialService
+    {
+        return $this->mainBankCredentialService ??= app(MainBankCredentialService::class);
     }
 
     protected function endpoint(): string

@@ -17,7 +17,10 @@ class AllianceMembershipService
 {
     private const CACHE_KEY = 'alliances:membership:ids';
 
-    public function __construct(private readonly Repository $cache) {}
+    public function __construct(
+        private readonly Repository $cache,
+        private ?MainBankCredentialService $mainBankCredentialService = null,
+    ) {}
 
     /**
      * Return all alliance IDs that should be considered part of our umbrella.
@@ -87,8 +90,8 @@ class AllianceMembershipService
         $primaryAllianceId = $this->getPrimaryAllianceId();
 
         if ($allianceId === $primaryAllianceId) {
-            $apiKey = config('services.pw.api_key');
-            $mutationKey = config('services.pw.mutation_key');
+            $apiKey = $this->mainBankCredentialService()->apiKey();
+            $mutationKey = $this->mainBankCredentialService()->mutationKey();
 
             if (! is_string($apiKey) || $apiKey === '') {
                 return null;
@@ -119,6 +122,11 @@ class AllianceMembershipService
             'api_key' => $apiKey,
             'mutation_key' => $offshore->mutation_key_decrypted,
         ];
+    }
+
+    private function mainBankCredentialService(): MainBankCredentialService
+    {
+        return $this->mainBankCredentialService ??= app(MainBankCredentialService::class);
     }
 
     /**

@@ -7,11 +7,13 @@ use App\Exceptions\OffshoreTransferException;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\ManualOffshoreTransferRequest;
 use App\Http\Requests\Admin\StoreOffshoreRequest;
+use App\Http\Requests\Admin\UpdateMainBankCredentialsRequest;
 use App\Http\Requests\Admin\UpdateOffshoreRequest;
 use App\Models\Offshore;
 use App\Models\OffshoreGuardrail;
 use App\Models\OffshoreTransfer;
 use App\Services\AuditLogger;
+use App\Services\MainBankCredentialService;
 use App\Services\MainBankService;
 use App\Services\OffshoreService;
 use App\Services\OffshoreTransferService;
@@ -27,6 +29,7 @@ class OffshoreController extends Controller
         private readonly OffshoreService $offshoreService,
         private readonly OffshoreTransferService $transferService,
         private readonly MainBankService $mainBankService,
+        private readonly MainBankCredentialService $mainBankCredentialService,
         private readonly AuditLogger $auditLogger,
     ) {}
 
@@ -53,6 +56,7 @@ class OffshoreController extends Controller
             'resources' => PWHelperService::resources(),
             'guardrailResources' => OffshoreGuardrail::RESOURCES,
             'mainBankSnapshot' => $mainBankSnapshot,
+            'mainBankCredentialStatus' => $this->mainBankCredentialService->status(),
             'showCreateModal' => $request->session()->pull('show-offshore-modal') === 'create',
             'editOffshoreId' => $request->session()->pull('edit-offshore-id'),
         ]);
@@ -378,6 +382,31 @@ class OffshoreController extends Controller
 
         return redirect()->route('admin.offshores.index')->with([
             'alert-message' => 'Main bank balances refreshed: '.implode(', ', $this->formatBalancesForMessage($balances)),
+            'alert-type' => 'success',
+        ]);
+    }
+
+    public function updateMainBankCredentials(UpdateMainBankCredentialsRequest $request): RedirectResponse
+    {
+        $credentials = $request->credentials();
+        $credential = $this->mainBankCredentialService->update($credentials);
+
+        $this->auditLogger->recordAfterCommit(
+            category: 'offshore',
+            action: 'main_bank_credentials_updated',
+            outcome: 'success',
+            severity: 'warning',
+            subject: $credential,
+            context: [
+                'changes' => collect(array_keys($credentials))
+                    ->mapWithKeys(fn (string $field): array => [$field => ['updated' => true]])
+                    ->all(),
+            ],
+            message: 'Main bank credentials updated.'
+        );
+
+        return redirect()->route('admin.offshores.index')->with([
+            'alert-message' => 'Main bank credentials updated successfully.',
             'alert-type' => 'success',
         ]);
     }

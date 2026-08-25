@@ -3,10 +3,17 @@
 
     $canManageOffshores = auth()->user()?->can('manage-offshores');
     $modalContext = old('modal_context');
+    $mainBankCredentialContext = $modalContext === 'main-bank-credentials';
     $showCreateModal = ($showCreateModal ?? false) || $modalContext === 'create';
     $editOffshoreId = $editOffshoreId ?? (Str::startsWith($modalContext, 'edit-') ? (int) Str::after($modalContext, 'edit-') : null);
     $mainBankSnapshot = $mainBankSnapshot ?? ['balances' => [], 'cached_at' => null];
     $mainBankCachedAt = $mainBankSnapshot['cached_at'] ?? null;
+    $mainBankCredentialStatus = $mainBankCredentialStatus ?? [
+        'api_key_configured' => false,
+        'api_key_source' => null,
+        'mutation_key_configured' => false,
+        'mutation_key_source' => null,
+    ];
 @endphp
 
 @extends('layouts.admin')
@@ -15,7 +22,7 @@
 
 @section('content')
     <x-header title="Offshore Management" separator use-h1>
-        <x-slot:subtitle>Monitor cached balances, adjust guardrails, and trigger manual transfers.</x-slot:subtitle>
+        <x-slot:subtitle>Monitor cached balances, manage credentials and guardrails, and trigger manual transfers.</x-slot:subtitle>
         @if($canManageOffshores)
             <x-slot:actions>
                 <button id="offshore-create-modal-open" class="btn btn-primary btn-sm" type="button" data-dialog-open="createOffshoreModal">
@@ -250,6 +257,77 @@
                 @endif
 
                 @if($canManageOffshores)
+                    <div class="mt-4 rounded-box border border-base-300 bg-base-200/50 p-4">
+                        <div class="flex flex-wrap items-start justify-between gap-3">
+                            <div>
+                                <h3 class="font-semibold">Main Bank Credentials</h3>
+                                <p class="text-sm nexus-text-muted">Database overrides are encrypted. Leave either field blank to keep its current value.</p>
+                            </div>
+                            <div class="flex flex-wrap gap-2">
+                                <span class="badge {{ $mainBankCredentialStatus['api_key_configured'] ? 'badge-success' : 'badge-error' }}">
+                                    API {{ $mainBankCredentialStatus['api_key_configured'] ? 'configured' : 'missing' }}
+                                </span>
+                                <span class="badge {{ $mainBankCredentialStatus['mutation_key_configured'] ? 'badge-success' : 'badge-error' }}">
+                                    Mutation {{ $mainBankCredentialStatus['mutation_key_configured'] ? 'configured' : 'missing' }}
+                                </span>
+                            </div>
+                        </div>
+
+                        <form action="{{ route('admin.offshores.main-bank.credentials.update') }}" method="POST" autocomplete="off" class="mt-4 space-y-4">
+                            @csrf
+                            @method('PUT')
+                            <input type="hidden" name="modal_context" value="main-bank-credentials">
+
+                            <label class="block space-y-2" for="offshore-main-bank-api-key">
+                                <span class="text-sm font-medium">API Key</span>
+                                <input
+                                    id="offshore-main-bank-api-key"
+                                    type="password"
+                                    class="input w-full"
+                                    name="api_key"
+                                    minlength="20"
+                                    maxlength="20"
+                                    placeholder="Leave blank to keep current key"
+                                    autocomplete="new-password"
+                                    aria-describedby="offshore-main-bank-api-key-help{{ $mainBankCredentialContext && $errors->has('api_key') ? ' offshore-main-bank-api-key-error' : '' }}"
+                                    aria-invalid="{{ $mainBankCredentialContext && $errors->has('api_key') ? 'true' : 'false' }}"
+                                >
+                                <span id="offshore-main-bank-api-key-help" class="text-xs nexus-text-muted">
+                                    Current source: {{ $mainBankCredentialStatus['api_key_source'] === 'database' ? 'encrypted Nexus storage' : ($mainBankCredentialStatus['api_key_source'] === 'environment' ? 'deployment environment' : 'not configured') }}.
+                                </span>
+                                @if($mainBankCredentialContext && $errors->has('api_key'))
+                                    <span id="offshore-main-bank-api-key-error" class="text-xs text-error">{{ $errors->first('api_key') }}</span>
+                                @endif
+                            </label>
+
+                            <label class="block space-y-2" for="offshore-main-bank-mutation-key">
+                                <span class="text-sm font-medium">Mutation Key</span>
+                                <input
+                                    id="offshore-main-bank-mutation-key"
+                                    type="password"
+                                    class="input w-full"
+                                    name="mutation_key"
+                                    maxlength="255"
+                                    placeholder="Leave blank to keep current key"
+                                    autocomplete="new-password"
+                                    aria-describedby="offshore-main-bank-mutation-key-help{{ $mainBankCredentialContext && $errors->has('mutation_key') ? ' offshore-main-bank-mutation-key-error' : '' }}"
+                                    aria-invalid="{{ $mainBankCredentialContext && $errors->has('mutation_key') ? 'true' : 'false' }}"
+                                >
+                                <span id="offshore-main-bank-mutation-key-help" class="text-xs nexus-text-muted">
+                                    Current source: {{ $mainBankCredentialStatus['mutation_key_source'] === 'database' ? 'encrypted Nexus storage' : ($mainBankCredentialStatus['mutation_key_source'] === 'environment' ? 'deployment environment' : 'not configured') }}.
+                                </span>
+                                @if($mainBankCredentialContext && $errors->has('mutation_key'))
+                                    <span id="offshore-main-bank-mutation-key-error" class="text-xs text-error">{{ $errors->first('mutation_key') }}</span>
+                                @endif
+                            </label>
+
+                            <button id="offshore-main-bank-credentials-submit" type="submit" class="btn btn-primary w-full">
+                                <x-icon name="o-key" class="size-4" />
+                                Save Credentials
+                            </button>
+                        </form>
+                    </div>
+
                     <div class="mt-4 rounded-box border border-base-300 bg-base-200/50 p-4">
                         <p class="mb-3 text-sm nexus-text-muted">
                             Bridge funds between the main bank and offshores. Transfers are executed instantly using the configured API keys.

@@ -67,6 +67,8 @@ Route::post('/offshores/reorder', [OffshoreController::class, 'reorder'])
 Route::post('/offshores/main-bank/refresh', [OffshoreController::class, 'refreshMainBank'])
     ->name('admin.offshores.main-bank.refresh')
     ->middleware(BlockWhenPWDown::class);
+Route::put('/offshores/main-bank/credentials', [OffshoreController::class, 'updateMainBankCredentials'])
+    ->name('admin.offshores.main-bank.credentials.update');
 Route::post('/offshores/{offshore}/toggle', [OffshoreController::class, 'toggle'])
     ->name('admin.offshores.toggle')
     ->middleware(BlockWhenPWDown::class);
