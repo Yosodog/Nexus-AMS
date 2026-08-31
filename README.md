@@ -1,44 +1,182 @@
 # Nexus AMS
 
-Nexus AMS is an open-source alliance management system for [Politics & War](https://politicsandwar.com/). It combines alliance banking, war tooling, membership operations, audit logging, and admin workflows into a single Laravel application.
+Nexus AMS is an open-source alliance management system for [Politics & War](https://politicsandwar.com/). It brings banking, grants, loans, recruitment, audits, military operations, and member services into one application, with Discord commands and notifications connected to the same records and permissions.
 
-The project is under active development. Expect ongoing changes, incomplete areas, and occasional breaking updates while the platform continues to mature.
+## Beta status
 
-## What It Does
+Nexus AMS is in beta. Bugs and configuration changes are still possible before 1.0.
 
-Nexus AMS is built around day-to-day alliance operations rather than a single feature area.
+Use a tagged beta release for an installation. The `main` branch is for ongoing development and may move ahead of the latest supported release.
 
-- Alliance banking with member accounts, transfers, withdrawals, deposits, freezes, limits, and finance reporting
-- Tax operations with brackets, direct deposit enrollment, collection jobs, and alliance-level summaries
-- Grants, city grants, loans, war aid, rebuilding requests, and other approval-based finance workflows
-- War tooling including counters, war plans, raid finder, war stats, war simulators, beige alerts, and intel reports
-- Offshore-aware alliance management so the primary alliance and approved offshores can operate as one umbrella
-- Recruitment and applications, including Discord-connected application workflows
-- Payroll, MMR planning, market tools, and alliance member management
-- Audit logs, audit rules, and security-sensitive event tracking
-- Custom pages, content publishing, and NEL-based admin tooling/documentation
-- API endpoints for user automation, Discord integrations, and the Nexus subscription pipeline
+## Why Nexus
 
-## Current Stack
+Alliance tools often begin as a collection of Discord commands. That works for simple actions, but it becomes difficult to track applications, approvals, balances, policy decisions, military assignments, and staff access across channels.
 
-- PHP 8.3
-- Laravel 13
-- MySQL as the default and primary supported database path
-- Blade and Livewire 3 for server-rendered UI and interaction
-- Tailwind CSS 4, DaisyUI 5, and MaryUI 2 across public, member, and admin surfaces
-- Vite 6 for frontend bundling
-- Sanctum, Fortify, Pulse, Telescope, and Laravel Boost
-- Optional companion services for Discord and GraphQL subscription ingestion
+Nexus keeps that work in a proper application. Members have one place for accounts, requests, readiness, and alliance programs. Staff have searchable queues, reports, policy controls, and an audit trail. Discord remains available for quick commands, private notifications, interviews, intelligence capture, and war rooms, but Nexus is the source of truth.
 
-## Related Repositories
+The systems share the same member records, permissions, settings, and history. A grant requested through Discord follows the same requirements as one requested on the web. A staff decision remains visible after the Discord conversation is gone. Many alliance policies can be changed from the admin interface without adding a new command or editing application code.
 
-- [Nexus AMS Subs](https://github.com/Yosodog/Nexus-AMS-Subs): subscription listener for Politics & War events that forwards updates into Nexus
-- [Nexus AMS Discord](https://github.com/Yosodog/Nexus-AMS-Discord): Discord bot scaffolding and Nexus-facing automation hooks
-- [Nexus-Setup](https://github.com/Yosodog/Nexus-Setup): production install/provisioning script for Nexus AMS and related services
+## Screenshots
 
-## Quick Start
+### Member overview
 
-For local development, use the normal Laravel flow.
+The member dashboard puts open tasks, audit findings, military readiness, and stockpile warnings in one place.
+
+![Nexus member dashboard with open audit findings and military readiness details](docs/screenshots/member-dashboard.png)
+
+### Staff work queue
+
+Staff get one permission-aware queue for applications, grants, loans, withdrawals, and other work that needs review.
+
+![Nexus staff work queue with pending applications, grants, loans, and withdrawals](docs/screenshots/staff-work-queue.png)
+
+### Custom grant programs
+
+Grant programs combine a configurable payout with nested eligibility rules. Staff can use nation data, policies, projects, military levels, membership history, and other fields without writing code.
+
+![Nexus custom grant editor with payout controls and nested eligibility rules](docs/screenshots/custom-grant-builder.png)
+
+### MMR Assistant
+
+MMR Assistant can reserve part of a member's Direct Deposit income for resources. Automatic mode estimates recurring shortages and shows the expected cost and coverage before each purchase.
+
+![Nexus MMR Assistant showing automatic resource coverage and price estimates](docs/screenshots/mmr-assistant.png)
+
+### Member audits and build guidance
+
+Members can review active findings, remediation guidance, and city build recommendations based on current alliance policy.
+
+![Nexus member audit and city build recommendation](docs/screenshots/member-audit.png)
+
+### Loans and amortization
+
+Loan pages show principal, scheduled payments, interest, term progress, payoff information, and the full amortization schedule.
+
+![Nexus loan details and amortization schedule](docs/screenshots/loan-amortization.png)
+
+### War operations
+
+The operations workspace combines incoming wars, counter requests, raid-policy violations, delivery status, and staff actions.
+
+![Nexus war operations queue with counter requests and raid-policy violations](docs/screenshots/war-operations.png)
+
+### Counter coordination
+
+Counter coordinators can inspect an incoming war, compare recommended defenders, and confirm that the team is ready before creating a war room.
+
+![Nexus counter coordination workspace with a recommended defensive team](docs/screenshots/counter-coordination.png)
+
+### Audit rule creation
+
+Staff can build audit rules with grouped conditions, exceptions, priorities, scheduled evaluation, member-facing explanations, and remediation guidance. A plain-language summary shows what the rule will do before it is activated.
+
+![Nexus audit rule builder with conditions, exceptions, and member guidance](docs/screenshots/audit-rule-builder.png)
+
+## Features
+
+### Banking and alliance finance
+
+- Member and alliance accounts with deposits, withdrawals, transfers, limits, freezes, and downloadable statements
+- Staff review queues, liquidity tools, reconciliation, finance reports, and a durable history of decisions
+- Tax brackets, collection jobs, import checkpoints, alliance summaries, and offshore support
+- Payroll, an alliance market, Growth Circles, and a configurable weekly lottery
+- Direct Deposit, which applies a city-based tax bracket and credits the remaining revenue to the member's chosen account
+- MMR Assistant, which can use Direct Deposit funds to cover projected resource shortages or follow a member's manual allocation
+
+### Grants, loans, and member support
+
+- City grants, custom grant programs, loans, war aid, rebuilding assistance, and manual disbursements
+- One-time or repeatable programs with configurable money and resource payouts
+- Nested eligibility rules based on nation, city, economy, military, policy, project, membership, and stockpile data
+- Clear failure messages so members can see which requirements they have not met
+- Server-side checks shared by the web application and Discord bot
+- Approval controls, request history, amortization schedules, and protection against duplicate pending requests
+
+Grant requirements are not tied to a fixed command. Staff can require a minimum city count, a specific project, a military threshold, time since the last project, a resource level, or a nested combination of conditions. Rules can require all conditions, any condition, or none of them. Staff can revise the policy from the admin interface, and Nexus applies it everywhere the program is available.
+
+### Recruitment and membership
+
+- Scheduled recruitment messages for eligible nations, with contact history to prevent duplicate outreach
+- An optional follow-up message after 60 hours, skipped when the nation has already joined an alliance
+- Public recruitment pages, application forms, and account verification
+- Discord interview channels with recoverable Nexus metadata and transcript forwarding
+- Staff review, onboarding, member history, inactivity workflows, and alliance membership checks
+
+### Military operations and intelligence
+
+- Incoming-war monitoring, counter recommendations, assignments, war plans, and readiness checks
+- Raid finding, raid-policy violations, war statistics, attack simulators, beige alerts, and reimbursement workflows
+- Spy operations, intelligence reports, and member or API report submission
+- Automatic capture of pasted in-game intelligence reports through the Discord bot
+- Discord war-room creation and archival with the plan and delivery state retained in Nexus
+- Staff workspaces for reviewing targets, recommended defenders, available slots, and team coverage
+
+### Audits and readiness
+
+- Configurable audit rules with priorities, grouped conditions, exceptions, and scheduled evaluation
+- Member-safe findings with explanations, remediation guidance, and decision history
+- Military readiness and resource targets by city tier
+- City build recommendations evaluated against a member's current cities and alliance policy
+- Permission-scoped staff views and audit logging for sensitive actions
+
+### Federation
+
+Federation is an advanced beta feature for sharing selected military planning data between Nexus installations. It is disabled by default.
+
+Each link is bilateral and uses signing and encryption keys. Administrators control sharing by direction, peer, coalition, and resource type. The first federation protocol supports war-plan snapshots, including recipient review, expiry, payload hashes, signed delivery, and local draft import. Each installation keeps its own authoritative records and can suspend or revoke links and keys.
+
+See [Federation operations](docs/federation-operations.md) and the [federation protocol](docs/federation-protocol-v1.md) for the full model.
+
+### Member tools and customization
+
+- Profitability and raid leaderboards with date filters and member rankings
+- City, infrastructure, land, project, research, military purchase, and city-economics calculators
+- Custom pages and Nexus Expression Language support for alliance-specific content
+- Configurable public content, roles, permissions, notifications, tax behavior, offshores, military settings, and operational rules
+- Personal API tokens and protected endpoints for additional automation
+
+## Companion services
+
+Nexus uses separate repositories for the web application, Discord process, subscription listener, and installer. Pin each component to a compatible beta tag or exact commit because the repositories have separate release histories.
+
+### Nexus AMS Discord
+
+[Nexus AMS Discord](https://github.com/Yosodog/Nexus-AMS-Discord) connects Discord to Nexus permissions and workflows. It supports commands for accounts, transactions, requests, grants, loans, builds, war aid, raids, wars, spy assignments, and applications.
+
+The bot also handles account linking, private notifications, interview channels, intelligence-report capture, member departures, alliance role removal, and war-room creation and archival. Protected actions are authorized by Nexus rather than trusted solely because they came from Discord. Queue leases, retries, acknowledgements, signed interaction proofs, and stable delivery identifiers reduce duplicate or lost work.
+
+Dedicated self-hosting supports one Nexus installation. A shared hosted mode exists for managed development and Cloud pilots, but public hosted-bot onboarding is not ready yet.
+
+### Nexus AMS Subs
+
+[Nexus AMS Subs](https://github.com/Yosodog/Nexus-AMS-Subs) listens for Politics & War GraphQL subscription events through Pusher. It sends nation, alliance, and war changes to Nexus without waiting for the next scheduled full synchronization.
+
+Subs supports protected HTTP delivery or signed Redis Streams delivery. It includes bounded concurrency, retries, dead-letter storage, health checks, and graceful shutdown. The delivery mode is explicit so it does not switch transports after an ambiguous failure.
+
+### Nexus Setup
+
+[Nexus Setup](https://github.com/Yosodog/Nexus-Setup) installs a standalone deployment on Ubuntu. It can place the application, web server, database, and subscription listener on one host or use split profiles for remote databases and separate web or Subs hosts.
+
+The installer configures the required system packages, Nginx, MySQL or MariaDB, optional Redis, Supervisor, Laravel scheduling, TLS, migrations, seed data, frontend assets, and an optional first administrator. Production installs use exact AMS and Subs commit SHAs so rerunning the installer does not silently move to newer code.
+
+## Stack
+
+- PHP 8.3 and Laravel 13
+- MySQL or compatible MariaDB
+- Blade and Livewire 3
+- Tailwind CSS 4, DaisyUI 5, and MaryUI 2
+- Vite 6
+- Sanctum, Fortify, Pulse, and Telescope
+
+## Local development
+
+Requirements:
+
+- PHP 8.3 or later
+- Composer
+- Node.js 20 or later
+- MySQL 8 or compatible MariaDB
+- Redis is optional locally and recommended for production queue, cache, and session workloads
 
 ```bash
 git clone https://github.com/Yosodog/Nexus-AMS.git
@@ -52,274 +190,51 @@ npm run build
 composer run dev
 ```
 
-`composer run dev` starts the Laravel server, queue listener, log tailer, and Vite dev server together.
+Set the application URL, database credentials, Politics & War API credentials, alliance ID, and Nexus API token in `.env` before first sign-in. Add the Discord bot key when using Discord-connected workflows. Do not commit `.env`.
 
-Minimum local requirements:
+`composer run dev` starts the Laravel server, queue listener, log tailer, and Vite development server.
 
-- PHP 8.3+
-- Composer
-- Node.js 20+
-- MySQL 8+ or compatible MariaDB
-- Redis is optional locally, but recommended for production queue/cache/session workloads
-
-Before first sign-in, set the key environment values in `.env`:
-
-- `APP_URL`
-- `DB_HOST`, `DB_PORT`, `DB_DATABASE`, `DB_USERNAME`, `DB_PASSWORD`
-- `PW_API_KEY`
-- `PW_API_MUTATION_KEY`
-- `PW_ALLIANCE_ID`
-- `NEXUS_API_TOKEN`
-- `DISCORD_BOT_KEY` if you are using Discord-connected flows
-
-`NEXUS_RUNTIME` defaults to `standalone`, which preserves local public and private writes, schedules, backups, and interactive setup. The `hosted-tenant` and temporary `world-writer` values are managed deployment roles; selecting either value only changes the typed capability contract and does not connect a standalone installation to Nexus Cloud.
-
-`/up` remains the public, boot-only liveness check. Authenticated internal checks are available at `/api/internal/v1/readiness`, `/api/internal/v1/health`, and `/api/internal/v1/build` using the existing `NEXUS_API_TOKEN` bearer credential. These responses expose only allowlisted runtime, release, schema, view-contract, and heartbeat status fields; they never include connection details, raw configuration, exception messages, or secrets.
-
-Hosted tenant callbacks use a durable outbox and a versioned HMAC contract. Managed deployments set `NEXUS_CONTROL_CALLBACK_URL` to the fixed HTTPS Cloud receiver and mount the tenant-scoped key at `NEXUS_CONTROL_CALLBACK_KEY_FILE`; raw key material is never placed in an environment variable. Retries keep the callback identity and body stable while signing each attempt with a fresh nonce. Standalone and world-writer runtimes neither schedule callbacks nor read callback credentials.
-
-Managed hosted tenants redeem the initial-administrator bootstrap through `POST /api/internal/v1/bootstrap/redeem`. The opaque token is accepted only in the request body, hashed and removed before throttling or telemetry, and introspected through the fixed HTTPS `NEXUS_BOOTSTRAP_INTROSPECTION_URL` using the tenant-control HMAC key. Signed claims are one-action, release-, tenant-, alliance-, nation-, and Cloud-user-scoped, with a hard 15-minute maximum lifetime. Local credentials, sessions, roles, and authentication factors remain tenant-local; the user, protected administrator role, immutable redemption evidence, audit record, and durable `bootstrap.redeemed` callback are committed atomically.
-
-Routed tenant events are a separate, disabled-by-default hosted transport. Managed deployments may set `NEXUS_TENANT_EVENTS_ENABLED=true`, mount a dedicated HMAC key at `NEXUS_TENANT_EVENTS_KEY_FILE`, and provide a tenant-scoped Redis ACL credential. `nexus:consume-tenant-events` reads only the stream deterministically derived from the immutable tenant ID, validates the signed `tenant-events-v1` envelope, records an immutable receipt with no raw payload, and applies tenant-local reactions transactionally. Standalone and world-writer runtimes never read the key or connect to this stream.
-
-## Production Quick Start
-
-Managed hosted releases build the repository's [`Dockerfile`](Dockerfile) once and deploy the same digest for every service role. Every build must supply `NEXUS_APPLICATION_VERSION` (1–64 release-safe characters) and `NEXUS_COMMIT_SHA` (the exact lowercase 40-character Git commit); the build fails when either identity is absent or invalid. The image accepts exactly one of `web`, `queue`, `scheduler`, `migrator`, `bootstrap`, or `event-consumer`; it does not pass arbitrary commands through to a shell. Composer dependencies and Vite assets are built in isolated stages, the final PHP 8.3/Apache runtime runs as `www-data`, and the image embeds OCI build labels plus a deterministic CycloneDX runtime dependency inventory at `/usr/share/nexus/sbom/nexus-ams.cdx.json`, including the pinned base image, Debian packages, PHP extensions, production Composer packages, and compiled frontend packages.
-
-The deployment template should use a read-only root filesystem, drop all Linux capabilities, prevent privilege escalation, and mount writable paths for `/var/www/html/storage`, `/var/www/html/bootstrap/cache`, and `/tmp` with UID/GID 33 ownership. Queue workers finish their active Laravel job after `SIGTERM`; the web supervisor translates `SIGTERM` into Apache's graceful-stop signal. Set the orchestrator stop grace period to at least 960 seconds so the current 900-second hosted jobs can drain before a forced stop. Release ID and image digest remain runtime-supplied values because an image cannot safely self-reference its final digest.
-
-If you want a fast production-style install, use the companion installer from `Nexus-Setup`.
-
-Interactive install:
+Useful checks before submitting a change:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/Yosodog/Nexus-Setup/main/install_nexus.sh -o install_nexus.sh
-chmod +x install_nexus.sh
-sudo ./install_nexus.sh
+./vendor/bin/pint --dirty
+composer test:fast
+npm run build
 ```
 
-Preview without making changes:
+See [AGENTS.md](AGENTS.md) for repository conventions, testing guidance, and security requirements. UI changes should follow [DESIGN_SYSTEM.md](DESIGN_SYSTEM.md).
+
+## Production and self-hosting
+
+Use [Nexus Setup](https://github.com/Yosodog/Nexus-Setup) for a standalone production installation. Pin `NEXUS_AMS_COMMIT` and `NEXUS_SUBS_COMMIT` to the beta revisions you intend to deploy. The installer supports single-host and split-host profiles.
 
 ```bash
-sudo ./install_nexus.sh --dry-run
-```
-
-Non-interactive rerun using an existing `install.env`:
-
-```bash
+git clone https://github.com/Yosodog/Nexus-Setup.git
+cd Nexus-Setup
+chmod 600 install.env
+nano install.env
+./install_nexus.sh --check-config
 sudo ./install_nexus.sh --non-interactive
 ```
 
-The current installer supports these profiles:
+The repository also contains a hardened container build for managed deployments. Its runtime roles, release metadata, health contracts, and deployment restrictions are intended for an orchestrated environment rather than a basic standalone install.
 
-- `full`: app, web, database, and subscription worker
-- `app-web-subs-remote-db`: app and subs with the database hosted elsewhere
-- `web-only`: app/web only, no local DB or subs worker
-- `db-only`: database host only
-- `subs-only`: subscription worker only
+## Nexus Cloud
 
-The installer currently provisions or configures:
+Nexus Cloud is the managed deployment path under development. The application already contains the runtime boundaries and service contracts needed by managed environments, but public Cloud onboarding is not ready yet.
 
-- PHP-FPM, Composer, Node.js, and Nginx
-- MySQL or MariaDB when the selected profile includes a local database
-- Redis when enabled
-- Nexus AMS and Nexus AMS Subs clones
-- Laravel migrations, seeding, and frontend build
-- Supervisor workers
-- Cron-based Laravel scheduler
-- Certbot/TLS
-- Optional initial admin user creation
-
-## Project Structure
-
-This repo is not a generic CRUD Laravel app. The main conventions are:
-
-- [`app/Http/Controllers`](app/Http/Controllers): web and API entry points
-- [`app/Http/Requests`](app/Http/Requests): validation and request authorization
-- [`app/Services`](app/Services): core business logic and orchestration
-- [`app/Models`](app/Models): Eloquent models for application state
-- [`app/GraphQL`](app/GraphQL): Politics & War GraphQL data objects and hydration helpers
-- [`app/Nel`](app/Nel): the NEL expression engine and related helpers
-- [`app/Console/Commands`](app/Console/Commands): scheduled and operational commands
-- [`resources/views`](resources/views): Blade views
-- [`resources/views/layouts`](resources/views/layouts): unified public, member, staff, and error shells
-- [`resources/views/admin`](resources/views/admin): dense, permission-aware staff workspaces
-- [`resources/views/user`](resources/views/user): member overview, settings, and API reference
-- [`resources/js`](resources/js): Vite-compiled JavaScript entrypoints
-- [`resources/css/app.css`](resources/css/app.css): Tailwind 4 configuration, DaisyUI themes, and Nexus design primitives
-- [`routes/web.php`](routes/web.php): browser routes
-- [`routes/api.php`](routes/api.php): API routes, subs endpoints, and bot integrations
-- [`database/migrations`](database/migrations): schema changes
-- [`database/seeders`](database/seeders): baseline data
-
-The frontend has three expressions of one design system:
-
-- Public: editorial recruitment, application, and onboarding journeys
-- Member: approachable, task-focused alliance operations
-- Admin: denser, permission-scoped triage and decision workspaces
-
-All three use the same semantic light/dark themes, typography, control contracts, and accessibility foundation. The former Bootstrap/AdminLTE compatibility layer is not part of the active frontend architecture. See [`DESIGN_SYSTEM.md`](DESIGN_SYSTEM.md) before adding or changing UI.
-
-## Important App Conventions
-
-- Use service container resolution and dependency injection rather than instantiating services directly.
-- Prefer Form Request classes over inline controller validation.
-- Use typed properties and explicit return types.
-- Prefer collection helpers unless a loop is clearer.
-- Security-sensitive actions should be logged through `App\Services\AuditLogger`.
-- If a workflow allows only one pending request at a time, enforce it at the database level with the repository's `pending_key` pattern instead of relying only on app validation.
-- Treat the primary alliance plus enabled offshores as one umbrella through `AllianceMembershipService`; do not hard-code direct `PW_ALLIANCE_ID` checks where umbrella membership matters.
-- If a change affects cache keys, scheduled jobs, or workers, call that out clearly in documentation or PR notes.
-- Do not commit `.env` changes or built frontend artifacts.
-
-## Admin Permissions
-
-Nexus AMS uses a role-and-permission model on top of the admin gate.
-
-- `AdminMiddleware` blocks the admin area unless `is_admin` is set on the authenticated user.
-- Fine-grained capabilities are registered from [`config/permissions.php`](config/permissions.php) and enforced through Laravel gates, form requests, policies, and Blade visibility checks.
-- Navigation and admin screens are permission-aware, so access is intentionally segmented instead of treating every admin as a super-admin.
-
-Key permission groups currently include:
-
-- User and role management: `view-users`, `edit-users`, `view-roles`, `edit-roles`
-- Finance operations: `view-accounts`, `manage-accounts`, `view-financial-reports`, `view-taxes`
-- Workflow approvals: `manage-city-grants`, `manage-grants`, `manage-loans`, `manage-war-aid`, `manage-rebuilding`
-- Operations and planning: `manage-war-room`, `manage-raids`, `manage-spies`, `manage-mmr`, `manage-market`
-- Diagnostic and restricted tooling: `view-diagnostic-info`, `manage-custom-pages`
-- Exception handling for trusted staff: `bypass-self-restrictions`
-
-Permission design expectations:
-
-- Add the smallest permission set that solves the problem.
-- Prefer separate `view-*` and `manage-*` capabilities when a feature needs read-only and write access.
-- Keep especially sensitive tools behind `view-diagnostic-info` or a similarly explicit permission.
-- For approval flows, combine permission checks with self-approval restrictions where appropriate instead of assuming admin status alone is sufficient.
-
-## Security Model
-
-Security in Nexus AMS is layered. The app already includes several concrete protections:
-
-- Authenticated app usage is typically gated by user verification, Discord verification, and MFA enforcement before protected user/admin routes are available.
-- MFA can be required for all users or specifically for admins, and trusted-device bypasses are stored as hashed tokens with user-agent binding and expiry.
-- Security headers are applied centrally, including CSP, HSTS on secure non-local requests, `X-Frame-Options`, `X-Content-Type-Options`, referrer policy, and permissions policy.
-- Disabled users are force-logged out by middleware instead of being allowed to continue on stale sessions.
-- Request IDs are assigned and echoed back so audit entries and production debugging can correlate a request across logs.
-- Security-sensitive actions and authorization denials are written to audit logs through `AuditLogger`.
-- Internal bot/subscription endpoints require bearer-token middleware instead of being left open.
-- Rate limiting is in place for sensitive or abuse-prone actions such as account transfers, grant requests, and war simulations.
-- Single-pending workflows use the repository's `pending_key` database pattern so concurrency rules are enforced at the data layer, not just in controller validation.
-- Self-approval protections exist for workflows where a staff member should not process their own request unless they explicitly have the bypass permission.
-
-When adding or changing security-sensitive code:
-
-- Use Form Requests or gates for authorization, not just hidden buttons in Blade.
-- Keep single-pending enforcement at the database level.
-- Log approvals, denials, refunds, overrides, and other sensitive actions with useful structured context.
-- Do not put secrets, tokens, passwords, or raw request payloads into logs or audit context.
-- Prefer session-domain, secure, `HttpOnly` cookies for anything that reduces authentication friction.
-- Treat Discord, subs, queue, scheduler, and admin diagnostic paths as privileged surfaces and document any new operational risk.
-
-## Useful Commands
-
-Development:
-
-```bash
-composer run dev
-npm run build
-./vendor/bin/pint --dirty
-composer test:fast
-composer test:integration
-npm run test:browser
-```
-
-## Automated Testing
-
-Automated tests are part of the expected regression-safety workflow.
-
-- `tests/Unit`: pure business logic and builder/parser coverage
-- `tests/Feature`: Laravel HTTP and container-backed application tests
-- `tests/Integration`: MySQL-backed schema and workflow constraint tests
-- `tests/Browser`: Playwright smoke coverage for critical pages and flows
-
-Test authoring rules:
-
-- Write tests against the intended, supported behavior of the application
-- Fake Politics & War and Discord at stable seams; never call live external services from test runs
-- If a new or updated test fails, verify the fixture, auth state, seed data, fake responses, and assertions before concluding the application behavior is wrong
-- Prefer observable outcomes such as redirects, DB writes, queued jobs, events, notifications, and cookies over implementation-detail assertions
-
-Environment defaults:
-
-- Copy [`.env.testing.example`](.env.testing.example) to `.env.testing` when you need a local testing env file
-- Fast suites use in-memory SQLite by default
-- Integration suites should point `.env.testing` at MySQL so `pending_key` and unique-constraint behavior matches production
-
-Common app commands:
-
-```bash
-php artisan sync:nations
-php artisan sync:alliances
-php artisan sync:wars
-php artisan sync:treaties
-php artisan taxes:collect
-php artisan trades:update
-php artisan military:sign-in
-php artisan loans:process-payments
-php artisan payroll:run-daily
-php artisan audits:run
-php artisan inactivity:check
-php artisan queue:work
-php artisan schedule:run
-```
-
-`php artisan schedule:list` will display all available commands.
-
-## AI Agent Guidance
-
-If you are using Codex, Claude, Cursor, or another coding agent on this repo, these rules matter:
-
-1. Read [`AGENTS.md`](AGENTS.md) before making changes.
-2. Prefer understanding the surrounding feature area before editing. This app has a lot of business rules hidden in services, requests, and admin flows.
-3. Use Laravel Boost tools when available. They are the fastest path for application info, docs lookup, routes, logs, config, schema, and safe database reads.
-4. Search Laravel ecosystem docs before making framework-level assumptions.
-5. Run `./vendor/bin/pint --dirty` after touching PHP.
-6. Add or update automated tests when they protect intended, supported behavior. When a test fails, rule out fixture, fake, auth, and assertion issues before concluding the application behavior is wrong.
-7. Do not rely on a friendly `exists()` check alone for single-pending workflows. Preserve or add the `pending_key` database guard.
-8. Never commit secrets, `.env` edits, or generated frontend build output.
-9. When editing UI, follow the unified Tailwind 4/DaisyUI 5 system in [`DESIGN_SYSTEM.md`](DESIGN_SYSTEM.md); do not reintroduce Bootstrap/AdminLTE compatibility classes.
-10. When a change affects queues, cron, caches, or deployment behavior, document the operational impact.
-
-For humans working with AI agents, the highest-leverage pattern is:
-
-- Give the agent a narrow goal and the files or subsystem involved
-- Expect it to inspect the existing conventions first
-- Require it to explain operational impact, not just code changes
-- Require it to say whether formatting was run and whether anything could not be verified locally
+Self-hosted installations should use `NEXUS_RUNTIME=standalone` through Nexus Setup. The hosted runtime modes are for operator-managed development and pilots.
 
 ## Contributing
 
-Contributions are welcome, but they should stay focused and match the existing conventions.
+Keep changes focused and follow the conventions in [AGENTS.md](AGENTS.md). Use descriptive, present-tense commit messages. Pull requests should describe user-visible effects and call out migrations, cache clears, scheduler changes, or queue-worker restarts.
 
-1. Fork the repository.
-2. Create a topic branch.
-3. Follow the quick-start instructions.
-4. Keep the change scoped to one coherent area.
-5. Use descriptive present-tense commit messages.
-6. Note any migration, cache clear, scheduler, or queue-worker impact in the PR description.
+Before opening a pull request, run the relevant tests and `./vendor/bin/pint --dirty` after changing PHP. Do not commit secrets, `.env` files, or built frontend assets.
 
-Before opening a PR:
+## Reporting bugs and requests
 
-- Match existing Laravel and Blade conventions
-- Run `./vendor/bin/pint --dirty` for PHP formatting
-- Update documentation when behavior or operational setup changes
-
-## Reporting Bugs and Requests
-
-- Open an issue at [Nexus AMS Issues](https://github.com/Yosodog/Nexus-AMS/issues)
-- Include expected behavior, actual behavior, and reproduction steps
-- For operational issues, include whether the problem is on the web app, queue worker, scheduler, subscription service, or Discord integration
+Open an issue in [Nexus AMS Issues](https://github.com/Yosodog/Nexus-AMS/issues). Include the expected behavior, actual behavior, and reproduction steps. For operational issues, note whether the problem affects the web application, queue worker, scheduler, subscription service, or Discord integration.
 
 ## License
 
-This project is licensed under the GNU GPL v3. See [`LICENSE`](LICENSE).
+Nexus AMS is licensed under the GNU GPL v3. See [LICENSE](LICENSE).
