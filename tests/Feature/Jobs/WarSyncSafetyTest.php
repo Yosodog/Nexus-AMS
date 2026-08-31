@@ -6,6 +6,7 @@ use App\Jobs\FinalizeWarSyncJob;
 use App\Jobs\SyncWarsJob;
 use App\Models\War;
 use App\Services\AllianceMembershipService;
+use App\Services\World\WorldWriteGuard;
 use Carbon\CarbonImmutable;
 use DateTimeInterface;
 use Illuminate\Bus\Batch;
@@ -34,7 +35,7 @@ class WarSyncSafetyTest extends TestCase
         $this->expectException(RuntimeException::class);
         $this->expectExceptionMessage('Alliance lookup failed.');
 
-        (new SyncWarsJob(1, 1000))->handle();
+        (new SyncWarsJob(1, 1000))->handle(app(WorldWriteGuard::class));
     }
 
     public function test_empty_page_is_treated_as_a_failed_sync(): void
@@ -59,7 +60,7 @@ class WarSyncSafetyTest extends TestCase
         $this->expectException(RuntimeException::class);
         $this->expectExceptionMessage('War sync page 1 returned no records.');
 
-        (new SyncWarsJob(1, 1000))->handle();
+        (new SyncWarsJob(1, 1000))->handle(app(WorldWriteGuard::class));
     }
 
     public function test_finalizer_skips_cleanup_when_expected_page_manifest_is_truncated(): void
@@ -71,7 +72,7 @@ class WarSyncSafetyTest extends TestCase
         Cache::put("sync_batch:{$batchId}:pages", [1], now()->addHour());
         Cache::put("sync_batch:{$batchId}:1", [1001], now()->addHour());
 
-        (new FinalizeWarSyncJob($batchId))->handle();
+        (new FinalizeWarSyncJob($batchId))->handle(app(WorldWriteGuard::class));
 
         $this->assertNull($staleWar->refresh()->end_date);
     }
@@ -85,7 +86,7 @@ class WarSyncSafetyTest extends TestCase
         Cache::put("sync_batch:{$batchId}:pages", [1, 2], now()->addHour());
         Cache::put("sync_batch:{$batchId}:1", [1001], now()->addHour());
 
-        (new FinalizeWarSyncJob($batchId))->handle();
+        (new FinalizeWarSyncJob($batchId))->handle(app(WorldWriteGuard::class));
 
         $this->assertNull($staleWar->refresh()->end_date);
     }
@@ -102,7 +103,7 @@ class WarSyncSafetyTest extends TestCase
         Cache::put("sync_batch:{$batchId}:1", [1001], now()->addHour());
         Cache::put("sync_batch:{$batchId}:2", [1002], now()->addHour());
 
-        (new FinalizeWarSyncJob($batchId))->handle();
+        (new FinalizeWarSyncJob($batchId))->handle(app(WorldWriteGuard::class));
 
         $this->assertNull($seenWar->refresh()->end_date);
         $this->assertNotNull($staleWar->refresh()->end_date);

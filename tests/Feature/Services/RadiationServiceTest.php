@@ -2,9 +2,12 @@
 
 namespace Tests\Feature\Services;
 
+use App\Enums\NexusRuntime;
 use App\Models\RadiationSnapshot;
 use App\Services\GameInfoQueryService;
 use App\Services\RadiationService;
+use App\Services\RuntimeCapabilities;
+use App\Services\World\WorldWriteGuard;
 use Carbon\Carbon;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Client\Request;
@@ -163,6 +166,26 @@ class RadiationServiceTest extends TestCase
             'snapshot_at' => now()->subHours(3),
             'game_date' => '2126-09-21',
         ]);
+        Http::fake();
+
+        $selected = app(RadiationService::class)->latestOrRefresh();
+
+        $this->assertTrue($snapshot->is($selected));
+        Http::assertNothingSent();
+    }
+
+    public function test_hosted_runtime_selects_a_stale_shared_snapshot_without_refreshing(): void
+    {
+        Carbon::setTestNow('2026-08-02 18:00:00 UTC');
+        $snapshot = $this->createSnapshot([
+            'snapshot_at' => now()->subHours(4),
+            'game_date' => '2126-09-21',
+        ]);
+        config(['nexus.runtime' => NexusRuntime::HostedTenant->value]);
+        $this->app->forgetInstance(NexusRuntime::class);
+        $this->app->forgetInstance(RuntimeCapabilities::class);
+        $this->app->forgetInstance(WorldWriteGuard::class);
+        $this->app->forgetInstance(RadiationService::class);
         Http::fake();
 
         $selected = app(RadiationService::class)->latestOrRefresh();

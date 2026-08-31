@@ -5,6 +5,7 @@ namespace App\Jobs;
 use App\Models\Alliance;
 use App\Services\AllianceQueryService;
 use App\Services\SubscriptionRecordQuarantine;
+use App\Services\World\WorldWriteGuard;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Foundation\Queue\Queueable;
@@ -48,8 +49,10 @@ class UpdateAllianceJob implements ShouldQueue
     /**
      * Execute the job.
      */
-    public function handle(): void
+    public function handle(WorldWriteGuard $worldWriteGuard): void
     {
+        $worldWriteGuard->assertCanWrite(Alliance::class);
+
         $quarantine = app(SubscriptionRecordQuarantine::class);
 
         foreach ($this->alliancesData as $allianceData) {

@@ -7,6 +7,7 @@ use App\GraphQL\Models\Nation as GraphQLNationModel;
 use App\Models\Nation;
 use App\Services\BeigeAlertService;
 use App\Services\NationProfitabilityService;
+use App\Services\World\WorldWriteGuard;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Database\UniqueConstraintViolationException;
@@ -36,9 +37,12 @@ class UpdateNationJob implements ShouldQueue
      * Execute the job.
      */
     public function handle(
+        WorldWriteGuard $worldWriteGuard,
         BeigeAlertService $beigeAlertService,
-        NationProfitabilityService $profitabilityService
+        NationProfitabilityService $profitabilityService,
     ): void {
+        $worldWriteGuard->assertCanWrite(Nation::class);
+
         try {
             foreach ($this->nationsData as $nationData) {
                 $nationModel = new GraphQLNationModel;

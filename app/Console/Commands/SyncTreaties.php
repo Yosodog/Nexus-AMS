@@ -7,6 +7,7 @@ use App\GraphQL\Models\Treaty as TreatyGraphQL;
 use App\Models\Treaty;
 use App\Services\GraphQLQueryBuilder;
 use App\Services\QueryService;
+use App\Services\World\WorldWriteGuard;
 use Illuminate\Console\Command;
 use Illuminate\Http\Client\ConnectionException;
 
@@ -20,8 +21,10 @@ class SyncTreaties extends Command
      * @throws PWQueryFailedException
      * @throws ConnectionException
      */
-    public function handle(): void
+    public function handle(WorldWriteGuard $worldWriteGuard): void
     {
+        $worldWriteGuard->assertCanWrite(Treaty::class);
+
         $query = (new GraphQLQueryBuilder)
             ->setRootField('treaties')
             ->addArgument('first', 1000)

@@ -5,6 +5,7 @@ namespace App\Services\Economy;
 use App\Models\Nation;
 use App\Services\GraphQLQueryBuilder;
 use App\Services\QueryService;
+use App\Services\World\WorldWriteGuard;
 use Illuminate\Support\Facades\DB;
 use RuntimeException;
 
@@ -14,8 +15,12 @@ final class EconomyContextService
 
     private const UPSERT_CHUNK_SIZE = 100;
 
+    public function __construct(private readonly WorldWriteGuard $worldWriteGuard) {}
+
     public function refresh(): int
     {
+        $this->worldWriteGuard->assertCanWrite(Nation::class);
+
         $treasures = $this->queryTreasures();
         $colors = $this->queryRootList('colors', ['color', 'turn_bonus']);
 

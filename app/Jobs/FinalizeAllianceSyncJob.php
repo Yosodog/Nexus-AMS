@@ -4,6 +4,7 @@ namespace App\Jobs;
 
 use App\Models\Alliance;
 use App\Services\SettingService;
+use App\Services\World\WorldWriteGuard;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Support\Facades\Bus;
@@ -29,8 +30,10 @@ class FinalizeAllianceSyncJob implements ShouldQueue
      * and logs the count of deleted records. Finally, it updates the last processed batch ID
      * for Alliance synchronization.
      */
-    public function handle(): void
+    public function handle(WorldWriteGuard $worldWriteGuard): void
     {
+        $worldWriteGuard->assertCanWrite(Alliance::class);
+
         $batch = Bus::findBatch($this->batchId);
 
         if (! $batch) {

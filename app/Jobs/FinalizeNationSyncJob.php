@@ -7,6 +7,7 @@ use App\Models\Nation;
 use App\Models\NationMilitary;
 use App\Models\NationResources;
 use App\Services\SettingService;
+use App\Services\World\WorldWriteGuard;
 use Illuminate\Bus\Batch;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
@@ -25,8 +26,11 @@ class FinalizeNationSyncJob implements ShouldQueue
         $this->batchId = $batchId;
     }
 
-    public function handle(): void
+    public function handle(WorldWriteGuard $worldWriteGuard): void
     {
+        $worldWriteGuard->assertCanWrite(Nation::class);
+        $worldWriteGuard->assertCanWrite(City::class);
+
         $batch = Bus::findBatch($this->batchId);
         $mode = $this->determineMode($batch);
 

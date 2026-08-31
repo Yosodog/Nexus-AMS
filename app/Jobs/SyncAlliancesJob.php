@@ -2,7 +2,9 @@
 
 namespace App\Jobs;
 
+use App\Models\Alliance;
 use App\Services\AllianceQueryService;
+use App\Services\World\WorldWriteGuard;
 use Carbon\CarbonImmutable;
 use Exception;
 use Illuminate\Bus\Batchable;
@@ -74,8 +76,10 @@ class SyncAlliancesJob implements ShouldQueue
      * We read once from the GraphQL gateway, normalise the payload, and then perform high-volume
      * upserts using the query builder to avoid Eloquent model instantiation overhead.
      */
-    public function handle(): void
+    public function handle(WorldWriteGuard $worldWriteGuard): void
     {
+        $worldWriteGuard->assertCanWrite(Alliance::class);
+
         if ($this->batch()?->cancelled()) {
             Log::info("SyncAlliancesJob for page {$this->page} was cancelled.");
 

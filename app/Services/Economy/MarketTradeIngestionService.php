@@ -5,11 +5,13 @@ namespace App\Services\Economy;
 use App\DataTransferObjects\MarketPriceSet;
 use App\Exceptions\ProfitabilityPricingUnavailable;
 use App\Models\MarketPriceSnapshot;
+use App\Models\MarketPriceSnapshotItem;
 use App\Models\MarketTrade;
 use App\Services\ApiDateNormalizer;
 use App\Services\GraphQLQueryBuilder;
 use App\Services\QueryService;
 use App\Services\TradePriceService;
+use App\Services\World\WorldWriteGuard;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -30,13 +32,20 @@ final class MarketTradeIngestionService
 
     private const WINDOW_DAYS = 7;
 
-    public function __construct(private readonly TradePriceService $tradePriceService) {}
+    public function __construct(
+        private readonly TradePriceService $tradePriceService,
+        private readonly WorldWriteGuard $worldWriteGuard,
+    ) {}
 
     /**
      * @throws ProfitabilityPricingUnavailable
      */
     public function refresh(): MarketPriceSnapshot
     {
+        $this->worldWriteGuard->assertCanWrite(MarketTrade::class);
+        $this->worldWriteGuard->assertCanWrite(MarketPriceSnapshot::class);
+        $this->worldWriteGuard->assertCanWrite(MarketPriceSnapshotItem::class);
+
         $windowEndedAt = CarbonImmutable::now('UTC');
         $windowStartedAt = $windowEndedAt->subDays(self::WINDOW_DAYS);
         $snapshot = null;

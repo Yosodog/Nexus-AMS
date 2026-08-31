@@ -18,6 +18,7 @@ use App\Models\City;
 use App\Models\Nation;
 use App\Models\NationAccount;
 use App\Models\War;
+use App\Services\World\WorldWriteGuard;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Queue;
@@ -118,7 +119,7 @@ class SubsIngestionTest extends FeatureTestCase
             ], 200),
         ]);
 
-        (new CreateAllianceJob(9988))->handle();
+        (new CreateAllianceJob(9988))->handle(app(WorldWriteGuard::class));
 
         $this->assertDatabaseHas('alliances', [
             'id' => 9988,
@@ -170,7 +171,7 @@ class SubsIngestionTest extends FeatureTestCase
             (new UpdateAllianceJob([
                 ['id' => ['poison']],
                 ['id' => 77, 'name' => 'After', '__typename' => 'Alliance'],
-            ]))->handle();
+            ]))->handle(app(WorldWriteGuard::class));
 
             $this->assertDatabaseHas('alliances', ['id' => 77, 'name' => 'After']);
             $this->assertFileExists($quarantineFile);
@@ -196,7 +197,7 @@ class SubsIngestionTest extends FeatureTestCase
             'accept_members' => true,
             'forum_link' => null,
             'discord_link' => null,
-        ]]))->handle();
+        ]]))->handle(app(WorldWriteGuard::class));
 
         $this->assertDatabaseHas('alliances', [
             'id' => 77,

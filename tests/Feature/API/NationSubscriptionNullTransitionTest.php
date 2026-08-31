@@ -9,6 +9,7 @@ use App\Models\Nation;
 use App\Services\BeigeAlertService;
 use App\Services\NationProfitabilityService;
 use App\Services\PWHelperService;
+use App\Services\World\WorldWriteGuard;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Event;
@@ -74,7 +75,11 @@ class NationSubscriptionNullTransitionTest extends TestCase
             'id' => $nation->id,
             'alliance_id' => null,
             'discord_id' => null,
-        ]]))->handle($beigeAlertService, $profitabilityService);
+        ]]))->handle(
+            app(WorldWriteGuard::class),
+            $beigeAlertService,
+            $profitabilityService,
+        );
 
         $nation->refresh();
 

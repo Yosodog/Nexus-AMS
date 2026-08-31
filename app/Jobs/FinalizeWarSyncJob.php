@@ -4,6 +4,7 @@ namespace App\Jobs;
 
 use App\Models\War;
 use App\Services\SettingService;
+use App\Services\World\WorldWriteGuard;
 use Illuminate\Bus\Batchable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
@@ -32,8 +33,10 @@ class FinalizeWarSyncJob implements ShouldQueue
      * This finalizer sets `end_date` on wars that were not included in the current batch,
      * if they are older than 5 days and still marked as active (null `end_date`).
      */
-    public function handle(): void
+    public function handle(WorldWriteGuard $worldWriteGuard): void
     {
+        $worldWriteGuard->assertCanWrite(War::class);
+
         $batch = Bus::findBatch($this->batchId);
 
         if (! $batch) {

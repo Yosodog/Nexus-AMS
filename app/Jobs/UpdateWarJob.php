@@ -6,6 +6,7 @@ use App\Events\WarStateChanged;
 use App\Models\War;
 use App\Services\AllianceMembershipService;
 use App\Services\SubscriptionRecordQuarantine;
+use App\Services\World\WorldWriteGuard;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Queue\InteractsWithQueue;
@@ -23,8 +24,10 @@ class UpdateWarJob implements ShouldQueue
 
     public function __construct(public array $warsData) {}
 
-    public function handle(): void
+    public function handle(WorldWriteGuard $worldWriteGuard): void
     {
+        $worldWriteGuard->assertCanWrite(War::class);
+
         $quarantine = app(SubscriptionRecordQuarantine::class);
 
         foreach ($this->warsData as $warData) {

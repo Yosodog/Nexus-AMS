@@ -8,6 +8,7 @@ use App\Models\City;
 use App\Models\Nation;
 use App\Models\NationMilitary;
 use App\Models\NationResources;
+use App\Services\World\WorldWriteGuard;
 use Carbon\CarbonImmutable;
 use Illuminate\Bus\Batch;
 use Illuminate\Bus\BatchRepository;
@@ -43,7 +44,7 @@ class NationSyncJobTest extends TestCase
             }));
         DB::enableQueryLog();
 
-        (new SyncNationsJob(1, 100))->handle();
+        (new SyncNationsJob(1, 100))->handle(app(WorldWriteGuard::class));
 
         $writeQueries = collect(DB::getQueryLog())
             ->filter(fn (array $query): bool => str_starts_with(strtolower($query['query']), 'insert into'));
@@ -99,14 +100,14 @@ class NationSyncJobTest extends TestCase
             '*' => Http::response($this->nationResponse([$this->nationPayload(1001)])),
         ]);
 
-        (new SyncNationsJob(1, 100))->handle();
+        (new SyncNationsJob(1, 100))->handle(app(WorldWriteGuard::class));
 
         City::query()->findOrFail(3001)->delete();
         NationResources::query()->where('nation_id', 1001)->firstOrFail()->delete();
         NationMilitary::query()->where('nation_id', 1001)->firstOrFail()->delete();
         Nation::query()->findOrFail(1001)->delete();
 
-        (new SyncNationsJob(1, 100))->handle();
+        (new SyncNationsJob(1, 100))->handle(app(WorldWriteGuard::class));
 
         $this->assertNull(Nation::withTrashed()->findOrFail(1001)->deleted_at);
         $this->assertNull(NationResources::withTrashed()->where('nation_id', 1001)->firstOrFail()->deleted_at);
@@ -121,14 +122,14 @@ class NationSyncJobTest extends TestCase
         Http::fakeSequence()
             ->push($this->nationResponse([$this->nationPayload(1001)]))
             ->push($this->nationResponse([$changed]));
-        (new SyncNationsJob(1, 100))->handle();
+        (new SyncNationsJob(1, 100))->handle(app(WorldWriteGuard::class));
         Nation::query()->whereKey(1001)->update([
             'treasure_income_modifier' => 0.05,
             'color_turn_bonus' => 125,
             'economy_context_synced_at' => now(),
         ]);
 
-        (new SyncNationsJob(1, 100))->handle();
+        (new SyncNationsJob(1, 100))->handle(app(WorldWriteGuard::class));
 
         $nation = Nation::query()->findOrFail(1001);
         $this->assertSame('red', $nation->color);
@@ -146,7 +147,7 @@ class NationSyncJobTest extends TestCase
         $this->expectException(RuntimeException::class);
         $this->expectExceptionMessage('Nation sync page 4 returned no records.');
 
-        (new SyncNationsJob(4, 100))->handle();
+        (new SyncNationsJob(4, 100))->handle(app(WorldWriteGuard::class));
     }
 
     public function test_finalizer_soft_deletes_children_before_stale_nations(): void
@@ -157,7 +158,7 @@ class NationSyncJobTest extends TestCase
                 $this->nationPayload(1002),
             ])),
         ]);
-        (new SyncNationsJob(1, 100))->handle();
+        (new SyncNationsJob(1, 100))->handle(app(WorldWriteGuard::class));
 
         Nation::query()->whereKey(1001)->update(['updated_at' => now()->subDays(31)]);
         Nation::query()->whereKey(1002)->update(['updated_at' => now()->subDay()]);
@@ -177,7 +178,7 @@ class NationSyncJobTest extends TestCase
         );
         Bus::shouldReceive('findBatch')->once()->with($batchId)->andReturn($batch);
 
-        (new FinalizeNationSyncJob($batchId))->handle();
+        (new FinalizeNationSyncJob($batchId))->handle(app(WorldWriteGuard::class));
 
         $this->assertSoftDeleted('nations', ['id' => 1001]);
         $this->assertSoftDeleted('nation_resources', ['nation_id' => 1001]);

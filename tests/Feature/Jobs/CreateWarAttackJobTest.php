@@ -6,6 +6,7 @@ use App\Jobs\CreateWarAttackJob;
 use App\Models\Nation;
 use App\Models\WarAttack;
 use App\Services\SubscriptionRecordQuarantine;
+use App\Services\World\WorldWriteGuard;
 use Illuminate\Support\Facades\Schema;
 use Tests\FeatureTestCase;
 
@@ -61,7 +62,10 @@ class CreateWarAttackJobTest extends FeatureTestCase
             ],
         ]);
 
-        $job->handle(app(SubscriptionRecordQuarantine::class));
+        $job->handle(
+            app(SubscriptionRecordQuarantine::class),
+            app(WorldWriteGuard::class),
+        );
 
         $this->assertDatabaseMissing('war_attacks', ['id' => 7001]);
         $this->assertDatabaseHas('war_attacks', ['id' => 7002, 'type' => 'GROUND']);
@@ -81,7 +85,10 @@ class CreateWarAttackJobTest extends FeatureTestCase
             $this->warAttackRow(7103, now()),
         ]);
 
-        $job->handle(app(SubscriptionRecordQuarantine::class));
+        $job->handle(
+            app(SubscriptionRecordQuarantine::class),
+            app(WorldWriteGuard::class),
+        );
 
         $this->assertDatabaseHas('war_attacks', ['id' => 7101]);
         $this->assertDatabaseMissing('war_attacks', ['id' => 7102]);

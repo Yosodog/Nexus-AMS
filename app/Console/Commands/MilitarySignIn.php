@@ -6,6 +6,7 @@ use App\Models\Nation;
 use App\Services\AllianceMembershipService;
 use App\Services\AllianceQueryService;
 use App\Services\QueryService;
+use App\Services\RuntimeCapabilities;
 use App\Services\SignInService;
 use Illuminate\Console\Command;
 use Throwable;
@@ -24,7 +25,8 @@ class MilitarySignIn extends Command
 
     public function __construct(
         protected SignInService $signInService,
-        protected AllianceMembershipService $membershipService
+        protected AllianceMembershipService $membershipService,
+        protected RuntimeCapabilities $runtimeCapabilities,
     ) {
         parent::__construct();
     }
@@ -88,7 +90,11 @@ class MilitarySignIn extends Command
                     // TODO Handle if the nation isn't sharing their resources by spamming them with messages.
 
                     $mmrScore = $this->signInService->snapshotNation($nation);
-                    Nation::updateFromAPI($nation); // Why not update it while we're here
+
+                    if ($this->runtimeCapabilities->writesPublicWorld()) {
+                        Nation::updateFromAPI($nation);
+                    }
+
                     $this->line("✅ {$nation->nation_name} (MMR {$mmrScore}%)");
                 } catch (Throwable $e) {
                     $this->error("❌ {$nation->nation_name}: ".$e->getMessage());

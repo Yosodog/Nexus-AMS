@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Jobs\UpdateWarJob;
 use App\Models\War;
+use App\Services\World\WorldWriteGuard;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Cache;
 use Tests\TestCase;
@@ -100,7 +101,7 @@ class WarSubscriptionUpdateSafetyTest extends TestCase
         (new UpdateWarJob([[
             'id' => $war->id,
             'turns_left' => 3,
-        ]]))->handle();
+        ]]))->handle(app(WorldWriteGuard::class));
 
         $this->assertSame(3, $war->refresh()->turns_left);
     }
@@ -122,7 +123,7 @@ class WarSubscriptionUpdateSafetyTest extends TestCase
             'ground_control' => null,
             'air_superiority' => null,
             'naval_blockade' => null,
-        ]]))->handle();
+        ]]))->handle(app(WorldWriteGuard::class));
 
         $war->refresh();
 
@@ -140,7 +141,7 @@ class WarSubscriptionUpdateSafetyTest extends TestCase
         (new UpdateWarJob([
             ['turns_left' => 3],
             ['id' => $war->id, 'turns_left' => 2],
-        ]))->handle();
+        ]))->handle(app(WorldWriteGuard::class));
 
         $this->assertSame(2, $war->refresh()->turns_left);
         $this->assertFileExists($this->quarantineFile);

@@ -5,6 +5,7 @@ namespace App\Jobs;
 use App\Models\Nation;
 use App\Services\NationProfitabilityService;
 use App\Services\NationQueryService;
+use App\Services\World\WorldWriteGuard;
 use Illuminate\Contracts\Cache\LockTimeoutException;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
@@ -31,8 +32,12 @@ class CreateNationJob implements ShouldQueue
     /**
      * The subscription doesn't give us everything we need, so we'll just query the API to get all the info. Weird, but I don't care.
      */
-    public function handle(NationProfitabilityService $profitabilityService): void
-    {
+    public function handle(
+        WorldWriteGuard $worldWriteGuard,
+        NationProfitabilityService $profitabilityService,
+    ): void {
+        $worldWriteGuard->assertCanWrite(Nation::class);
+
         foreach ($this->nationsData as $nationData) {
             $nationId = $nationData['id'] ?? null;
 

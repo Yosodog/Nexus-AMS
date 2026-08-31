@@ -8,6 +8,7 @@ use App\Models\Nation;
 use App\Models\WarAttack;
 use App\Services\AllianceMembershipService;
 use App\Services\SubscriptionRecordQuarantine;
+use App\Services\World\WorldWriteGuard;
 use Illuminate\Bus\Batchable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
@@ -24,8 +25,12 @@ class CreateWarAttackJob implements ShouldQueue
 
     public function __construct(public array $warAttacks) {}
 
-    public function handle(SubscriptionRecordQuarantine $quarantine): void
-    {
+    public function handle(
+        SubscriptionRecordQuarantine $quarantine,
+        WorldWriteGuard $worldWriteGuard,
+    ): void {
+        $worldWriteGuard->assertCanWrite(WarAttack::class);
+
         if (empty($this->warAttacks)) {
             return;
         }

@@ -5,6 +5,7 @@ namespace App\Console\Commands;
 use App\Models\TradePrice;
 use App\Services\ApiDateNormalizer;
 use App\Services\TradePriceService;
+use App\Services\World\WorldWriteGuard;
 use Illuminate\Console\Command;
 use Throwable;
 
@@ -14,13 +15,17 @@ class UpdateTradePrices extends Command
 
     protected $description = 'Fetch and save the current trade prices from PW API';
 
-    public function __construct(protected TradePriceService $tradePriceService)
-    {
+    public function __construct(
+        protected TradePriceService $tradePriceService,
+        private readonly WorldWriteGuard $worldWriteGuard,
+    ) {
         parent::__construct();
     }
 
     public function handle(): void
     {
+        $this->worldWriteGuard->assertCanWrite(TradePrice::class);
+
         $this->info('Fetching latest trade prices...');
 
         try {

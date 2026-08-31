@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\RadiationSnapshot;
 use App\Services\Economy\EconomyRules;
+use App\Services\World\WorldWriteGuard;
 use Carbon\Carbon;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\Log;
@@ -12,7 +13,11 @@ use Throwable;
 
 class RadiationService
 {
-    public function __construct(private readonly GameInfoQueryService $gameInfoQueryService) {}
+    public function __construct(
+        private readonly GameInfoQueryService $gameInfoQueryService,
+        private readonly WorldWriteGuard $worldWriteGuard,
+        private readonly RuntimeCapabilities $runtimeCapabilities,
+    ) {}
 
     public function latest(): ?RadiationSnapshot
     {
@@ -31,6 +36,10 @@ class RadiationService
             return $latest;
         }
 
+        if (! $this->runtimeCapabilities->writesPublicWorld()) {
+            return $latest;
+        }
+
         if (
             $latest === null
             || $latest->snapshot_at === null
@@ -44,6 +53,8 @@ class RadiationService
 
     public function refresh(?Carbon $snapshotAt = null): ?RadiationSnapshot
     {
+        $this->worldWriteGuard->assertCanWrite(RadiationSnapshot::class);
+
         try {
             $payload = $this->gameInfoQueryService->getEconomySnapshot();
             $latest = $this->latest();

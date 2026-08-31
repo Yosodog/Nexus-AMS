@@ -5,6 +5,7 @@ namespace App\Jobs;
 use App\Models\War;
 use App\Services\AllianceMembershipService;
 use App\Services\WarQueryService;
+use App\Services\World\WorldWriteGuard;
 use Carbon\CarbonImmutable;
 use Illuminate\Bus\Batchable;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -148,8 +149,10 @@ class SyncWarsJob implements ShouldQueue
      * We normalise the payload once, reuse cached column templates, and lean on the query builder
      * for the actual upsert so we spend our CPU cycles on SQL execution rather than PHP array churn.
      */
-    public function handle(): void
+    public function handle(WorldWriteGuard $worldWriteGuard): void
     {
+        $worldWriteGuard->assertCanWrite(War::class);
+
         if ($this->batch()?->cancelled()) {
             Log::info("SyncWarsJob for page {$this->page} was cancelled.");
 

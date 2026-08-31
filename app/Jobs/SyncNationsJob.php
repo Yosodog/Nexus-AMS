@@ -11,8 +11,10 @@
 namespace App\Jobs;
 
 use App\Models\City;
+use App\Models\Nation;
 use App\Services\NationQueryService;
 use App\Services\PWHelperService;
+use App\Services\World\WorldWriteGuard;
 use Illuminate\Bus\Batchable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
@@ -407,8 +409,11 @@ class SyncNationsJob implements ShouldQueue
      * We keep the loop tight and reuse column templates so we only perform array bookkeeping once
      * per chunk rather than per row.
      */
-    public function handle(): void
+    public function handle(WorldWriteGuard $worldWriteGuard): void
     {
+        $worldWriteGuard->assertCanWrite(Nation::class);
+        $worldWriteGuard->assertCanWrite(City::class);
+
         if ($this->batch()?->cancelled()) {
             Log::info("SyncNationsJob for page {$this->page} was cancelled.");
 

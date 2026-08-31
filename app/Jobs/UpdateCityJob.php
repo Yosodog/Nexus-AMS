@@ -8,6 +8,7 @@ use App\Models\Nation;
 use App\Services\CityQueryService;
 use App\Services\NationProfitabilityService;
 use App\Services\NationQueryService;
+use App\Services\World\WorldWriteGuard;
 use Illuminate\Contracts\Cache\LockTimeoutException;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
@@ -36,8 +37,13 @@ class UpdateCityJob implements ShouldQueue
     /**
      * Execute the job.
      */
-    public function handle(NationProfitabilityService $profitabilityService): void
-    {
+    public function handle(
+        WorldWriteGuard $worldWriteGuard,
+        NationProfitabilityService $profitabilityService,
+    ): void {
+        $worldWriteGuard->assertCanWrite(City::class);
+        $worldWriteGuard->assertCanWrite(Nation::class);
+
         foreach ($this->citiesData as $cityData) {
             try {
                 $cityFromApi = null;
