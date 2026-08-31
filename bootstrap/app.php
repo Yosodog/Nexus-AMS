@@ -61,6 +61,8 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {
+        $exceptions->dontFlash(['api_key', 'mutation_key']);
+
         $isDiscordActorApi = static fn (Request $request): bool => $request->is('api/v1/discord/me/*')
             || $request->is('api/v1/discord/staff/*')
             || $request->is('api/v1/discord/applications/preview')

@@ -12,9 +12,9 @@ class PWMessageService
 
     protected string $endpoint = 'https://politicsandwar.com/api/send-message/';
 
-    public function __construct()
+    public function __construct(?MainBankCredentialService $mainBankCredentialService = null)
     {
-        $apiKey = config('services.pw.api_key');
+        $apiKey = ($mainBankCredentialService ?? app(MainBankCredentialService::class))->apiKey();
 
         $this->apiKey = is_string($apiKey) && $apiKey !== ''
             ? $apiKey

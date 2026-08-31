@@ -5668,6 +5668,21 @@
     },
     {
         "domain": null,
+        "method": "PUT",
+        "uri": "admin/offshores/main-bank/credentials",
+        "name": "admin.offshores.main-bank.credentials.update",
+        "action": "App\\Http\\Controllers\\Admin\\OffshoreController@updateMainBankCredentials",
+        "middleware": [
+            "web",
+            "Illuminate\\Auth\\Middleware\\Authenticate",
+            "App\\Http\\Middleware\\EnsureUserIsVerified",
+            "App\\Http\\Middleware\\DiscordVerifiedMiddleware",
+            "App\\Http\\Middleware\\EnsureMfaConfigured",
+            "App\\Http\\Middleware\\AdminMiddleware"
+        ]
+    },
+    {
+        "domain": null,
         "method": "POST",
         "uri": "admin/offshores/{offshore}/toggle",
         "name": "admin.offshores.toggle",
