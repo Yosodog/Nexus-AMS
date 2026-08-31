@@ -4,6 +4,7 @@ namespace Tests\Feature\Jobs;
 
 use App\Jobs\CreateWarAttackJob;
 use App\Models\Nation;
+use App\Models\WarAttack;
 use App\Services\SubscriptionRecordQuarantine;
 use Illuminate\Support\Facades\Schema;
 use Tests\FeatureTestCase;
@@ -67,6 +68,37 @@ class CreateWarAttackJobTest extends FeatureTestCase
         $this->assertFileExists($this->quarantineFile);
         $this->assertStringContainsString('unknown_war_attack_type', file_get_contents($this->quarantineFile));
         $this->assertStringContainsString('NEW_UPSTREAM_ATTACK', file_get_contents($this->quarantineFile));
+    }
+
+    public function test_pruning_preserves_the_full_raid_leaderboard_window(): void
+    {
+        WarAttack::query()->insert([
+            $this->warAttackRow(7101, now()->subDays(89)),
+            $this->warAttackRow(7102, now()->subDays(91)),
+        ]);
+
+        $job = new CreateWarAttackJob([
+            $this->warAttackRow(7103, now()),
+        ]);
+
+        $job->handle(app(SubscriptionRecordQuarantine::class));
+
+        $this->assertDatabaseHas('war_attacks', ['id' => 7101]);
+        $this->assertDatabaseMissing('war_attacks', ['id' => 7102]);
+        $this->assertDatabaseHas('war_attacks', ['id' => 7103]);
+    }
+
+    /** @return array<string, mixed> */
+    private function warAttackRow(int $id, \DateTimeInterface $date): array
+    {
+        return [
+            'id' => $id,
+            'date' => $date,
+            'att_id' => 1001,
+            'def_id' => 2002,
+            'war_id' => 901,
+            'type' => 'GROUND',
+        ];
     }
 
     private function createTables(): void

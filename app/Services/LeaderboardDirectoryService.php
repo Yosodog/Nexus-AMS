@@ -2,12 +2,13 @@
 
 namespace App\Services;
 
+use App\Models\WarAttack;
 use App\Services\War\RaidLeaderboardService;
 use Carbon\Carbon;
 
 class LeaderboardDirectoryService
 {
-    public const MAX_RAID_WINDOW_DAYS = 90;
+    public const MAX_RAID_WINDOW_DAYS = WarAttack::RETENTION_DAYS;
 
     public function __construct(
         private readonly NationProfitabilityService $nationProfitabilityService,

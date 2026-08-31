@@ -12,6 +12,8 @@ use Throwable;
 
 class WarAttack extends Model
 {
+    public const RETENTION_DAYS = 90;
+
     protected $table = 'war_attacks';
 
     protected $primaryKey = 'id';

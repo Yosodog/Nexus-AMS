@@ -81,7 +81,7 @@ class CreateWarAttackJob implements ShouldQueue
                 }
             }
 
-            WarAttack::pruneOlderThanDays(30);
+            WarAttack::pruneOlderThanDays(WarAttack::RETENTION_DAYS);
         } catch (Throwable $exception) {
             Log::error('Failed to create war attacks', [
                 'war_attack_ids' => collect($this->warAttacks)->pluck('id')->filter()->take(10)->values()->all(),

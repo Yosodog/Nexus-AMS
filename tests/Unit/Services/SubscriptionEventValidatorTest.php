@@ -146,6 +146,31 @@ class SubscriptionEventValidatorTest extends TestCase
         ], $validated->records);
     }
 
+    #[DataProvider('warAttackZeroCitySentinelProvider')]
+    public function test_it_normalizes_pw_war_attack_zero_city_sentinels_to_null(
+        string $attackType,
+        int|string $cityId,
+    ): void {
+        $validated = app(SubscriptionEventValidator::class)->validateAndNormalize('warattack', 'create', [
+            'id' => 401,
+            'att_id' => 101,
+            'def_id' => 102,
+            'war_id' => 301,
+            'type' => $attackType,
+            'city_id' => $cityId,
+        ]);
+
+        $this->assertSame([[
+            'id' => 401,
+            'att_id' => 101,
+            'def_id' => 102,
+            'war_id' => 301,
+            'type' => $attackType,
+            'city_id' => null,
+        ]], $validated->records);
+        $this->assertFileDoesNotExist($this->quarantineFile);
+    }
+
     #[DataProvider('invalidSentinelAdjacentRecordProvider')]
     public function test_it_keeps_negative_identifiers_and_non_sentinel_dates_invalid(
         string $model,
@@ -235,6 +260,15 @@ class SubscriptionEventValidatorTest extends TestCase
         yield 'account create' => ['account', 'create', ['id' => '101']];
         yield 'account update' => ['account', 'update', ['id' => '101']];
         yield 'account delete' => ['account', 'delete', ['id' => '101']];
+    }
+
+    /** @return iterable<string, array{string, int|string}> */
+    public static function warAttackZeroCitySentinelProvider(): iterable
+    {
+        yield 'integer sentinel' => ['VICTORY', 0];
+        yield 'string sentinel' => ['ALLIANCELOOT', '0'];
+        yield 'peace sentinel' => ['PEACE', 0];
+        yield 'fortify sentinel' => ['FORTIFY', 0];
     }
 
     /** @return iterable<string, array{string, array<string, mixed>}> */

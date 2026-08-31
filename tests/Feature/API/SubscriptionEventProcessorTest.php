@@ -153,6 +153,14 @@ class SubscriptionEventProcessorTest extends TestCase
             'air_superiority' => '0',
             'naval_blockade' => '0',
         ]);
+        $processor->process('warattack', 'create', [
+            'id' => '1001',
+            'att_id' => '701',
+            'def_id' => '702',
+            'war_id' => '901',
+            'type' => 'VICTORY',
+            'city_id' => '0',
+        ]);
 
         Queue::assertPushed(UpdateNationJob::class, fn (UpdateNationJob $job): bool => $job->nationsData === [[
             'id' => 701,
@@ -173,6 +181,14 @@ class SubscriptionEventProcessorTest extends TestCase
             'ground_control' => null,
             'air_superiority' => null,
             'naval_blockade' => null,
+        ]]);
+        Queue::assertPushed(CreateWarAttackJob::class, fn (CreateWarAttackJob $job): bool => $job->warAttacks === [[
+            'id' => 1001,
+            'att_id' => 701,
+            'def_id' => 702,
+            'war_id' => 901,
+            'type' => 'VICTORY',
+            'city_id' => null,
         ]]);
     }
 

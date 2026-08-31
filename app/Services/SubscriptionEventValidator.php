@@ -71,6 +71,7 @@ final readonly class SubscriptionEventValidator
     /** @var array<string, list<string>> */
     private const ZERO_AS_NULL_FIELDS = [
         'nation' => ['alliance_id'],
+        'warattack' => ['city_id'],
         'war' => [
             'att_alliance_id',
             'def_alliance_id',
