@@ -1,0 +1,29 @@
+services:
+  mysql:
+    image: mysql:8.4.10@sha256:8dbcf531a03aade657e181b9cf2f1d1803ce621a1d55610cb44cb531ab7d7db6
+    environment:
+      MYSQL_DATABASE: nexus_testing
+      MYSQL_ROOT_HOST: "%"
+      MYSQL_ROOT_PASSWORD_FILE: /run/secrets/mysql_root_password
+    command:
+      - --skip-name-resolve
+      - --local-infile=OFF
+    ports:
+      - "127.0.0.1::3306"
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "--host=127.0.0.1", "--silent"]
+      interval: 2s
+      timeout: 2s
+      retries: 60
+      start_period: 10s
+    secrets:
+      - mysql_root_password
+    volumes:
+      - mysql_data:/var/lib/mysql
+
+secrets:
+  mysql_root_password:
+    file: ${NEXUS_AMS_PHASE2_MYSQL_ROOT_PASSWORD_FILE:?NEXUS_AMS_PHASE2_MYSQL_ROOT_PASSWORD_FILE must name a runtime-generated secret file}
+
+volumes:
+  mysql_data:

@@ -202,6 +202,13 @@ composer test:fast
 npm run build
 ```
 
+The hosted-runtime MySQL closure matrix requires Docker and runs its own digest-pinned,
+loopback-only MySQL fixture with generated runtime credentials:
+
+```bash
+composer test:hosted-mysql
+```
+
 See [AGENTS.md](AGENTS.md) for repository conventions, testing guidance, and security requirements. UI changes should follow [DESIGN_SYSTEM.md](DESIGN_SYSTEM.md).
 
 ## Production and self-hosting

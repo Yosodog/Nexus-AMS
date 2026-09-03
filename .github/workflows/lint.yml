@@ -125,6 +125,25 @@ jobs:
           SUBS_REDIS_TEST_URL: redis://127.0.0.1:6379/15
           TENANT_EVENTS_REDIS_ACL_ADMIN_URL: redis://127.0.0.1:6379/14
 
+  phpunit-hosted-mysql:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    needs: phpunit-fast
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+
+      - name: Install Composer dependencies
+        run: composer install --no-interaction --prefer-dist --no-progress
+
+      - name: Run hosted MySQL Phase 2 closure matrix
+        run: composer test:hosted-mysql
+
   browser-smoke:
     runs-on: ubuntu-latest
     timeout-minutes: 25

@@ -11,6 +11,9 @@ use App\Services\World\WorldModelManifest;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
+use PDO;
+use PDOException;
+use Tests\Integration\Support\HostedMySqlBoundaryFixture;
 use Tests\TestCase;
 
 class HostedFreshMigrationTest extends TestCase
@@ -262,5 +265,104 @@ class HostedFreshMigrationTest extends TestCase
         $this->assertTrue($snapshot['ready']);
         $this->assertSame('compatible', $snapshot['checks']['world_views']['status']);
         $this->assertSame('current', $snapshot['checks']['tenant_schema']['status']);
+
+        $connection = DB::connection('mysql');
+        $fixture = new HostedMySqlBoundaryFixture(
+            admin: $connection->getPdo(),
+            tenantSchema: (string) $connection->getDatabaseName(),
+            connectionHost: (string) config('database.connections.mysql.host'),
+            connectionPort: (int) config('database.connections.mysql.port'),
+        );
+
+        try {
+            $fixture->install();
+            $this->assertHostedDatabaseBoundary($fixture);
+        } finally {
+            $fixture->cleanup();
+        }
+    }
+
+    private function assertHostedDatabaseBoundary(HostedMySqlBoundaryFixture $fixture): void
+    {
+        $applicationGrants = implode("\n", $fixture->applicationGrants());
+        $definerGrants = implode("\n", $fixture->definerGrants());
+        $viewMetadata = $fixture->viewMetadata();
+
+        $this->assertSame([$fixture->applicationHost()], $fixture->applicationAccountHosts());
+        $this->assertStringNotContainsString('%', $fixture->applicationHost());
+        $this->assertStringNotContainsString('_', $fixture->applicationHost());
+        $this->assertTrue($fixture->definerIsLocked());
+        $this->assertStringContainsString($fixture->privateTable(), $applicationGrants);
+        $this->assertStringContainsString('alliances', $applicationGrants);
+        $this->assertStringNotContainsString($fixture->worldSchema(), $applicationGrants);
+        $this->assertStringNotContainsString($fixture->otherTenantSchema(), $applicationGrants);
+        $this->assertStringNotContainsString("@'%'", $applicationGrants);
+        $this->assertStringContainsString($fixture->worldSchema(), $definerGrants);
+        $this->assertStringContainsString('alliances', $definerGrants);
+        $this->assertStringContainsString('id', $definerGrants);
+        $this->assertStringContainsString('name', $definerGrants);
+        $this->assertStringNotContainsString('private_canary', $definerGrants);
+        $this->assertSame($fixture->definerUser().'@localhost', $viewMetadata['definer']);
+        $this->assertSame('DEFINER', $viewMetadata['security_type']);
+        $this->assertStringNotContainsString('private_canary', strtolower($viewMetadata['view_definition']));
+
+        $application = $fixture->applicationConnection();
+        $worldRow = $application->query('SELECT `id`, `name` FROM `alliances`')->fetch(PDO::FETCH_ASSOC);
+
+        $this->assertIsArray($worldRow);
+        $this->assertSame(1001, (int) ($worldRow['id'] ?? 0));
+        $this->assertSame('Hosted Alliance', $worldRow['name'] ?? null);
+        $this->assertArrayNotHasKey('private_canary', $worldRow);
+
+        $application->exec(
+            'INSERT INTO '.$this->qualified($fixture->privateTable()).
+            " (`id`, `private_value`) VALUES (1, 'tenant-private-value')",
+        );
+        $privateValue = $application->query(
+            'SELECT `private_value` FROM '.$this->qualified($fixture->privateTable()),
+        )->fetchColumn();
+
+        $this->assertSame('tenant-private-value', $privateValue);
+        $this->assertSqlDenied(
+            $application,
+            'SELECT `private_canary` FROM '.$this->qualified($fixture->worldSchema(), 'alliances'),
+        );
+        $this->assertSqlDenied(
+            $application,
+            'SELECT `private_value` FROM '.$this->qualified($fixture->otherTenantSchema(), 'private_records'),
+        );
+        $this->assertSqlDenied(
+            $application,
+            'INSERT INTO `alliances` (`id`, `name`) VALUES (1002, \'blocked\')',
+        );
+        $this->assertSqlDenied(
+            $application,
+            'UPDATE `alliances` SET `name` = \'blocked\' WHERE `id` = 1001',
+        );
+        $this->assertSqlDenied($application, 'DELETE FROM `alliances` WHERE `id` = 1001');
+    }
+
+    private function assertSqlDenied(PDO $connection, string $sql): void
+    {
+        try {
+            $connection->query($sql);
+        } catch (PDOException $exception) {
+            $sqlState = is_array($exception->errorInfo) ? ($exception->errorInfo[0] ?? null) : null;
+
+            $this->assertContains($sqlState, ['42000', 'HY000']);
+
+            return;
+        }
+
+        $this->fail('The hosted application principal unexpectedly executed a restricted SQL statement.');
+    }
+
+    private function qualified(string $schema, ?string $object = null): string
+    {
+        if ($object === null) {
+            return '`'.str_replace('`', '``', $schema).'`';
+        }
+
+        return '`'.str_replace('`', '``', $schema).'`.`'.str_replace('`', '``', $object).'`';
     }
 }

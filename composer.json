@@ -70,6 +70,7 @@
         "test:integration": [
             "@php artisan test --testsuite=Integration --fail-on-skipped"
         ],
+        "test:hosted-mysql": "bash tests/Integration/HostedMySql/run.sh",
         "test:browser": [
             "npm run test:browser"
         ]
