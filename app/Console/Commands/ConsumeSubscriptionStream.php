@@ -2,6 +2,7 @@
 
 namespace App\Console\Commands;
 
+use App\Services\RuntimeCapabilities;
 use App\Services\SubscriptionStreamConsumer;
 use Illuminate\Console\Attributes\Description;
 use Illuminate\Console\Attributes\Signature;
@@ -15,8 +16,16 @@ class ConsumeSubscriptionStream extends Command
 {
     private bool $shouldKeepRunning = true;
 
-    public function handle(SubscriptionStreamConsumer $consumer): int
-    {
+    public function handle(
+        RuntimeCapabilities $capabilities,
+        SubscriptionStreamConsumer $consumer,
+    ): int {
+        if (! $capabilities->runsPublicWorldSchedules()) {
+            $this->components->info('Public subscription events are not enabled for this runtime.');
+
+            return self::SUCCESS;
+        }
+
         if (defined('SIGTERM')) {
             $this->trap([SIGTERM, SIGQUIT], function () use ($consumer): void {
                 $this->shouldKeepRunning = false;

@@ -7,6 +7,7 @@ use App\GraphQL\Models\Nation as GraphQLNation;
 use App\Models\Nation;
 use App\Services\AllianceMembershipService;
 use App\Services\NationQueryService;
+use App\Services\RuntimeCapabilities;
 use Closure;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Support\Facades\Log;
@@ -15,7 +16,10 @@ use Throwable;
 
 class InAllianceAndMember implements ValidationRule
 {
-    public function __construct(private readonly ?AllianceMembershipService $membershipService = null) {}
+    public function __construct(
+        private readonly ?AllianceMembershipService $membershipService = null,
+        private readonly ?RuntimeCapabilities $runtimeCapabilities = null,
+    ) {}
 
     /**
      * Run the validation rule.
@@ -35,7 +39,14 @@ class InAllianceAndMember implements ValidationRule
 
         try {
             $nation = $this->fetchLiveNation($nationId);
-            Nation::updateFromAPI($nation);
+            $liveAllianceId = $nation->alliance_id;
+            $liveAlliancePosition = $nation->alliance_position;
+
+            if ($this->capabilities()->writesPublicWorld()) {
+                $storedNation = Nation::updateFromAPI($nation);
+                $liveAllianceId = $storedNation->alliance_id;
+                $liveAlliancePosition = $storedNation->alliance_position;
+            }
         } catch (PWEntityDoesNotExist) {
             $fail('That nation does not exist');
 
@@ -51,8 +62,8 @@ class InAllianceAndMember implements ValidationRule
         }
 
         if (
-            ! $membershipService->contains($nation->alliance_id)
-            || strtoupper((string) $nation->alliance_position) === 'APPLICANT'
+            ! $membershipService->contains($liveAllianceId)
+            || strtoupper((string) $liveAlliancePosition) === 'APPLICANT'
         ) {
             $fail('You are either not in the alliance or you are still an applicant.');
         }
@@ -61,5 +72,10 @@ class InAllianceAndMember implements ValidationRule
     protected function fetchLiveNation(int $nationId): GraphQLNation
     {
         return NationQueryService::getNationById($nationId);
+    }
+
+    private function capabilities(): RuntimeCapabilities
+    {
+        return $this->runtimeCapabilities ?? app(RuntimeCapabilities::class);
     }
 }

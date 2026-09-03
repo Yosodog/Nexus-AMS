@@ -16,7 +16,9 @@ use App\Models\Alliance;
 use App\Models\City;
 use App\Models\Nation;
 use App\Models\War;
+use App\Models\WarAttack;
 use App\Services\TenantEvents\WarDeclarationReactionService;
+use App\Services\World\WorldWriteGuard;
 use InvalidArgumentException;
 
 class SubscriptionEventProcessor
@@ -37,6 +39,8 @@ class SubscriptionEventProcessor
         if ($records === []) {
             return;
         }
+
+        $this->assertPublicWorldWriteAllowed($subscriptionEvent->model);
 
         switch ($subscriptionEvent->key()) {
             case 'nation:create':
@@ -160,6 +164,22 @@ class SubscriptionEventProcessor
     {
         foreach ($records as $record) {
             War::query()->find($record['id'])?->delete();
+        }
+    }
+
+    private function assertPublicWorldWriteAllowed(string $model): void
+    {
+        $modelClass = match ($model) {
+            'nation' => Nation::class,
+            'alliance' => Alliance::class,
+            'city' => City::class,
+            'war' => War::class,
+            'warattack' => WarAttack::class,
+            default => null,
+        };
+
+        if ($modelClass !== null) {
+            app(WorldWriteGuard::class)->assertCanWrite($modelClass);
         }
     }
 }

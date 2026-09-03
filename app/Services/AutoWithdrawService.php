@@ -8,6 +8,7 @@ use App\Exceptions\UserErrorException;
 use App\Models\Account;
 use App\Models\AutoWithdrawSetting;
 use App\Models\Nation;
+use App\Services\World\NationPrivateProjector;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Support\Carbon;
@@ -18,6 +19,11 @@ use Illuminate\Support\Facades\Log;
 
 class AutoWithdrawService
 {
+    public function __construct(
+        private readonly RuntimeCapabilities $runtimeCapabilities,
+        private readonly NationPrivateProjector $nationPrivateProjector,
+    ) {}
+
     /**
      * @return Collection<int, mixed>
      */
@@ -69,8 +75,20 @@ class AutoWithdrawService
             if ($requiresRefresh) {
                 try {
                     $graphQLNation = NationQueryService::getNationById($nation->id);
-                    $nation->updateFromAPI($graphQLNation);
-                    $nation->refresh();
+
+                    if ($this->runtimeCapabilities->writesPublicWorld()) {
+                        $nation->updateFromAPI($graphQLNation);
+                        $nation->refresh();
+                    } else {
+                        $projectedNation = $this->nationPrivateProjector->project($graphQLNation);
+
+                        if ($projectedNation === null) {
+                            return;
+                        }
+
+                        $nation->unsetRelation('resources')->load('resources');
+                    }
+
                     $resources = $nation->resources;
                 } catch (\Throwable) {
                     return;

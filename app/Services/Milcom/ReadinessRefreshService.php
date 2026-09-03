@@ -5,6 +5,8 @@ namespace App\Services\Milcom;
 use App\Domain\Milcom\ReadinessRefreshResult;
 use App\Models\Nation;
 use App\Services\NationQueryService;
+use App\Services\RuntimeCapabilities;
+use App\Services\World\NationPrivateProjector;
 use Carbon\CarbonImmutable;
 use Laravel\Pulse\Facades\Pulse;
 use Laravel\Telescope\Telescope;
@@ -12,6 +14,11 @@ use RuntimeException;
 
 class ReadinessRefreshService
 {
+    public function __construct(
+        private readonly RuntimeCapabilities $runtimeCapabilities,
+        private readonly NationPrivateProjector $nationPrivateProjector,
+    ) {}
+
     /**
      * Refresh the exact nation pool from Politics & War before snapshotting.
      *
@@ -33,8 +40,14 @@ class ReadinessRefreshService
                 $processed = 0;
 
                 foreach ($nations as $graphQlNation) {
-                    $nation = Nation::updateFromAPI($graphQlNation);
-                    $refreshed[] = (int) $nation->id;
+                    $nation = $this->runtimeCapabilities->writesPublicWorld()
+                        ? Nation::updateFromAPI($graphQlNation)
+                        : $this->nationPrivateProjector->project($graphQlNation);
+
+                    if ($nation !== null) {
+                        $refreshed[] = (int) $nation->id;
+                    }
+
                     $processed++;
 
                     if ($processed % 100 === 0) {

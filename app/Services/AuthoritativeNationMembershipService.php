@@ -11,7 +11,10 @@ use Throwable;
 
 class AuthoritativeNationMembershipService
 {
-    public function __construct(private readonly AllianceMembershipService $membershipService) {}
+    public function __construct(
+        private readonly AllianceMembershipService $membershipService,
+        private readonly ?RuntimeCapabilities $runtimeCapabilities = null,
+    ) {}
 
     /**
      * @throws ValidationException
@@ -20,7 +23,14 @@ class AuthoritativeNationMembershipService
     {
         try {
             $nation = $this->fetchNation($nationId);
-            Nation::updateFromAPI($nation);
+            $liveAllianceId = $nation->alliance_id;
+            $liveAlliancePosition = $nation->alliance_position;
+
+            if ($this->capabilities()->writesPublicWorld()) {
+                $storedNation = Nation::updateFromAPI($nation);
+                $liveAllianceId = $storedNation->alliance_id;
+                $liveAlliancePosition = $storedNation->alliance_position;
+            }
         } catch (PWEntityDoesNotExist) {
             throw ValidationException::withMessages([
                 'alliance' => 'The recipient nation no longer exists.',
@@ -36,13 +46,13 @@ class AuthoritativeNationMembershipService
             ]);
         }
 
-        if (! $this->membershipService->contains($nation->alliance_id)) {
+        if (! $this->membershipService->contains($liveAllianceId)) {
             throw ValidationException::withMessages([
                 'alliance' => 'The recipient is no longer a member of the required alliance.',
             ]);
         }
 
-        if ($nation->alliance_position === 'APPLICANT') {
+        if ($liveAlliancePosition === 'APPLICANT') {
             throw ValidationException::withMessages([
                 'alliance' => 'Applicants are not eligible for financial aid.',
             ]);
@@ -52,5 +62,10 @@ class AuthoritativeNationMembershipService
     protected function fetchNation(int $nationId): GraphQlNation
     {
         return NationQueryService::getNationById($nationId);
+    }
+
+    private function capabilities(): RuntimeCapabilities
+    {
+        return $this->runtimeCapabilities ?? app(RuntimeCapabilities::class);
     }
 }

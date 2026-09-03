@@ -15,6 +15,7 @@ use App\Models\RadiationSnapshot;
 use App\Services\Economy\EconomyCalculator;
 use App\Services\Economy\EconomyRules;
 use App\Services\Economy\MarketValuationService;
+use App\Services\World\NationPrivateProjector;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection as EloquentCollection;
@@ -29,6 +30,8 @@ class NationProfitabilityService
         private readonly MarketValuationService $marketValuationService,
         private readonly RadiationService $radiationService,
         private readonly EconomyCalculator $calculator,
+        private readonly RuntimeCapabilities $runtimeCapabilities,
+        private readonly NationPrivateProjector $nationPrivateProjector,
     ) {}
 
     /**
@@ -176,11 +179,19 @@ class NationProfitabilityService
         $result = $this->calculator->calculateNation($calculatorNation, $radiationSnapshot, $prices);
 
         if ($this->isEligibleGraphQLNation($nationFromApi) && $prices->snapshotId !== null) {
-            $storedNation = Nation::updateFromAPI($nationFromApi)->load(['cities', 'military']);
-            $this->assertFreshEconomyContext($storedNation);
-            $storedResult = $this->calculator->calculateNation($storedNation, $radiationSnapshot, $prices);
-            $snapshot = $this->storeSnapshotForNation($storedNation, $storedResult, $radiationSnapshot, $prices);
-            $result['stored_snapshot_updated'] = $snapshot !== null;
+            $storedNation = $this->runtimeCapabilities->writesPublicWorld()
+                ? Nation::updateFromAPI($nationFromApi)
+                : $this->nationPrivateProjector->project($nationFromApi);
+
+            if ($storedNation === null) {
+                $result['stored_snapshot_updated'] = false;
+            } else {
+                $storedNation->load(['cities', 'military']);
+                $this->assertFreshEconomyContext($storedNation);
+                $storedResult = $this->calculator->calculateNation($storedNation, $radiationSnapshot, $prices);
+                $snapshot = $this->storeSnapshotForNation($storedNation, $storedResult, $radiationSnapshot, $prices);
+                $result['stored_snapshot_updated'] = $snapshot !== null;
+            }
         } else {
             $result['stored_snapshot_updated'] = false;
         }
