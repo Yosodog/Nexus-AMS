@@ -4,10 +4,12 @@ namespace Tests\Feature\Workflows;
 
 use App\Jobs\AssignTaxBracket;
 use App\Models\Account;
+use App\Models\Alliance;
 use App\Models\GrowthCircleDistribution;
 use App\Models\GrowthCircleEnrollment;
 use App\Models\Nation;
 use App\Models\NationProfitabilitySnapshot;
+use App\Models\Offshore;
 use App\Models\User;
 use App\Services\GrowthCircleService;
 use App\Services\NationProfitabilityService;
@@ -172,6 +174,62 @@ class GrowthCircleDistributionTest extends TestCase
             'lead' => 0.0,
             'food' => 9.0,
         ], $shortfalls);
+    }
+
+    public function test_offshore_distribution_uses_the_member_alliance_growth_circle_tax_id(): void
+    {
+        config()->set('services.pw.alliance_id', 777);
+        Cache::flush();
+        Cache::forever('alliances:membership:ids', [777, 888]);
+        SettingService::setGrowthCirclesTaxId(555);
+
+        Alliance::factory()->create(['id' => 888]);
+        Offshore::query()->create([
+            'name' => 'Growth Circles Offshore',
+            'alliance_id' => 888,
+            'enabled' => true,
+            'growth_circles_tax_id' => 666,
+            'growth_circles_fallback_tax_id' => 667,
+        ]);
+
+        $nation = Nation::factory()->create([
+            'alliance_id' => 888,
+            'alliance_position' => 'MEMBER',
+            'tax_id' => 666,
+            'vacation_mode_turns' => 0,
+            'color' => 'green',
+            'num_cities' => 5,
+        ]);
+        $account = new Account;
+        $account->nation_id = $nation->id;
+        $account->name = 'Offshore Growth Circles';
+        $account->save();
+
+        GrowthCircleEnrollment::query()->create([
+            'nation_id' => $nation->id,
+            'account_id' => $account->id,
+            'previous_tax_id' => 321,
+            'enrolled_at' => now(),
+        ]);
+
+        $profitability = Mockery::mock(NationProfitabilityService::class);
+        $profitability->shouldReceive('getDailyGrowthCircleShortfalls')
+            ->once()
+            ->andReturn([
+                'coal' => 5.0,
+                'oil' => 0.0,
+                'uranium' => 0.0,
+                'iron' => 0.0,
+                'bauxite' => 0.0,
+                'lead' => 0.0,
+                'food' => 0.0,
+            ]);
+        $this->app->instance(NationProfitabilityService::class, $profitability);
+
+        $result = app(GrowthCircleService::class)->runDailyDistribution('2026-09-04');
+
+        $this->assertSame(['distributed' => 1, 'skipped' => 0, 'failed' => 0], $result);
+        $this->assertSame(5.0, (float) $account->fresh()->coal);
     }
 
     public function test_daily_growth_circle_shortfalls_ignore_stale_current_version_snapshots(): void

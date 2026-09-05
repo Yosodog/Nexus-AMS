@@ -17,6 +17,7 @@ use App\Models\MMRAssistantPurchase;
 use App\Models\MMRConfig;
 use App\Models\MMRSetting;
 use App\Services\AccountService;
+use App\Services\AllianceTaxProgramService;
 use App\Services\AutoWithdrawService;
 use App\Services\DirectDepositService;
 use App\Services\GrowthCircleService;
@@ -426,6 +427,8 @@ class AccountsController extends Controller
 
         $ddEnrollment = DirectDepositEnrollment::with('account')->where('nation_id', $nationId)->first();
         $ddEnrolled = $ddEnrollment !== null;
+        $directDepositAvailable = app(AllianceTaxProgramService::class)
+            ->isDirectDepositEnabled((int) $nation->alliance_id);
 
         $gcEnrollment = GrowthCircleEnrollment::with('account')
             ->where('nation_id', $nationId)
@@ -459,6 +462,7 @@ class AccountsController extends Controller
             'gcEligibility' => $gcEligibility,
             'gcRecentDistributions' => $gcRecentDistributions,
             'ddEnrolled' => $ddEnrolled,
+            'directDepositAvailable' => $directDepositAvailable,
         ];
     }
 }

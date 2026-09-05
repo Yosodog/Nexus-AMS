@@ -109,7 +109,16 @@ class OffshoreController extends Controller
 
     public function update(UpdateOffshoreRequest $request, Offshore $offshore): RedirectResponse
     {
-        $before = $offshore->only(['name', 'alliance_id', 'enabled', 'priority']);
+        $before = $offshore->only([
+            'name',
+            'alliance_id',
+            'enabled',
+            'priority',
+            'direct_deposit_tax_id',
+            'direct_deposit_fallback_tax_id',
+            'growth_circles_tax_id',
+            'growth_circles_fallback_tax_id',
+        ]);
         $beforeGuardrails = $offshore->guardrails()->get()->mapWithKeys(
             fn (OffshoreGuardrail $guardrail) => [$guardrail->resource => $guardrail->minimum_amount]
         )->all();
@@ -118,7 +127,16 @@ class OffshoreController extends Controller
 
         event(new OffshoreCacheInvalidated($offshore->id, 'updated'));
 
-        $after = $offshore->fresh(['guardrails'])->only(['name', 'alliance_id', 'enabled', 'priority']);
+        $after = $offshore->fresh(['guardrails'])->only([
+            'name',
+            'alliance_id',
+            'enabled',
+            'priority',
+            'direct_deposit_tax_id',
+            'direct_deposit_fallback_tax_id',
+            'growth_circles_tax_id',
+            'growth_circles_fallback_tax_id',
+        ]);
         $afterGuardrails = $offshore->guardrails->mapWithKeys(
             fn (OffshoreGuardrail $guardrail) => [$guardrail->resource => $guardrail->minimum_amount]
         )->all();
@@ -162,7 +180,16 @@ class OffshoreController extends Controller
     {
         Gate::authorize('manage-offshores');
 
-        $snapshot = $offshore->only(['name', 'alliance_id', 'enabled', 'priority']);
+        $snapshot = $offshore->only([
+            'name',
+            'alliance_id',
+            'enabled',
+            'priority',
+            'direct_deposit_tax_id',
+            'direct_deposit_fallback_tax_id',
+            'growth_circles_tax_id',
+            'growth_circles_fallback_tax_id',
+        ]);
         $guardrails = $offshore->guardrails()->get()->mapWithKeys(
             fn (OffshoreGuardrail $guardrail) => [$guardrail->resource => $guardrail->minimum_amount]
         )->all();

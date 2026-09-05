@@ -15,7 +15,7 @@
 
 @section('content')
     <x-header title="Offshore Management" separator use-h1>
-        <x-slot:subtitle>Monitor cached balances, adjust guardrails, and trigger manual transfers.</x-slot:subtitle>
+        <x-slot:subtitle>Monitor balances, configure tax programs, adjust guardrails, and trigger manual transfers.</x-slot:subtitle>
         @if($canManageOffshores)
             <x-slot:actions>
                 <button id="offshore-create-modal-open" class="btn btn-primary btn-sm" type="button" data-dialog-open="createOffshoreModal">
@@ -49,6 +49,7 @@
                         <th>Name</th>
                         <th>Alliance</th>
                         <th>Status</th>
+                        <th>Tax Programs</th>
                         <th>Cached Balances</th>
                         <th>Guardrails</th>
                         @if($canManageOffshores)
@@ -102,6 +103,23 @@
                                 <span class="badge {{ $offshore->enabled ? 'badge-success' : 'badge-ghost' }}">
                                     {{ $offshore->enabled ? 'Enabled' : 'Disabled' }}
                                 </span>
+                            </td>
+                            <td>
+                                <div class="flex flex-col gap-2 text-sm">
+                                    @if($offshore->direct_deposit_tax_id)
+                                        <span class="badge badge-outline whitespace-nowrap">
+                                            DD #{{ $offshore->direct_deposit_tax_id }} / #{{ $offshore->direct_deposit_fallback_tax_id }} fallback
+                                        </span>
+                                    @endif
+                                    @if($offshore->growth_circles_tax_id)
+                                        <span class="badge badge-outline whitespace-nowrap">
+                                            GC #{{ $offshore->growth_circles_tax_id }} / #{{ $offshore->growth_circles_fallback_tax_id }} fallback
+                                        </span>
+                                    @endif
+                                    @if(! $offshore->direct_deposit_tax_id && ! $offshore->growth_circles_tax_id)
+                                        <span class="nexus-text-muted">Not configured</span>
+                                    @endif
+                                </div>
                             </td>
                             <td>
                                 @if(! empty($snapshot['balances']))
@@ -204,7 +222,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="{{ $canManageOffshores ? 7 : 6 }}" class="py-6 text-center nexus-text-muted">
+                            <td colspan="{{ $canManageOffshores ? 8 : 7 }}" class="py-6 text-center nexus-text-muted">
                                 No offshores configured yet.
                             </td>
                         </tr>
@@ -334,7 +352,7 @@
                     <div class="flex items-start justify-between gap-4">
                         <div>
                             <h3 class="text-lg font-semibold">Add Offshore</h3>
-                            <p class="text-sm nexus-text-muted">Create an offshore entry and define any transfer guardrails.</p>
+                            <p class="text-sm nexus-text-muted">Create an offshore entry, configure tax programs, and define transfer guardrails.</p>
                         </div>
                         <button id="offshore-create-new-modal-close" type="button" class="btn btn-circle btn-ghost btn-sm" data-dialog-close="createOffshoreModal" aria-label="Close offshore creation dialog">✕</button>
                     </div>
@@ -400,6 +418,22 @@
                             @endif
                         </label>
                     </div>
+
+                    @php
+                        $createTaxProgramValues = collect([
+                            'direct_deposit_tax_id',
+                            'direct_deposit_fallback_tax_id',
+                            'growth_circles_tax_id',
+                            'growth_circles_fallback_tax_id',
+                        ])->mapWithKeys(fn (string $field): array => [
+                            $field => $modalContext === 'create' ? old($field) : null,
+                        ])->all();
+                    @endphp
+                    @include('admin.offshores.partials.tax-program-fields', [
+                        'prefix' => 'offshore-create-new',
+                        'values' => $createTaxProgramValues,
+                        'showErrors' => $modalContext === 'create',
+                    ])
 
                     <fieldset class="space-y-3">
                         <legend class="font-semibold">Guardrails</legend>
@@ -471,7 +505,7 @@
                         <div class="flex items-start justify-between gap-4">
                             <div>
                                 <h3 class="text-lg font-semibold">Edit {{ $offshore->name }}</h3>
-                                <p class="text-sm nexus-text-muted">Update credentials, ordering, and resource guardrails.</p>
+                                <p class="text-sm nexus-text-muted">Update credentials, tax programs, ordering, and resource guardrails.</p>
                             </div>
                             <button id="offshore-edit-{{ $offshore->id }}-modal-close" type="button" class="btn btn-circle btn-ghost btn-sm" data-dialog-close="editOffshoreModal-{{ $offshore->id }}" aria-label="Close offshore editing dialog for {{ $offshore->name }}">✕</button>
                         </div>
@@ -539,6 +573,22 @@
                                 @endif
                             </label>
                         </div>
+
+                        @php
+                            $editTaxProgramValues = collect([
+                                'direct_deposit_tax_id',
+                                'direct_deposit_fallback_tax_id',
+                                'growth_circles_tax_id',
+                                'growth_circles_fallback_tax_id',
+                            ])->mapWithKeys(fn (string $field): array => [
+                                $field => $editContext ? old($field, $offshore->{$field}) : $offshore->{$field},
+                            ])->all();
+                        @endphp
+                        @include('admin.offshores.partials.tax-program-fields', [
+                            'prefix' => 'offshore-edit-'.$offshore->id,
+                            'values' => $editTaxProgramValues,
+                            'showErrors' => $editContext,
+                        ])
 
                         <fieldset class="space-y-3">
                             <legend class="font-semibold">Guardrails</legend>

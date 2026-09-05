@@ -5,12 +5,14 @@ namespace Tests\Unit\Services;
 use App\Events\AllianceExpenseOccurred;
 use App\GraphQL\Models\BankRecord;
 use App\Models\Account;
+use App\Models\Alliance;
 use App\Models\DirectDepositLog;
 use App\Models\DirectDepositTaxBracket;
 use App\Models\MMRAssistantPurchase;
 use App\Models\MMRConfig;
 use App\Models\MMRSetting;
 use App\Models\Nation;
+use App\Models\Offshore;
 use App\Services\DirectDepositService;
 use App\Services\PWHelperService;
 use App\Services\SettingService;
@@ -150,6 +152,40 @@ class DirectDepositIdempotencyTest extends TestCase
         $this->assertSame(1, MMRAssistantPurchase::query()->count());
     }
 
+    public function test_offshore_tax_record_uses_the_receiving_alliance_direct_deposit_tax_id(): void
+    {
+        config()->set('services.pw.alliance_id', 777);
+        SettingService::setDirectDepositId(555);
+        $this->createTenPercentBracket();
+
+        Alliance::factory()->create(['id' => 888]);
+        Offshore::query()->create([
+            'name' => 'Direct Deposit Offshore',
+            'alliance_id' => 888,
+            'enabled' => true,
+            'direct_deposit_tax_id' => 777,
+            'direct_deposit_fallback_tax_id' => 778,
+        ]);
+
+        $nation = Nation::factory()->create([
+            'alliance_id' => 888,
+            'num_cities' => 5,
+        ]);
+        $account = new Account;
+        $account->nation_id = $nation->id;
+        $account->name = 'Offshore Direct Deposit';
+        $account->save();
+
+        $taxRecord = app(DirectDepositService::class)->process(
+            $this->bankRecord($nation, 65432, receiverId: 888, taxId: 777),
+        );
+
+        $this->assertSame(100.0, (float) $taxRecord->money);
+        $this->assertSame(10.0, (float) $taxRecord->coal);
+        $this->assertSame(900.0, (float) $account->fresh()->money);
+        $this->assertSame(90.0, (float) $account->fresh()->coal);
+    }
+
     private function createTenPercentBracket(): DirectDepositTaxBracket
     {
         return DirectDepositTaxBracket::query()->create([
@@ -158,19 +194,24 @@ class DirectDepositIdempotencyTest extends TestCase
         ]);
     }
 
-    private function bankRecord(Nation $nation, int $id, ?string $date = null): BankRecord
-    {
+    private function bankRecord(
+        Nation $nation,
+        int $id,
+        ?string $date = null,
+        int $receiverId = 777,
+        int $taxId = 555,
+    ): BankRecord {
         $record = new BankRecord;
         $record->buildWithJSON((object) [
             'id' => $id,
             'date' => $date ?? now()->toISOString(),
             'sender_id' => $nation->id,
             'sender_type' => 1,
-            'receiver_id' => 777,
+            'receiver_id' => $receiverId,
             'receiver_type' => 2,
             'banker_id' => 1,
             'note' => 'Direct deposit test',
-            'tax_id' => 555,
+            'tax_id' => $taxId,
             ...$this->resourcePayload([
                 'money' => 1000,
                 'coal' => 100,

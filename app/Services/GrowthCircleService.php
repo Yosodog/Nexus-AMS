@@ -21,10 +21,11 @@ class GrowthCircleService
 {
     public function __construct(
         protected AllianceMembershipService $membershipService,
+        protected AllianceTaxProgramService $taxPrograms,
     ) {}
 
     /**
-     * Evaluate the five eligibility gates for Growth Circles.
+     * Evaluate the eligibility gates for Growth Circles.
      *
      * Both enrollment and per-cycle distribution use this method, so
      * a member who later loses eligibility is paused (not auto-disenrolled).
@@ -35,6 +36,10 @@ class GrowthCircleService
     {
         if (! $this->membershipService->contains((int) $nation->alliance_id)) {
             return ['eligible' => false, 'reason' => 'Nation is not in the alliance group.'];
+        }
+
+        if (! $this->taxPrograms->isGrowthCirclesEnabled((int) $nation->alliance_id)) {
+            return ['eligible' => false, 'reason' => 'Growth Circles is not configured for this alliance.'];
         }
 
         if (($nation->alliance_position ?? null) === AlliancePositionEnum::APPLICANT->value) {
@@ -67,7 +72,8 @@ class GrowthCircleService
             throw new UserErrorException('Selected account does not belong to your nation.');
         }
 
-        $taxId = SettingService::getGrowthCirclesTaxId();
+        $allianceId = (int) $nation->alliance_id;
+        $taxId = $this->taxPrograms->getGrowthCirclesTaxId($allianceId);
         if ($taxId <= 0) {
             throw new UserErrorException('Growth Circles is not configured. Contact an admin.');
         }
@@ -105,6 +111,7 @@ class GrowthCircleService
         $mutation = new TaxBracketService;
         $mutation->id = $taxId;
         $mutation->target_id = (int) $nation->id;
+        $mutation->alliance_id = $allianceId;
         $mutation->send();
 
         app(AuditLogger::class)->recordAfterCommit(
@@ -156,12 +163,14 @@ class GrowthCircleService
         }
 
         $targetTaxId = (int) $enrollment->previous_tax_id;
-        $fallbackTaxId = SettingService::getGrowthCirclesFallbackTaxId();
+        $allianceId = (int) $nation->alliance_id;
+        $fallbackTaxId = $this->taxPrograms->getGrowthCirclesFallbackTaxId($allianceId);
 
         try {
             $mutation = new TaxBracketService;
             $mutation->id = $targetTaxId > 0 ? $targetTaxId : $fallbackTaxId;
             $mutation->target_id = (int) $nation->id;
+            $mutation->alliance_id = $allianceId;
             $mutation->send();
         } catch (Throwable $e) {
             Log::warning(
@@ -172,6 +181,7 @@ class GrowthCircleService
                 $fallbackMutation = new TaxBracketService;
                 $fallbackMutation->id = $fallbackTaxId;
                 $fallbackMutation->target_id = (int) $nation->id;
+                $fallbackMutation->alliance_id = $allianceId;
                 $fallbackMutation->send();
             } catch (Throwable $fallbackException) {
                 Log::error(
@@ -251,7 +261,7 @@ class GrowthCircleService
                     return 'skipped';
                 }
 
-                $growthCirclesTaxId = SettingService::getGrowthCirclesTaxId();
+                $growthCirclesTaxId = $this->taxPrograms->getGrowthCirclesTaxId((int) $nation->alliance_id);
                 if ((int) $nation->tax_id !== $growthCirclesTaxId) {
                     Log::warning('growth_circles.skip', [
                         'nation_id' => $nation->id,

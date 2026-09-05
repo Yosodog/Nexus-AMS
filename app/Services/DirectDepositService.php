@@ -22,18 +22,18 @@ use Throwable;
 
 class DirectDepositService
 {
-    public int $ddTaxId;
-
     public function __construct(
-        protected SettingService $settings,
         protected AccountService $accountService,
-    ) {
-        $this->ddTaxId = SettingService::getDirectDepositId();
-    }
+        protected AllianceTaxProgramService $taxPrograms,
+    ) {}
 
     public function process(BankRecord $record): BankRecord
     {
-        if ($record->tax_id != $this->ddTaxId) {
+        $allianceId = (int) $record->receiver_id;
+        $directDepositTaxId = $this->taxPrograms->getDirectDepositTaxId($allianceId);
+
+        if (! $this->taxPrograms->isDirectDepositEnabled($allianceId)
+            || (int) $record->tax_id !== $directDepositTaxId) {
             return $record; // Not a DD tax record
         }
 
@@ -54,7 +54,7 @@ class DirectDepositService
 
         $bracket = $this->getApplicableBracket($nation);
         if (! $bracket) {
-            $fallbackTaxId = SettingService::getDirectDepositFallbackId();
+            $fallbackTaxId = $this->taxPrograms->getDirectDepositFallbackTaxId($allianceId);
             Log::warning(
                 "DirectDeposit: No tax bracket configured for nation {$nation->id}; using fallback tax ID {$fallbackTaxId}"
             );
@@ -271,9 +271,15 @@ class DirectDepositService
 
     public function enroll(Nation $nation, Account $account): void
     {
-        $ddTaxId = $this->ddTaxId;
+        $allianceId = (int) $nation->alliance_id;
+        $ddTaxId = $this->taxPrograms->getDirectDepositTaxId($allianceId);
+        $fallbackTaxId = $this->taxPrograms->getDirectDepositFallbackTaxId($allianceId);
 
-        DB::transaction(function () use ($nation, $account, $ddTaxId): void {
+        if ($ddTaxId <= 0 || $fallbackTaxId <= 0) {
+            throw new UserErrorException('Direct Deposit is not configured for your alliance. Contact an admin.');
+        }
+
+        DB::transaction(function () use ($nation, $account, $ddTaxId, $fallbackTaxId): void {
             $lockedNation = Nation::query()->whereKey($nation->id)->lockForUpdate()->first();
             if (! $lockedNation) {
                 throw new UserErrorException('Nation was not found.');
@@ -297,7 +303,7 @@ class DirectDepositService
             }
 
             $previousTaxId = ((int) $lockedNation->tax_id === $ddTaxId)
-                ? SettingService::getDirectDepositFallbackId()
+                ? $fallbackTaxId
                 : (int) $lockedNation->tax_id;
 
             DirectDepositEnrollment::query()->updateOrCreate(
@@ -313,6 +319,7 @@ class DirectDepositService
         $mutation = new TaxBracketService;
         $mutation->id = $ddTaxId;
         $mutation->target_id = $nation->id;
+        $mutation->alliance_id = $allianceId;
         $mutation->send();
     }
 
@@ -333,13 +340,16 @@ class DirectDepositService
         }
 
         $targetTaxId = $enrollment->previous_tax_id;
-        $fallbackTaxId = SettingService::getDirectDepositFallbackId();
+        $allianceId = (int) $nation->alliance_id;
+        $fallbackTaxId = $this->taxPrograms->getDirectDepositFallbackTaxId($allianceId);
+        $targetTaxId = (int) $targetTaxId > 0 ? (int) $targetTaxId : $fallbackTaxId;
 
         // Attempt to assign the previous tax bracket
         try {
             $mutation = new TaxBracketService;
             $mutation->id = $targetTaxId;
             $mutation->target_id = $nation->id;
+            $mutation->alliance_id = $allianceId;
             $mutation->send();
         } catch (Throwable $e) {
             // Fallback if failure
@@ -350,6 +360,7 @@ class DirectDepositService
             $fallbackMutation = new TaxBracketService;
             $fallbackMutation->id = $fallbackTaxId;
             $fallbackMutation->target_id = $nation->id;
+            $fallbackMutation->alliance_id = $allianceId;
             $fallbackMutation->send();
         }
 

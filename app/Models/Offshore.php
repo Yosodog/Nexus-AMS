@@ -19,6 +19,10 @@ class Offshore extends Model
         'priority',
         'api_key',
         'mutation_key',
+        'direct_deposit_tax_id',
+        'direct_deposit_fallback_tax_id',
+        'growth_circles_tax_id',
+        'growth_circles_fallback_tax_id',
     ];
 
     protected $casts = [
@@ -26,6 +30,10 @@ class Offshore extends Model
         'priority' => 'integer',
         'api_key' => 'encrypted',
         'mutation_key' => 'encrypted',
+        'direct_deposit_tax_id' => 'integer',
+        'direct_deposit_fallback_tax_id' => 'integer',
+        'growth_circles_tax_id' => 'integer',
+        'growth_circles_fallback_tax_id' => 'integer',
     ];
 
     protected $hidden = [

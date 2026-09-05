@@ -7,6 +7,7 @@ use App\Http\Requests\Admin\SaveGrowthCirclesSettingsRequest;
 use App\Models\GrowthCircleDistribution;
 use App\Models\GrowthCircleEnrollment;
 use App\Models\Nation;
+use App\Services\AllianceTaxProgramService;
 use App\Services\AuditLogger;
 use App\Services\GrowthCircleService;
 use App\Services\SettingService;
@@ -20,6 +21,7 @@ class GrowthCirclesController extends Controller
     public function __construct(
         protected GrowthCircleService $growthCircles,
         protected AuditLogger $auditLogger,
+        protected AllianceTaxProgramService $taxPrograms,
     ) {}
 
     public function index(): View
@@ -159,7 +161,8 @@ class GrowthCirclesController extends Controller
         $this->authorize('manage-growth-circles');
         $this->authorize('view-diagnostic-info');
 
-        $taxId = SettingService::getGrowthCirclesTaxId();
+        $allianceId = (int) $nation->alliance_id;
+        $taxId = $this->taxPrograms->getGrowthCirclesTaxId($allianceId);
         if ($taxId <= 0) {
             return back()->with([
                 'alert-message' => 'Growth Circles tax bracket is not configured.',
@@ -170,6 +173,7 @@ class GrowthCirclesController extends Controller
         $mutation = new TaxBracketService;
         $mutation->id = $taxId;
         $mutation->target_id = (int) $nation->id;
+        $mutation->alliance_id = $allianceId;
         $mutation->send();
 
         $this->auditLogger->success(
