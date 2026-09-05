@@ -1,6 +1,9 @@
 @can('view-dd')
     {{-- DD Settings --}}
     <x-card title="Direct Deposit Settings" class="mb-4">
+        <p class="mb-4 text-sm nexus-text-muted">
+            These bracket IDs apply to the primary alliance. Configure alliance-specific IDs on each offshore's settings.
+        </p>
         <form method="POST" action="{{ route('admin.dd.settings') }}">
             @csrf
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">

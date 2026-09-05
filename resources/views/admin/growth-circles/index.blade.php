@@ -9,6 +9,9 @@
 
             {{-- Settings card --}}
             <x-card id="growth-circles-settings" title="Growth Circles Settings" class="scroll-mt-24">
+                <p class="mb-4 text-sm nexus-text-muted">
+                    These bracket IDs apply to the primary alliance. Configure alliance-specific IDs on each offshore's settings.
+                </p>
                 <form method="POST" action="{{ route('admin.growth-circles.settings') }}">
                     @csrf
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">

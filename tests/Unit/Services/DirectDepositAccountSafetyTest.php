@@ -41,6 +41,9 @@ class DirectDepositAccountSafetyTest extends TestCase
 
     public function test_direct_deposit_enroll_rejects_frozen_accounts_before_tax_mutation(): void
     {
+        SettingService::setDirectDepositId(555);
+        SettingService::setDirectDepositFallbackId(556);
+
         $nation = Nation::factory()->create();
         $frozenAccount = $this->createAccount($nation, 'Frozen', frozen: true);
 
