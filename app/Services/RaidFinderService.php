@@ -17,6 +17,7 @@ class RaidFinderService
         protected LootCalculatorService $lootCalculator,
         protected AllianceMembershipService $membershipService,
         protected RaidPolicyService $raidPolicy,
+        protected RaidTargetActivityFilter $activityFilter,
     ) {}
 
     /**
@@ -36,7 +37,9 @@ class RaidFinderService
         $maxScore = $ownNation->score * 1.75;
 
         // Load all raidable nations
-        $nations = $this->queryRaidableNations($minScore, $maxScore);
+        $nations = $this->activityFilter->filter(
+            $this->queryRaidableNations($minScore, $maxScore),
+        );
 
         $targets = collect();
 

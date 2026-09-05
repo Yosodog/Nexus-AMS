@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Admin\UpdateRaidFinderSettingsRequest;
 use App\Models\NoRaidList;
 use App\Services\AuditLogger;
 use App\Services\RaidFinderCache;
@@ -39,6 +40,8 @@ class RaidController extends Controller
         return view('admin.defense.raids', [
             'noRaidList' => $noRaidList,
             'topCap' => $topCap,
+            'activityCityThreshold' => SettingService::getRaidActivityCityThreshold(),
+            'minimumInactiveTurns' => SettingService::getRaidMinimumInactiveTurns(),
         ]);
     }
 
@@ -105,34 +108,51 @@ class RaidController extends Controller
     }
 
     /**
-     * @return RedirectResponse
-     *
      * @throws AuthorizationException
      */
-    public function updateTopCap(Request $request)
+    public function updateTopCap(UpdateRaidFinderSettingsRequest $request): RedirectResponse
     {
         $this->authorize('manage-raids');
 
-        $previous = SettingService::getTopRaidable();
-        $request->validate(['top_cap' => 'required|integer|min:1|max:1000']);
+        $validated = $request->validated();
+        $previous = [
+            'raid_top_alliance_cap' => SettingService::getTopRaidable(),
+            'raid_activity_city_threshold' => SettingService::getRaidActivityCityThreshold(),
+            'raid_minimum_inactive_turns' => SettingService::getRaidMinimumInactiveTurns(),
+        ];
+        $updated = [
+            'raid_top_alliance_cap' => (int) $validated['top_cap'],
+            'raid_activity_city_threshold' => (int) ($validated['raid_activity_city_threshold'] ?? $previous['raid_activity_city_threshold']),
+            'raid_minimum_inactive_turns' => (int) ($validated['raid_minimum_inactive_turns'] ?? $previous['raid_minimum_inactive_turns']),
+        ];
 
-        SettingService::setTopRaidable($request->input('top_cap'));
+        SettingService::setTopRaidable($updated['raid_top_alliance_cap']);
+        SettingService::setRaidActivityCityThreshold($updated['raid_activity_city_threshold']);
+        SettingService::setRaidMinimumInactiveTurns($updated['raid_minimum_inactive_turns']);
         $this->raidFinderCache->invalidatePolicy();
 
         $this->auditLogger->success(
             category: 'settings',
-            action: 'raid_top_cap_updated',
+            action: 'raid_finder_settings_updated',
             context: [
                 'changes' => [
                     'raid_top_alliance_cap' => [
-                        'from' => $previous,
-                        'to' => (int) $request->input('top_cap'),
+                        'from' => $previous['raid_top_alliance_cap'],
+                        'to' => $updated['raid_top_alliance_cap'],
+                    ],
+                    'raid_activity_city_threshold' => [
+                        'from' => $previous['raid_activity_city_threshold'],
+                        'to' => $updated['raid_activity_city_threshold'],
+                    ],
+                    'raid_minimum_inactive_turns' => [
+                        'from' => $previous['raid_minimum_inactive_turns'],
+                        'to' => $updated['raid_minimum_inactive_turns'],
                     ],
                 ],
             ],
-            message: 'Raid top cap updated.'
+            message: 'Raid finder settings updated.'
         );
 
-        return redirect()->route('admin.raids.index')->with('alert-message', 'Top alliance cap updated')->with('alert-type', 'success');
+        return redirect()->route('admin.raids.index')->with('alert-message', 'Raid finder settings updated')->with('alert-type', 'success');
     }
 }
