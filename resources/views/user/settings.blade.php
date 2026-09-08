@@ -691,7 +691,7 @@
                             </div>
 
                             <p class="text-sm text-base-content/70">
-                                Send <span class="font-mono bg-base-200 px-2 py-1 rounded">/verify {{ $discordVerificationToken }}</span> in Discord or use the verification page to complete linking.
+                                In Discord, type <span class="font-mono bg-base-200 px-2 py-1 rounded">/verify</span>, select the command, then paste the verification token above into the <span class="font-mono">code</span> field.
                             </p>
 
                             <div class="flex flex-wrap gap-3">

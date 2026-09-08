@@ -1,7 +1,6 @@
 @extends('layouts.public')
 
 @php
-    $discordCommand = $verificationToken ? '/verify '.$verificationToken : null;
     $pageBadge = $discordAccount
         ? 'Discord connection · Complete'
         : ($discordRequired ? 'Access check · Required' : 'Account connection · Optional');
@@ -34,20 +33,20 @@
             @else
                 <h2 class="font-display text-2xl font-bold tracking-[-0.02em]">Connect in Discord</h2>
                 <p class="mt-3 text-sm leading-6 text-neutral-content/70">
-                    The verification command is unique to your signed-in account. Do not share it with anyone else.
+                    The verification code is unique to your signed-in account. Do not share it with anyone else.
                 </p>
 
                 <ol class="mt-7 space-y-5">
                     <x-auth.journey-step
                         number="1"
                         state="current"
-                        title="Copy the command"
-                        description="Use the complete command shown on this page."
+                        title="Type /verify"
+                        description="In Discord, type /verify and select the bot command."
                     />
                     <x-auth.journey-step
                         number="2"
-                        title="Send it in Discord"
-                        description="Run the command where your alliance bot accepts verification."
+                        title="Enter the code"
+                        description="Paste the verification code from this page into the code field, then submit the command."
                     />
                     <x-auth.journey-step
                         number="3"
@@ -126,22 +125,22 @@
                 </div>
 
                 <section aria-labelledby="discord-command-title">
-                    <h2 id="discord-command-title" class="font-display text-xl font-bold text-base-content">Your Discord command</h2>
+                    <h2 id="discord-command-title" class="font-display text-xl font-bold text-base-content">Your verification code</h2>
                     <p class="mt-2 text-sm leading-6 text-base-content/70">
-                        Send this exact command in Discord. The command links the Discord account that sends it.
+                        In Discord, type <span class="font-mono">/verify</span>, select the command, then paste this code into the <span class="font-mono">code</span> field.
                     </p>
 
                     <div class="mt-4 rounded-lg bg-neutral p-4 text-neutral-content">
-                        <p class="text-xs font-medium text-neutral-content/75">Verification command</p>
+                        <p class="text-xs font-medium text-neutral-content/75">Verification code</p>
                         <div class="mt-2 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                            <code class="min-w-0 break-all font-mono text-base font-semibold">{{ $discordCommand }}</code>
+                            <code class="min-w-0 break-all font-mono text-base font-semibold">{{ $verificationToken }}</code>
                             <button
                                 type="button"
                                 class="btn btn-outline shrink-0 border-neutral-content/35 text-neutral-content hover:border-neutral-content hover:bg-neutral-content hover:text-neutral"
-                                data-copy-token="{{ $discordCommand }}"
+                                data-copy-token="{{ $verificationToken }}"
                                 aria-describedby="copy-token-status"
                             >
-                                <span data-copy-label>Copy Discord command</span>
+                                <span data-copy-label>Copy verification code</span>
                             </button>
                         </div>
                         <p id="copy-token-status" class="mt-2 min-h-5 text-xs text-neutral-content/70" aria-live="polite" aria-atomic="true"></p>
@@ -156,13 +155,13 @@
                 </div>
 
                 <section class="border-t border-base-300 pt-6" aria-labelledby="new-discord-command-title">
-                    <h2 id="new-discord-command-title" class="font-display text-lg font-bold text-base-content">Command not working?</h2>
+                    <h2 id="new-discord-command-title" class="font-display text-lg font-bold text-base-content">Code not working?</h2>
                     <p class="mt-2 text-sm leading-6 text-base-content/70">
-                        Generate a new command if this one was exposed or rejected. The current command will stop working.
+                        Generate a new code if this one was exposed or rejected. The current code will stop working.
                     </p>
                     <form method="POST" action="{{ route('discord.token.regenerate') }}" class="mt-4">
                         @csrf
-                        <button type="submit" class="btn btn-outline">Generate a new Discord command</button>
+                        <button type="submit" class="btn btn-outline">Generate a new verification code</button>
                     </form>
                 </section>
             @endif
@@ -185,14 +184,14 @@
                 const originalLabel = label.textContent;
 
                 button.addEventListener('click', async () => {
-                    const command = button.getAttribute('data-copy-token');
+                    const verificationCode = button.getAttribute('data-copy-token');
 
                     try {
                         if (navigator.clipboard && window.isSecureContext) {
-                            await navigator.clipboard.writeText(command);
+                            await navigator.clipboard.writeText(verificationCode);
                         } else {
                             const textArea = document.createElement('textarea');
-                            textArea.value = command;
+                            textArea.value = verificationCode;
                             textArea.setAttribute('readonly', '');
                             textArea.style.position = 'fixed';
                             textArea.style.opacity = '0';
@@ -212,15 +211,15 @@
                             }
                         }
 
-                        label.textContent = 'Command copied';
-                        status.textContent = 'Discord command copied to your clipboard.';
+                        label.textContent = 'Code copied';
+                        status.textContent = 'Verification code copied to your clipboard.';
 
                         window.setTimeout(() => {
                             label.textContent = originalLabel;
                         }, 2000);
                     } catch {
                         label.textContent = originalLabel;
-                        status.textContent = 'Copy failed. Select the command above and copy it manually.';
+                        status.textContent = 'Copy failed. Select the code above and copy it manually.';
                     }
                 });
             });
