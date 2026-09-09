@@ -154,11 +154,11 @@
         @endif
     </section>
 
-    <details id="application-settings" class="nexus-panel scroll-mt-24" @if($errors->any()) open @endif>
+    <details id="application-settings" class="nexus-panel scroll-mt-24" open>
         <summary class="flex cursor-pointer list-none items-center justify-between gap-4 px-5 py-4 marker:hidden">
             <span>
-                <span class="block font-semibold">Discord and alliance settings</span>
-                <span class="mt-0.5 block text-sm nexus-text-muted">Roles, interview routing, alliance position, and approval announcements.</span>
+                <span class="block font-semibold">Application intake and Discord settings</span>
+                <span class="mt-0.5 block text-sm nexus-text-muted">Open or pause new applications, then configure roles, interview routing, alliance position, and approval announcements.</span>
             </span>
             <span class="flex items-center gap-2">
                 <span class="nexus-status {{ $canManage ? 'nexus-status--neutral' : 'nexus-status--warning' }}">{{ $canManage ? 'Configurable' : 'View only' }}</span>
@@ -171,14 +171,14 @@
 
             <div class="nexus-form-grid">
                 <div>
-                    <x-toggle
+                    <x-form.toggle
                         id="applications_enabled"
-                        label="Enable application system"
-                        hint="Disable to temporarily pause new Discord applications."
+                        label="Accept new applications"
+                        hint="Turn this off to pause new Discord applications without changing the rest of the workflow configuration."
                         name="applications_enabled"
                         value="1"
                         :disabled="! $canManage"
-                        @checked(old('applications_enabled', $settings['enabled']))
+                        :checked="old('applications_enabled', $settings['enabled'])"
                     />
                 </div>
                 <x-input

@@ -9,13 +9,13 @@
         <form method="POST" action="{{ route('admin.beige-alerts.settings') }}" class="grid gap-4 md:grid-cols-[minmax(0,1fr)_minmax(0,2fr)_auto] md:items-end">
             @csrf
             <input type="hidden" name="beige_alerts_enabled" value="0">
-            <x-toggle
+            <x-form.toggle
                 id="beige_alerts_enabled"
                 label="Enable beige alerts"
                 hint="Schedules at :50 on odd hours and :10 on even hours."
                 name="beige_alerts_enabled"
                 value="1"
-                @checked(old('beige_alerts_enabled', $enabled))
+                :checked="old('beige_alerts_enabled', $enabled)"
             />
             <x-input
                 id="beige_alerts_discord_channel_id"

@@ -74,8 +74,8 @@ final class AdminNavigationCatalog
                 'Targets & readiness' => 'o-shield-exclamation',
             ]),
             $this->group('internal-affairs', 'Internal Affairs', 'o-users', 'department', [
-                $this->item('applications', 'Applications', 'o-document-text', route('admin.applications.index'), $this->request->routeIs('admin.applications.*'), $pendingCounts['applications'] ?? 0, $user->can('view-applications'), 'recruitment decisions', 'Membership'),
-                $this->item('recruitment', 'Recruitment', 'o-envelope', route('admin.recruitment.index'), $this->request->routeIs('admin.recruitment.*'), visible: $user->can('view-recruitment'), keywords: 'prospects messages', section: 'Membership'),
+                $this->item('applications', 'Applications', 'o-document-text', route('admin.applications.index'), $this->request->routeIs('admin.applications.*'), $pendingCounts['applications'] ?? 0, $user->can('view-applications'), 'recruitment decisions intake open pause enable disable', 'Membership'),
+                $this->item('recruitment', 'Recruitment', 'o-envelope', route('admin.recruitment.index'), $this->request->routeIs('admin.recruitment.*'), visible: $user->can('view-recruitment'), keywords: 'prospects messages automatic outreach enable disable', section: 'Membership'),
                 $this->item('members', 'Members', 'o-users', route('admin.members'), $this->request->routeIs('admin.members*'), visible: $user->can('view-members'), keywords: 'nations leaders', section: 'Membership'),
                 $this->item('cities', 'Cities', 'o-building-office-2', route('admin.cities.index'), $this->request->routeIs('admin.cities.*'), visible: $user->can('view-members'), keywords: 'infrastructure land', section: 'Membership'),
                 $this->item('audits', 'Audits', 'o-shield-check', route('admin.audits.index'), $this->request->routeIs('admin.audits.index', 'admin.audits.rules.*', 'admin.audits.results.*'), $pendingCounts['audit_remediation'] ?? 0, $user->can('view-audits'), 'compliance findings remediation', 'Governance & compliance'),

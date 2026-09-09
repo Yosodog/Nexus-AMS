@@ -5,6 +5,13 @@
 @section('content')
     <x-header title="Recruitment Messaging" separator use-h1>
         <x-slot:subtitle>Manage the primary and follow-up messages sent to eligible recruits.</x-slot:subtitle>
+        <x-slot:actions>
+            <x-nexus-status
+                :label="$recruitmentEnabled ? 'Automatic outreach active' : 'Automatic outreach paused'"
+                :intent="$recruitmentEnabled ? 'active' : 'warning'"
+                :icon="$recruitmentEnabled ? 'bolt' : 'minus-circle'"
+            />
+        </x-slot:actions>
     </x-header>
 
     <div id="recruitment-settings" class="grid scroll-mt-24 gap-6 lg:grid-cols-[minmax(0,2fr)_minmax(320px,1fr)]">
@@ -12,12 +19,13 @@
             <form method="POST" action="{{ route('admin.recruitment.update') }}" class="space-y-5">
                 @csrf
 
-                <x-toggle
+                <x-form.toggle
                     id="recruitment_enabled"
                     label="Enable automatic recruitment messages"
+                    hint="When enabled, scheduled recruitment cycles send the primary message to eligible nations."
                     name="recruitment_enabled"
                     value="1"
-                    @checked(old('recruitment_enabled', $recruitmentEnabled))
+                    :checked="old('recruitment_enabled', $recruitmentEnabled)"
                 />
 
                 <x-input
@@ -42,12 +50,12 @@
                     required
                 >{{ old('primary_message', $primaryMessage) }}</x-textarea>
 
-                <x-toggle
+                <x-form.toggle
                     id="follow_up_enabled"
                     :label="'Enable follow-up message (sent ' . \App\Services\RecruitmentService::FOLLOW_UP_DELAY_HOURS . ' hours later)'"
                     name="follow_up_enabled"
                     value="1"
-                    @checked(old('follow_up_enabled', $followUpEnabled))
+                    :checked="old('follow_up_enabled', $followUpEnabled)"
                 />
 
                 <x-input

@@ -124,11 +124,11 @@
                             @endcan
 
                             @can('view-applications')
-                                <x-admin.settings-link :href="route('admin.applications.index') . '#application-settings'" category="Applications" title="Application intake and Discord" description="Application availability, role mapping, announcement channel, and approval message." keywords="recruit applicants interview" external />
+                                <x-admin.settings-link :href="route('admin.applications.index') . '#application-settings'" category="Applications" title="Application intake and Discord" description="Open or pause new applications, configure role mapping, choose the announcement channel, and edit the approval message." keywords="recruit applicants interview enable disable intake availability" external />
                             @endcan
 
                             @can('view-recruitment')
-                                <x-admin.settings-link :href="route('admin.recruitment.index') . '#recruitment-settings'" category="Recruitment" title="Recruitment messaging" description="Recruitment availability, initial message, and follow-up content." keywords="outreach messages" external />
+                                <x-admin.settings-link :href="route('admin.recruitment.index') . '#recruitment-settings'" category="Recruitment" title="Automatic recruitment messaging" description="Enable or pause automatic outreach, then edit the initial message and follow-up content." keywords="recruitment outreach messages enable disable automation availability" external />
                             @endcan
 
                             @can('view-accounts')
