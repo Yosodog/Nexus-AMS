@@ -8,6 +8,7 @@ use App\Enums\ProcessHeartbeatRole;
 use App\Jobs\DispatchBeigeTurnAlertsJob;
 use App\Jobs\DispatchScheduledAlertBatchesJob;
 use App\Jobs\EvaluateAlertSubscriptionsJob;
+use App\Jobs\EvaluateResourceShortfallAlertsJob;
 use App\Jobs\ExpireFederationResourcesJob;
 use App\Jobs\PruneAlertHistoryJob;
 use App\Jobs\PruneFederationMessagesJob;
@@ -223,6 +224,10 @@ final readonly class NexusScheduleRegistrar
         $schedule->job(new EvaluateAlertSubscriptionsJob, 'sync')
             ->hourlyAt(25)
             ->withoutOverlapping(55)
+            ->onOneServer();
+        $schedule->job(new EvaluateResourceShortfallAlertsJob, 'sync')
+            ->everyTenMinutes()
+            ->withoutOverlapping(9)
             ->onOneServer();
         $schedule->job(new DispatchScheduledAlertBatchesJob, 'default')
             ->everyMinute()

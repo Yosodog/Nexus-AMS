@@ -17,6 +17,7 @@ class AlertUserSetting extends Model
         'default_digest_time' => '09:00:00',
         'default_digest_weekday' => 1,
         'discord_enabled' => false,
+        'resource_shortfall_alerts_enabled' => false,
     ];
 
     protected $fillable = [
@@ -27,6 +28,7 @@ class AlertUserSetting extends Model
         'default_digest_time',
         'default_digest_weekday',
         'discord_enabled',
+        'resource_shortfall_alerts_enabled',
     ];
 
     protected function casts(): array
@@ -34,6 +36,7 @@ class AlertUserSetting extends Model
         return [
             'default_digest_weekday' => 'integer',
             'discord_enabled' => 'boolean',
+            'resource_shortfall_alerts_enabled' => 'boolean',
         ];
     }
 

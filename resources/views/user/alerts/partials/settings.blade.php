@@ -29,6 +29,15 @@
             <input id="global-discord-enabled" type="checkbox" name="discord_enabled" value="1" class="toggle toggle-primary" @checked($useSettingsOldInput ? (bool) old('discord_enabled') : $settings->discord_enabled) @disabled(! $discordLinked)>
         </label>
 
+        <label class="flex cursor-pointer items-start justify-between gap-4 rounded-box bg-base-200/60 p-3" for="resource-shortfall-alerts-enabled">
+            <span>
+                <span class="block text-sm font-medium">Resource shortfall alerts</span>
+                <span class="block text-xs text-base-content/60">Send a Discord DM when your nation cannot cover the next turn, with an optional 12-turn withdrawal.</span>
+            </span>
+            <input type="hidden" name="resource_shortfall_alerts_enabled" value="0">
+            <input id="resource-shortfall-alerts-enabled" type="checkbox" name="resource_shortfall_alerts_enabled" value="1" class="toggle toggle-primary" @checked($useSettingsOldInput ? (bool) old('resource_shortfall_alerts_enabled') : $settings->resource_shortfall_alerts_enabled) @disabled(! $discordLinked)>
+        </label>
+
         <div class="grid gap-2">
             <label class="text-sm font-medium" for="account-alert-timezone">Timezone</label>
             <input id="account-alert-timezone" name="timezone" value="{{ $useSettingsOldInput ? old('timezone', $settings->timezone) : $settings->timezone }}" maxlength="64" list="alert-timezones" class="input w-full" data-account-timezone data-propose-browser-timezone="{{ $settings->exists ? 'false' : 'true' }}" required>

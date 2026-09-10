@@ -6,6 +6,7 @@ use App\DataTransferObjects\AllianceFinanceData;
 use App\Events\AllianceExpenseOccurred;
 use App\Models\Account;
 use App\Models\AllianceFinanceEntry;
+use App\Models\DiscordActionIntent;
 use App\Models\MMRAssistantPurchase;
 use App\Models\MMRConfig;
 use App\Models\MMRSetting;
@@ -476,6 +477,68 @@ final readonly class MMRAssistantService
         }
 
         return $log;
+    }
+
+    /**
+     * Purchase the quoted resources from an already locked account.
+     * The caller must wrap this operation and the corresponding withdrawal in one transaction.
+     *
+     * @param  array<string, array{qty:string,ppu:string,spend:string}>  $lines
+     */
+    public function applyAlertOnDemandPurchase(
+        Account $account,
+        DiscordActionIntent $intent,
+        array $lines,
+        string $totalSpend,
+        CarbonInterface $projectionCalculatedAt,
+    ): MMRAssistantPurchase {
+        if (bccomp($totalSpend, '0.00', 2) <= 0) {
+            throw new \InvalidArgumentException('An on-demand MMR purchase must have a positive cost.');
+        }
+
+        if (bccomp((string) $account->money, $totalSpend, 2) < 0) {
+            throw new \InvalidArgumentException('The selected account does not have enough money for this purchase.');
+        }
+
+        $account->money = bcsub((string) $account->money, $totalSpend, 2);
+        foreach ($lines as $resource => $line) {
+            if (! in_array($resource, PWHelperService::resources(false), true)) {
+                throw new \InvalidArgumentException('The MMR purchase contains an unsupported resource.');
+            }
+
+            $account->{$resource} = bcadd((string) $account->{$resource}, $line['qty'], 2);
+        }
+        $account->save();
+
+        $purchase = new MMRAssistantPurchase;
+        $purchase->account_id = $account->id;
+        $purchase->discord_action_intent_id = $intent->id;
+        $purchase->total_spent = $totalSpend;
+        $purchase->allocation_mode = MMRAssistantPurchase::ALLOCATION_MODE_ALERT_ON_DEMAND;
+        $purchase->projection_calculated_at = $projectionCalculatedAt;
+        foreach ($lines as $resource => $line) {
+            $purchase->setAttribute($resource, $line['qty']);
+            $purchase->setAttribute("{$resource}_ppu", $line['ppu']);
+        }
+        $purchase->save();
+
+        $floatLines = collect($lines)
+            ->map(fn (array $line): array => [
+                ...$line,
+                'qty' => (float) $line['qty'],
+                'ppu' => (float) $line['ppu'],
+                'spend' => (float) $line['spend'],
+            ])
+            ->all();
+        $this->db->afterCommit(fn () => $this->dispatchMmrExpenseEvent(
+            $account,
+            (float) $totalSpend,
+            $floatLines,
+            $purchase,
+            null,
+        ));
+
+        return $purchase;
     }
 
     /**

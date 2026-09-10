@@ -2796,6 +2796,32 @@
     },
     {
         "domain": null,
+        "method": "GET|HEAD",
+        "uri": "api/v1/discord/me/resource-shortfall-alerts/{occurrence}/options",
+        "name": null,
+        "action": "App\\Http\\Controllers\\API\\Discord\\ResourceShortfallController@options",
+        "middleware": [
+            "api",
+            "App\\Http\\Middleware\\ValidateDiscordBotAPI",
+            "App\\Http\\Middleware\\VerifyDiscordInteraction",
+            "App\\Http\\Middleware\\ResolveDiscordActor"
+        ]
+    },
+    {
+        "domain": null,
+        "method": "GET|HEAD",
+        "uri": "api/v1/discord/me/resource-shortfall-fulfillments/{intent}",
+        "name": null,
+        "action": "App\\Http\\Controllers\\API\\Discord\\ResourceShortfallController@review",
+        "middleware": [
+            "api",
+            "App\\Http\\Middleware\\ValidateDiscordBotAPI",
+            "App\\Http\\Middleware\\VerifyDiscordInteraction",
+            "App\\Http\\Middleware\\ResolveDiscordActor"
+        ]
+    },
+    {
+        "domain": null,
         "method": "POST",
         "uri": "api/v1/discord/me/accounts/{account}/deposit-requests",
         "name": null,
@@ -2842,6 +2868,48 @@
         "uri": "api/v1/discord/me/withdrawals/{intent}/cancel",
         "name": null,
         "action": "App\\Http\\Controllers\\API\\Discord\\FinanceController@cancelWithdrawal",
+        "middleware": [
+            "api",
+            "App\\Http\\Middleware\\ValidateDiscordBotAPI",
+            "App\\Http\\Middleware\\VerifyDiscordInteraction",
+            "App\\Http\\Middleware\\ResolveDiscordActor",
+            "App\\Http\\Middleware\\EnsureDiscordInteractionIdempotency"
+        ]
+    },
+    {
+        "domain": null,
+        "method": "POST",
+        "uri": "api/v1/discord/me/resource-shortfall-alerts/{occurrence}/drafts",
+        "name": null,
+        "action": "App\\Http\\Controllers\\API\\Discord\\ResourceShortfallController@createDraft",
+        "middleware": [
+            "api",
+            "App\\Http\\Middleware\\ValidateDiscordBotAPI",
+            "App\\Http\\Middleware\\VerifyDiscordInteraction",
+            "App\\Http\\Middleware\\ResolveDiscordActor",
+            "App\\Http\\Middleware\\EnsureDiscordInteractionIdempotency"
+        ]
+    },
+    {
+        "domain": null,
+        "method": "POST",
+        "uri": "api/v1/discord/me/resource-shortfall-fulfillments/{intent}/confirm",
+        "name": null,
+        "action": "App\\Http\\Controllers\\API\\Discord\\ResourceShortfallController@confirm",
+        "middleware": [
+            "api",
+            "App\\Http\\Middleware\\ValidateDiscordBotAPI",
+            "App\\Http\\Middleware\\VerifyDiscordInteraction",
+            "App\\Http\\Middleware\\ResolveDiscordActor",
+            "App\\Http\\Middleware\\EnsureDiscordInteractionIdempotency"
+        ]
+    },
+    {
+        "domain": null,
+        "method": "POST",
+        "uri": "api/v1/discord/me/resource-shortfall-fulfillments/{intent}/cancel",
+        "name": null,
+        "action": "App\\Http\\Controllers\\API\\Discord\\ResourceShortfallController@cancel",
         "middleware": [
             "api",
             "App\\Http\\Middleware\\ValidateDiscordBotAPI",

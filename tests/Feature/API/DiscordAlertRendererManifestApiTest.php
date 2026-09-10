@@ -55,9 +55,15 @@ class DiscordAlertRendererManifestApiTest extends TestCase
                 ],
             ]);
 
+        $this->assertTrue(
+            $response->json('data.capabilities')['alerts.resource-shortfall-actions.v1'],
+        );
+
         $eventKeys = collect($response->json('data.templates'))
             ->flatMap(fn (array $template): array => $template['event_keys'])
             ->unique();
+
+        $this->assertContains('nation.resource_shortfall', $eventKeys);
 
         $this->assertFalse($eventKeys->contains(
             fn (string $eventKey): bool => str_contains($eventKey, 'war_assignment')

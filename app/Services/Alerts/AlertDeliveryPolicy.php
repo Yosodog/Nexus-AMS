@@ -12,6 +12,20 @@ use Carbon\CarbonInterface;
 
 class AlertDeliveryPolicy
 {
+    public function scheduledAtForUser(User $user): ?CarbonInterface
+    {
+        $settings = AlertUserSetting::query()->whereBelongsTo($user)->first();
+
+        return $this->scheduledAt(
+            mode: AlertDeliveryMode::Immediate,
+            timezone: $settings?->timezone ?: 'UTC',
+            quietStart: $settings?->quiet_hours_start,
+            quietEnd: $settings?->quiet_hours_end,
+            digestTime: $settings?->default_digest_time ?: '09:00:00',
+            digestWeekday: (int) ($settings?->default_digest_weekday ?? 1),
+        );
+    }
+
     public function scheduledAtForSubscription(AlertSubscription $subscription, User $user): ?CarbonInterface
     {
         $settings = AlertUserSetting::query()->whereBelongsTo($user)->first();

@@ -26,6 +26,7 @@ class AlertUserSettingsService
             'default_digest_time' => '09:00:00',
             'default_digest_weekday' => 1,
             'discord_enabled' => $this->legacyDiscordEnabled($user),
+            'resource_shortfall_alerts_enabled' => false,
         ]);
     }
 
@@ -46,6 +47,7 @@ class AlertUserSettingsService
             'default_digest_time' => ['required', 'date_format:H:i'],
             'default_digest_weekday' => ['required', 'integer', 'between:1,7'],
             'discord_enabled' => ['required', 'boolean'],
+            'resource_shortfall_alerts_enabled' => ['sometimes', 'boolean'],
         ]);
         $validator->after(function ($validator) use ($input): void {
             $quietStart = $input['quiet_hours_start'] ?? null;
@@ -68,6 +70,9 @@ class AlertUserSettingsService
                 'default_digest_time' => $this->databaseTime($validated['default_digest_time']),
                 'default_digest_weekday' => (int) $validated['default_digest_weekday'],
                 'discord_enabled' => in_array($validated['discord_enabled'], [true, 1, '1'], true),
+                'resource_shortfall_alerts_enabled' => array_key_exists('resource_shortfall_alerts_enabled', $validated)
+                    ? in_array($validated['resource_shortfall_alerts_enabled'], [true, 1, '1'], true)
+                    : $settings->resource_shortfall_alerts_enabled,
             ])->save();
 
             return $settings->refresh();

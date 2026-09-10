@@ -11,11 +11,14 @@ class MMRAssistantPurchase extends Model
 
     public const ALLOCATION_MODE_AUTOMATIC = 'automatic';
 
+    public const ALLOCATION_MODE_ALERT_ON_DEMAND = 'alert_on_demand';
+
     /**
      * @var string[]
      */
     protected $fillable = [
         'account_id',
+        'discord_action_intent_id',
         'total_spent',
         'allocation_mode',
         'projection_calculated_at',
@@ -59,5 +62,10 @@ class MMRAssistantPurchase extends Model
     public function account()
     {
         return $this->belongsTo(Account::class);
+    }
+
+    public function discordActionIntent(): BelongsTo
+    {
+        return $this->belongsTo(DiscordActionIntent::class);
     }
 }

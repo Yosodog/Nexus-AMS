@@ -26,6 +26,7 @@ class AlertUserSettingFactory extends Factory
             'default_digest_time' => '09:00:00',
             'default_digest_weekday' => 1,
             'discord_enabled' => false,
+            'resource_shortfall_alerts_enabled' => false,
         ];
     }
 }

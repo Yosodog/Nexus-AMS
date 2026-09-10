@@ -13,6 +13,7 @@ use App\Http\Controllers\API\Discord\MilcomProjectionController as DiscordMilcom
 use App\Http\Controllers\API\Discord\OffshoreController as DiscordOffshoreController;
 use App\Http\Controllers\API\Discord\OffshoreSweepIntentController as DiscordOffshoreSweepIntentController;
 use App\Http\Controllers\API\Discord\OperationsWorkItemController as DiscordOperationsWorkItemController;
+use App\Http\Controllers\API\Discord\ResourceShortfallController as DiscordResourceShortfallController;
 use App\Http\Controllers\API\Discord\StatusController as DiscordStatusController;
 use App\Http\Controllers\API\Discord\WarCounterController as DiscordWarCounterController;
 use App\Http\Controllers\API\DiscordQueueController;
@@ -196,12 +197,19 @@ Route::prefix('v1/discord')->middleware(ValidateDiscordBotAPI::class)->group(fun
         Route::get('/accounts', [DiscordFinanceController::class, 'accounts']);
         Route::get('/accounts/{account}/transactions', [DiscordFinanceController::class, 'transactions']);
         Route::get('/withdrawals/{intent}', [DiscordFinanceController::class, 'reviewWithdrawal']);
+        Route::get('/resource-shortfall-alerts/{occurrence}/options', [DiscordResourceShortfallController::class, 'options'])
+            ->whereNumber('occurrence');
+        Route::get('/resource-shortfall-fulfillments/{intent}', [DiscordResourceShortfallController::class, 'review']);
 
         Route::middleware(EnsureDiscordInteractionIdempotency::class)->group(function () {
             Route::post('/accounts/{account}/deposit-requests', [DiscordFinanceController::class, 'createDepositRequest']);
             Route::post('/withdrawals/drafts', [DiscordFinanceController::class, 'createWithdrawalDraft']);
             Route::post('/withdrawals/{intent}/confirm', [DiscordFinanceController::class, 'confirmWithdrawal']);
             Route::post('/withdrawals/{intent}/cancel', [DiscordFinanceController::class, 'cancelWithdrawal']);
+            Route::post('/resource-shortfall-alerts/{occurrence}/drafts', [DiscordResourceShortfallController::class, 'createDraft'])
+                ->whereNumber('occurrence');
+            Route::post('/resource-shortfall-fulfillments/{intent}/confirm', [DiscordResourceShortfallController::class, 'confirm']);
+            Route::post('/resource-shortfall-fulfillments/{intent}/cancel', [DiscordResourceShortfallController::class, 'cancel']);
         });
     });
 

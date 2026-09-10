@@ -20,6 +20,7 @@ use App\Models\Transaction;
 use App\Models\User;
 use App\Models\WarAidRequest;
 use App\Notifications\DepositCreated;
+use Closure;
 use Exception;
 use Illuminate\Contracts\Cache\LockTimeoutException;
 use Illuminate\Http\Client\ConnectionException;
@@ -394,6 +395,8 @@ class AccountService
         int $fromAccountId,
         array $resources,
         ?DiscordActionIntent $actionIntent = null,
+        ?Closure $prepareLockedAccount = null,
+        ?Closure $finalizeLockedTransfer = null,
     ): Transaction {
         try {
             $requestNationId = (int) $actor->nation_id;
@@ -405,7 +408,7 @@ class AccountService
             self::ensureNotBlockaded($requestNationId);
 
             return Cache::lock("account-transfer:nation:{$requestNationId}", 15)
-                ->block(5, function () use ($fromAccountId, $resources, $requestNationId, $actionIntent): Transaction {
+                ->block(5, function () use ($fromAccountId, $resources, $requestNationId, $actionIntent, $prepareLockedAccount, $finalizeLockedTransfer): Transaction {
                     DB::beginTransaction();
 
                     try {
@@ -426,6 +429,10 @@ class AccountService
                         }
 
                         $fromAccount = self::getAccountById($fromAccountId);
+
+                        if ($prepareLockedAccount !== null) {
+                            $prepareLockedAccount($fromAccount, $actionIntent);
+                        }
 
                         // Validate the transfer. If there are any errors, it'll throw an exception that is handled below
                         self::validateTransfer(
@@ -464,6 +471,10 @@ class AccountService
                         if ($actionIntent) {
                             $transaction->discord_action_intent_id = $actionIntent->id;
                             $transaction->save();
+                        }
+
+                        if ($finalizeLockedTransfer !== null) {
+                            $finalizeLockedTransfer($transaction, $actionIntent, $fromAccount);
                         }
 
                         if (! $evaluation['requires_approval']) {

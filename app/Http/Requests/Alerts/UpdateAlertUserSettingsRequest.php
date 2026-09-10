@@ -22,6 +22,7 @@ class UpdateAlertUserSettingsRequest extends FormRequest
             'default_digest_time' => ['required', 'date_format:H:i'],
             'default_digest_weekday' => ['required', 'integer', 'between:1,7'],
             'discord_enabled' => ['required', 'boolean'],
+            'resource_shortfall_alerts_enabled' => ['sometimes', 'boolean'],
         ];
     }
 

@@ -7,6 +7,7 @@ use App\Enums\AlertAudience;
 use App\Enums\AlertDestinationKind;
 use App\Enums\AlertSensitivity;
 use App\Enums\AlertSeverity;
+use App\Services\Economy\EconomyRules;
 use Illuminate\Support\Arr;
 use InvalidArgumentException;
 use LogicException;
@@ -65,7 +66,7 @@ class AlertEventCatalog
         ]);
     }
 
-    /** @return array{contract_version:int,capabilities:array{queue_lanes:bool},templates:list<array{template_key:string,version:int,event_keys:list<string>,active:bool}>} */
+    /** @return array{contract_version:int,capabilities:array{queue_lanes:bool,alerts.resource-shortfall-actions.v1:bool},templates:list<array{template_key:string,version:int,event_keys:list<string>,active:bool}>} */
     public function rendererManifest(): array
     {
         $templates = collect($this->all())
@@ -91,7 +92,10 @@ class AlertEventCatalog
 
         return [
             'contract_version' => 1,
-            'capabilities' => ['queue_lanes' => true],
+            'capabilities' => [
+                'queue_lanes' => true,
+                'alerts.resource-shortfall-actions.v1' => true,
+            ],
             'templates' => $templates->all(),
         ];
     }
@@ -101,6 +105,10 @@ class AlertEventCatalog
      */
     public function safePayload(string $eventKey, array $payload): array
     {
+        if ($eventKey === ResourceShortfallService::EVENT_KEY) {
+            return $this->safeResourceShortfallPayload($payload);
+        }
+
         $safe = [];
         foreach (Arr::only($payload, $this->get($eventKey)->payloadKeys) as $key => $value) {
             if (! $this->isSafePayloadValue($value)) {
@@ -119,6 +127,45 @@ class AlertEventCatalog
         }
 
         return $safe;
+    }
+
+    /** @param array<string, mixed> $payload
+     * @return array<string, mixed>
+     */
+    private function safeResourceShortfallPayload(array $payload): array
+    {
+        $shortfalls = collect($payload['shortfalls'] ?? [])
+            ->filter(fn (mixed $line): bool => is_array($line)
+                && in_array($line['resource'] ?? null, EconomyRules::TRADE_RESOURCES, true)
+                && $this->isSafeResourceAmount($line['on_hand'] ?? null)
+                && $this->isSafeResourceAmount($line['next_turn_requirement'] ?? null)
+                && $this->isSafeResourceAmount($line['withdrawal_requirement'] ?? null))
+            ->take(20)
+            ->map(fn (array $line): array => [
+                'resource' => (string) str((string) ($line['resource'] ?? ''))->limit(32, ''),
+                'on_hand' => (string) str((string) ($line['on_hand'] ?? '0.00'))->limit(32, ''),
+                'next_turn_requirement' => (string) str((string) ($line['next_turn_requirement'] ?? '0.00'))->limit(32, ''),
+                'withdrawal_requirement' => (string) str((string) ($line['withdrawal_requirement'] ?? '0.00'))->limit(32, ''),
+            ])
+            ->values()
+            ->all();
+
+        return [
+            'nation_id' => (int) ($payload['nation_id'] ?? 0),
+            'nation_name' => (string) str((string) ($payload['nation_name'] ?? ''))->limit(100, ''),
+            'target_turns' => ResourceShortfallService::TARGET_TURNS,
+            'calculated_at' => (string) str((string) ($payload['calculated_at'] ?? ''))->limit(64, ''),
+            'resource_snapshot_at' => (string) str((string) ($payload['resource_snapshot_at'] ?? ''))->limit(64, ''),
+            'shortfalls' => $shortfalls,
+            'action_available' => (bool) ($payload['action_available'] ?? false),
+            'action_capability' => 'alerts.resource-shortfall-actions.v1',
+        ];
+    }
+
+    private function isSafeResourceAmount(mixed $value): bool
+    {
+        return is_scalar($value)
+            && preg_match('/^\d{1,16}(?:\.\d{1,2})?$/D', (string) $value) === 1;
     }
 
     private function isSafePayloadValue(mixed $value): bool
@@ -155,6 +202,7 @@ class AlertEventCatalog
             $this->definition('alliance.membership.changed', AlertAudience::Member, AlertSensitivity::Public, AlertSeverity::Normal, $memberDestinations, 'member_alert_v1', 'alliance', ['label', 'added', 'removed'], 'mark', 120),
             $this->definition('alliance.treaty.changed', AlertAudience::Member, AlertSensitivity::Public, AlertSeverity::Normal, $memberDestinations, 'member_alert_v1', 'alliance', ['label', 'added', 'removed'], 'mark', 120),
             $this->definition('market.price.crossed', AlertAudience::Member, AlertSensitivity::Public, AlertSeverity::Normal, $memberDestinations, 'member_alert_v1', 'market', ['resource', 'direction', 'threshold', 'price', 'observed_at'], 'mark', 120),
+            $this->definition(ResourceShortfallService::EVENT_KEY, AlertAudience::Member, AlertSensitivity::Restricted, AlertSeverity::Normal, $memberDestinations, 'resource_shortfall_v1', 'ownership', ['nation_id', 'nation_name', 'target_turns', 'calculated_at', 'resource_snapshot_at', 'shortfalls', 'action_available', 'action_capability'], 'suppress', 1440),
 
             $this->definition('application.status.changed', AlertAudience::Member, AlertSensitivity::Member, AlertSeverity::Normal, $memberDestinations, 'workflow_status_v1', 'ownership', ['label', 'status'], 'supersede'),
             $this->definition('finance.grant.status.changed', AlertAudience::Member, AlertSensitivity::Restricted, AlertSeverity::Normal, $memberDestinations, 'workflow_status_v1', 'ownership', ['label', 'status'], 'supersede'),

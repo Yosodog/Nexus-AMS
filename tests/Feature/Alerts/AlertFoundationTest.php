@@ -85,8 +85,14 @@ class AlertFoundationTest extends TestCase
             'member_alert_v1',
             'milcom_alert_v1',
             'operational_alert_v1',
+            'resource_shortfall_v1',
             'workflow_status_v1',
         ], $templates->keys()->sort()->values()->all());
+        $this->assertTrue($manifest['capabilities']['alerts.resource-shortfall-actions.v1']);
+        $this->assertSame(
+            ['nation.resource_shortfall'],
+            $templates['resource_shortfall_v1']['event_keys'],
+        );
         $this->assertContains('milcom.incident.detected', $templates['milcom_alert_v1']['event_keys']);
         $this->assertNotContains('war_assignment.created', $templates['milcom_alert_v1']['event_keys']);
 

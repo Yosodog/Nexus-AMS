@@ -38,6 +38,7 @@ class AlertDeliveryService
         ?AlertSubscription $subscription = null,
         bool $discordEnabled = false,
         bool $forceImmediate = false,
+        bool $respectUserQuietHours = false,
     ): Collection {
         $deliveries = collect();
 
@@ -51,7 +52,13 @@ class AlertDeliveryService
             if ($discordEnabled) {
                 $suppressionReason = $this->memberDiscordSuppressionReason($recipient, $subscription);
                 $deliveries->push($suppressionReason === null
-                    ? $this->createMemberDiscordDelivery($occurrence, $recipient, $subscription, $forceImmediate)
+                    ? $this->createMemberDiscordDelivery(
+                        $occurrence,
+                        $recipient,
+                        $subscription,
+                        $forceImmediate,
+                        $respectUserQuietHours,
+                    )
                     : $this->createMemberDiscordSuppression($occurrence, $recipient, $subscription, $suppressionReason));
             }
 
@@ -159,6 +166,7 @@ class AlertDeliveryService
         User $recipient,
         ?AlertSubscription $subscription,
         bool $forceImmediate,
+        bool $respectUserQuietHours,
     ): AlertDelivery {
         $discordId = $recipient->activeDiscordAccount()?->discord_id;
         $matchKey = $this->matchKey($occurrence, $subscription?->id, null, 'discord-dm:user:'.$recipient->id);
@@ -178,9 +186,12 @@ class AlertDeliveryService
             );
         }
 
-        $scheduledAt = $forceImmediate || $subscription === null
-            ? null
-            : $this->policy->scheduledAtForSubscription($subscription, $recipient);
+        $scheduledAt = match (true) {
+            $forceImmediate => null,
+            $subscription !== null => $this->policy->scheduledAtForSubscription($subscription, $recipient),
+            $respectUserQuietHours => $this->policy->scheduledAtForUser($recipient),
+            default => null,
+        };
 
         return $this->createDiscordDelivery(
             occurrence: $occurrence,

@@ -247,12 +247,14 @@ class DiscordAlertSubscriptionApiTest extends TestCase
                 'default_digest_time' => '09:15',
                 'default_digest_weekday' => 5,
                 'discord_enabled' => true,
+                'resource_shortfall_alerts_enabled' => true,
             ])
             ->assertOk()
             ->assertJsonPath('data.timezone', 'America/Chicago')
             ->assertJsonPath('data.quiet_hours.enabled', true)
             ->assertJsonPath('data.quiet_hours.start', '22:00')
-            ->assertJsonPath('data.default_digest.weekday', 5);
+            ->assertJsonPath('data.default_digest.weekday', 5)
+            ->assertJsonPath('data.resource_shortfall_alerts_enabled', true);
 
         $this->withHeaders($this->headers('945678901234567890'))
             ->getJson('/api/v1/discord/me/alerts/settings')

@@ -27,6 +27,7 @@ class AlertUserSettingsResource extends JsonResource
                 'weekday' => $this->default_digest_weekday,
             ],
             'discord_enabled' => $this->discord_enabled,
+            'resource_shortfall_alerts_enabled' => $this->resource_shortfall_alerts_enabled,
             'uses_legacy_defaults' => ! $this->exists,
         ];
     }

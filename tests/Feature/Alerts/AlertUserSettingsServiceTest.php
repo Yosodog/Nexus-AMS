@@ -29,6 +29,7 @@ class AlertUserSettingsServiceTest extends TestCase
         $this->assertFalse($settings->exists);
         $this->assertSame('UTC', $settings->timezone);
         $this->assertTrue($settings->discord_enabled);
+        $this->assertFalse($settings->resource_shortfall_alerts_enabled);
         $this->assertDatabaseCount('alert_user_settings', 0);
     }
 
@@ -43,6 +44,7 @@ class AlertUserSettingsServiceTest extends TestCase
             'default_digest_time' => '09:15',
             'default_digest_weekday' => 5,
             'discord_enabled' => true,
+            'resource_shortfall_alerts_enabled' => true,
         ]);
 
         $this->assertTrue($settings->exists);
@@ -53,6 +55,7 @@ class AlertUserSettingsServiceTest extends TestCase
         $this->assertSame('09:15:00', $settings->default_digest_time);
         $this->assertSame(5, $settings->default_digest_weekday);
         $this->assertTrue($settings->discord_enabled);
+        $this->assertTrue($settings->resource_shortfall_alerts_enabled);
         $this->assertTrue(app(AlertUserSettingsService::class)->isDiscordEnabled($user));
     }
 

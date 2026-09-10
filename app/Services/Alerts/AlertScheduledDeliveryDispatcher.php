@@ -13,6 +13,7 @@ class AlertScheduledDeliveryDispatcher
     public function __construct(
         private readonly AlertEventCatalog $catalog,
         private readonly AlertDeliveryService $deliveries,
+        private readonly ResourceShortfallService $resourceShortfalls,
     ) {}
 
     public function dispatchDue(int $limit = 500): int
@@ -58,6 +59,16 @@ class AlertScheduledDeliveryDispatcher
     {
         $occurrence = $delivery->occurrence;
         $definition = $this->catalog->get($occurrence->event_key);
+
+        if ($occurrence->event_key === ResourceShortfallService::EVENT_KEY
+            && ! $this->resourceShortfalls->occurrenceIsStillRelevant($occurrence)) {
+            $delivery->forceFill([
+                'status' => AlertDeliveryStatus::Suppressed,
+                'reason_code' => 'shortfall_resolved',
+            ])->save();
+
+            return true;
+        }
 
         if ($definition->stalePolicy === 'supersede' && $this->hasNewerOccurrence($occurrence)) {
             $delivery->forceFill([
