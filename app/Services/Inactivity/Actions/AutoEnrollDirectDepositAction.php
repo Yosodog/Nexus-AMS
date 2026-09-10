@@ -9,7 +9,6 @@ use App\Services\DirectDepositService;
 use App\Services\Inactivity\InactivityActionContext;
 use App\Services\Inactivity\InactivityActionHandler;
 use App\Services\Inactivity\InactivityActionResult;
-use App\Services\SettingService;
 
 class AutoEnrollDirectDepositAction implements InactivityActionHandler
 {
@@ -17,7 +16,7 @@ class AutoEnrollDirectDepositAction implements InactivityActionHandler
 
     public function handle(Nation $nation, InactivityEvent $event, InactivityActionContext $context): InactivityActionResult
     {
-        if (! SettingService::isDirectDepositEnabled()) {
+        if (! $context->directDepositEnabled) {
             return new InactivityActionResult;
         }
 

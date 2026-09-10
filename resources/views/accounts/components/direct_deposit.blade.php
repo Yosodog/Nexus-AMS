@@ -1,17 +1,28 @@
 @php
     use App\Services\PWHelperService;
 
-    $isEnrolled = isset($enrollment) && $enrollment->account !== null;
+    $hasEnrollment = isset($enrollment);
+    $isEnrolled = $hasEnrollment && $enrollment->account !== null;
+    $isDisenrollmentPending = $hasEnrollment && $enrollment->disenrollment_requested_at !== null;
+    $isDirectDepositAvailable = ! isset($ddConfiguration) || $ddConfiguration->isAvailable();
     $resources = PWHelperService::resources();
 @endphp
 
 <x-utils.card title="Direct Deposit" extraClasses="space-y-3">
-    @if ($isEnrolled)
+    @if ($isDisenrollmentPending)
+        <div class="rounded-xl bg-warning/10 border border-warning/40 p-4">
+            <p class="mb-1 text-warning font-semibold">Disenrollment pending</p>
+            <p class="text-sm text-base-content/80">
+                Your previous tax bracket is being restored. Deposits using your assigned Direct Deposit tax ID remain protected until this finishes.
+            </p>
+        </div>
+    @elseif ($isEnrolled)
         <div class="rounded-xl bg-success/10 border border-success/30 p-4">
             <p class="mb-1 text-success font-semibold">Enrolled</p>
             <p class="text-sm text-base-content/80">Your deposits are heading to <span class="font-bold">{{ $enrollment->account->name }}</span>.</p>
         </div>
 
+        @if($bracket)
         <div class="mb-4 space-y-2">
             <div class="flex items-center justify-between">
                 <h3 class="font-semibold">Current tax bracket</h3>
@@ -36,6 +47,7 @@
                 </table>
             </div>
         </div>
+        @endif
 
         <form method="POST" action="{{ route('dd.disenroll') }}" data-confirm="Disenroll from Direct Deposit? Automated deposits and the current tax-bracket assignment will stop." data-confirm-title="Leave Direct Deposit?" data-confirm-label="Disenroll" data-confirm-tone="error">
             @csrf
@@ -48,6 +60,13 @@
             <p class="mb-1 text-info font-semibold">Unavailable while in Growth Circles</p>
             <p class="text-sm text-base-content/80">
                 You are currently enrolled in Growth Circles. Contact an admin to disenroll before joining Direct Deposit.
+            </p>
+        </div>
+    @elseif (! $isDirectDepositAvailable)
+        <div class="rounded-xl bg-warning/10 border border-warning/40 p-4">
+            <p class="mb-1 text-warning font-semibold">Direct Deposit unavailable</p>
+            <p class="text-sm text-base-content/80">
+                {{ $ddConfiguration->unavailableReason ?? 'Direct Deposit is not configured for your alliance.' }}
             </p>
         </div>
     @else

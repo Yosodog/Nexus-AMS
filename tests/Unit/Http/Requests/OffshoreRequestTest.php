@@ -43,6 +43,52 @@ class OffshoreRequestTest extends TestCase
         $this->assertTrue(Validator::make(['api_key' => str_repeat('a', 21)], $rules)->fails());
     }
 
+    public function test_direct_deposit_tax_ids_are_required_and_must_differ_when_enabled(): void
+    {
+        $request = new StoreOffshoreRequest;
+        $request->merge(['direct_deposit_enabled' => true]);
+        $directDepositRules = $this->directDepositRules($request);
+
+        $this->assertTrue(Validator::make([
+            'direct_deposit_enabled' => true,
+        ], $directDepositRules)->fails());
+
+        $this->assertTrue(Validator::make([
+            'direct_deposit_enabled' => true,
+            'direct_deposit_tax_id' => 100,
+            'direct_deposit_fallback_tax_id' => 100,
+        ], $directDepositRules)->fails());
+
+        $this->assertFalse(Validator::make([
+            'direct_deposit_enabled' => true,
+            'direct_deposit_tax_id' => 100,
+            'direct_deposit_fallback_tax_id' => 101,
+        ], $directDepositRules)->fails());
+    }
+
+    public function test_tax_ids_are_optional_when_direct_deposit_is_disabled(): void
+    {
+        $request = new StoreOffshoreRequest;
+        $request->merge(['direct_deposit_enabled' => false]);
+        $directDepositRules = $this->directDepositRules($request);
+
+        $this->assertFalse(Validator::make([
+            'direct_deposit_enabled' => false,
+        ], $directDepositRules)->fails());
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function directDepositRules(StoreOffshoreRequest $request): array
+    {
+        return collect($request->rules())->only([
+            'direct_deposit_enabled',
+            'direct_deposit_tax_id',
+            'direct_deposit_fallback_tax_id',
+        ])->all();
+    }
+
     /**
      * @return array<string, array{string}>
      */

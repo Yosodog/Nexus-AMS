@@ -135,8 +135,10 @@
                 <thead>
                     <tr class="nexus-text-muted">
                         <th>Nation ID</th>
+                        <th>Alliance</th>
                         <th>Account</th>
                         <th>User</th>
+                        <th>Status</th>
                         <th data-sortable="false">Enrolled At</th>
                     </tr>
                 </thead>
@@ -148,8 +150,14 @@
                                     {{ $enrollment->nation_id }}
                                 </a>
                             </td>
+                            <td>{{ $enrollment->offshore?->name ?? ($enrollment->alliance_id ? 'Alliance #'.$enrollment->alliance_id : 'Primary alliance') }}</td>
                             <td>{{ $enrollment->account?->name ?? 'Deleted account' }}</td>
                             <td>{{ $enrollment->account?->user?->name ?? 'Deleted' }}</td>
+                            <td>
+                                <span class="badge {{ $enrollment->disenrollment_requested_at ? 'badge-warning' : 'badge-success' }}">
+                                    {{ $enrollment->disenrollment_requested_at ? 'Disenrollment pending' : 'Active' }}
+                                </span>
+                            </td>
                             <td data-order="{{ $enrollment->enrolled_at->timestamp }}">{{ $enrollment->enrolled_at->format('M d, Y H:i') }}</td>
                         </tr>
                     @endforeach

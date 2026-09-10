@@ -49,6 +49,7 @@
                         <th>Name</th>
                         <th>Alliance</th>
                         <th>Status</th>
+                        <th>Direct Deposit</th>
                         <th>Cached Balances</th>
                         <th>Guardrails</th>
                         @if($canManageOffshores)
@@ -102,6 +103,26 @@
                                 <span class="badge {{ $offshore->enabled ? 'badge-success' : 'badge-ghost' }}">
                                     {{ $offshore->enabled ? 'Enabled' : 'Disabled' }}
                                 </span>
+                            </td>
+                            <td>
+                                <div class="flex flex-col items-start gap-1">
+                                    <span class="badge {{ $offshore->enabled && $offshore->direct_deposit_enabled ? 'badge-success' : 'badge-ghost' }}">
+                                        {{ $offshore->enabled && $offshore->direct_deposit_enabled ? 'Enabled' : 'Disabled' }}
+                                    </span>
+                                    @if($offshore->direct_deposit_tax_id && $offshore->direct_deposit_fallback_tax_id)
+                                        <span class="text-xs nexus-text-muted">DD #{{ $offshore->direct_deposit_tax_id }} · fallback #{{ $offshore->direct_deposit_fallback_tax_id }}</span>
+                                    @else
+                                        <span class="text-xs text-warning">Tax IDs required</span>
+                                    @endif
+                                    @if($offshore->direct_deposit_enrollments_count > 0)
+                                        <span class="text-xs nexus-text-muted">
+                                            {{ $offshore->direct_deposit_enrollments_count }} enrolled
+                                            @if($offshore->pending_direct_deposit_enrollments_count > 0)
+                                                · {{ $offshore->pending_direct_deposit_enrollments_count }} pending
+                                            @endif
+                                        </span>
+                                    @endif
+                                </div>
                             </td>
                             <td>
                                 @if(! empty($snapshot['balances']))
@@ -399,6 +420,31 @@
                                 <span id="offshore-create-new-enabled-error" class="text-xs text-error">{{ $errors->first('enabled') }}</span>
                             @endif
                         </label>
+                        <label class="block space-y-2" for="offshore-create-new-direct-deposit-enabled">
+                            <span class="text-sm font-medium">Direct Deposit</span>
+                            @php $createDirectDepositEnabled = $modalContext === 'create' ? (int) old('direct_deposit_enabled', 0) : 0; @endphp
+                            <select id="offshore-create-new-direct-deposit-enabled" class="select w-full" name="direct_deposit_enabled">
+                                <option value="0" {{ $createDirectDepositEnabled === 0 ? 'selected' : '' }}>Disabled</option>
+                                <option value="1" {{ $createDirectDepositEnabled === 1 ? 'selected' : '' }}>Enabled</option>
+                            </select>
+                            <span class="text-xs nexus-text-muted">Requires both offshore-specific tax IDs and usable API credentials.</span>
+                        </label>
+                        <label class="block space-y-2" for="offshore-create-new-direct-deposit-tax-id">
+                            <span class="text-sm font-medium">Direct Deposit Tax ID</span>
+                            <input id="offshore-create-new-direct-deposit-tax-id" type="number" min="1" class="input w-full" name="direct_deposit_tax_id" value="{{ $modalContext === 'create' ? old('direct_deposit_tax_id') : '' }}"
+                                   aria-invalid="{{ $modalContext === 'create' && $errors->has('direct_deposit_tax_id') ? 'true' : 'false' }}">
+                            @if($modalContext === 'create' && $errors->has('direct_deposit_tax_id'))
+                                <span class="text-xs text-error">{{ $errors->first('direct_deposit_tax_id') }}</span>
+                            @endif
+                        </label>
+                        <label class="block space-y-2" for="offshore-create-new-direct-deposit-fallback-tax-id">
+                            <span class="text-sm font-medium">Fallback Tax ID</span>
+                            <input id="offshore-create-new-direct-deposit-fallback-tax-id" type="number" min="1" class="input w-full" name="direct_deposit_fallback_tax_id" value="{{ $modalContext === 'create' ? old('direct_deposit_fallback_tax_id') : '' }}"
+                                   aria-invalid="{{ $modalContext === 'create' && $errors->has('direct_deposit_fallback_tax_id') ? 'true' : 'false' }}">
+                            @if($modalContext === 'create' && $errors->has('direct_deposit_fallback_tax_id'))
+                                <span class="text-xs text-error">{{ $errors->first('direct_deposit_fallback_tax_id') }}</span>
+                            @endif
+                        </label>
                     </div>
 
                     <fieldset class="space-y-3">
@@ -536,6 +582,31 @@
                                 </select>
                                 @if($editContext && $errors->has('enabled'))
                                     <span id="offshore-edit-{{ $offshore->id }}-enabled-error" class="text-xs text-error">{{ $errors->first('enabled') }}</span>
+                                @endif
+                            </label>
+                            <label class="block space-y-2" for="offshore-edit-{{ $offshore->id }}-direct-deposit-enabled">
+                                <span class="text-sm font-medium">Direct Deposit</span>
+                                @php $editDirectDepositEnabled = $editContext ? (int) old('direct_deposit_enabled', $offshore->direct_deposit_enabled ? 1 : 0) : ($offshore->direct_deposit_enabled ? 1 : 0); @endphp
+                                <select id="offshore-edit-{{ $offshore->id }}-direct-deposit-enabled" class="select w-full" name="direct_deposit_enabled">
+                                    <option value="0" {{ $editDirectDepositEnabled === 0 ? 'selected' : '' }}>Disabled</option>
+                                    <option value="1" {{ $editDirectDepositEnabled === 1 ? 'selected' : '' }}>Enabled</option>
+                                </select>
+                                <span class="text-xs nexus-text-muted">Disabling queues safe tax-bracket restoration for enrolled members.</span>
+                            </label>
+                            <label class="block space-y-2" for="offshore-edit-{{ $offshore->id }}-direct-deposit-tax-id">
+                                <span class="text-sm font-medium">Direct Deposit Tax ID</span>
+                                <input id="offshore-edit-{{ $offshore->id }}-direct-deposit-tax-id" type="number" min="1" class="input w-full" name="direct_deposit_tax_id" value="{{ $editContext ? old('direct_deposit_tax_id', $offshore->direct_deposit_tax_id) : $offshore->direct_deposit_tax_id }}"
+                                       aria-invalid="{{ $editContext && $errors->has('direct_deposit_tax_id') ? 'true' : 'false' }}">
+                                @if($editContext && $errors->has('direct_deposit_tax_id'))
+                                    <span class="text-xs text-error">{{ $errors->first('direct_deposit_tax_id') }}</span>
+                                @endif
+                            </label>
+                            <label class="block space-y-2" for="offshore-edit-{{ $offshore->id }}-direct-deposit-fallback-tax-id">
+                                <span class="text-sm font-medium">Fallback Tax ID</span>
+                                <input id="offshore-edit-{{ $offshore->id }}-direct-deposit-fallback-tax-id" type="number" min="1" class="input w-full" name="direct_deposit_fallback_tax_id" value="{{ $editContext ? old('direct_deposit_fallback_tax_id', $offshore->direct_deposit_fallback_tax_id) : $offshore->direct_deposit_fallback_tax_id }}"
+                                       aria-invalid="{{ $editContext && $errors->has('direct_deposit_fallback_tax_id') ? 'true' : 'false' }}">
+                                @if($editContext && $errors->has('direct_deposit_fallback_tax_id'))
+                                    <span class="text-xs text-error">{{ $errors->first('direct_deposit_fallback_tax_id') }}</span>
                                 @endif
                             </label>
                         </div>

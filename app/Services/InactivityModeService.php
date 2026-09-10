@@ -33,6 +33,7 @@ class InactivityModeService
     public function __construct(
         private readonly AllianceMembershipService $membershipService,
         private readonly MemberInactivityExceptionEvaluator $exceptionEvaluator,
+        private readonly DirectDepositConfigurationResolver $directDepositConfigurationResolver,
         AutoEnrollDirectDepositAction $autoEnrollDirectDepositAction,
         SendInGameMessageAction $sendInGameMessageAction,
         SendDiscordNotificationAction $sendDiscordNotificationAction,
@@ -325,7 +326,9 @@ class InactivityModeService
         CarbonInterface $now,
         int $thresholdHours
     ): InactivityActionContext {
-        $directDepositEnabled = SettingService::isDirectDepositEnabled();
+        $directDepositEnabled = $this->directDepositConfigurationResolver
+            ->forNation($nation)
+            ->isAvailable();
         $enrolledInDd = $nation->relationLoaded('directDepositEnrollment')
             ? (bool) $nation->directDepositEnrollment
             : $nation->directDepositEnrollment()->exists();

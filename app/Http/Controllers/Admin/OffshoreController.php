@@ -109,17 +109,34 @@ class OffshoreController extends Controller
 
     public function update(UpdateOffshoreRequest $request, Offshore $offshore): RedirectResponse
     {
-        $before = $offshore->only(['name', 'alliance_id', 'enabled', 'priority']);
+        $before = $offshore->only([
+            'name',
+            'alliance_id',
+            'enabled',
+            'direct_deposit_enabled',
+            'direct_deposit_tax_id',
+            'direct_deposit_fallback_tax_id',
+            'priority',
+        ]);
         $beforeGuardrails = $offshore->guardrails()->get()->mapWithKeys(
             fn (OffshoreGuardrail $guardrail) => [$guardrail->resource => $guardrail->minimum_amount]
         )->all();
 
-        $this->offshoreService->update($offshore, $request->payload(), $request->guardrails());
+        $result = $this->offshoreService->update($offshore, $request->payload(), $request->guardrails());
+        $updatedOffshore = $result->offshore;
 
-        event(new OffshoreCacheInvalidated($offshore->id, 'updated'));
+        event(new OffshoreCacheInvalidated($updatedOffshore->id, 'updated'));
 
-        $after = $offshore->fresh(['guardrails'])->only(['name', 'alliance_id', 'enabled', 'priority']);
-        $afterGuardrails = $offshore->guardrails->mapWithKeys(
+        $after = $updatedOffshore->only([
+            'name',
+            'alliance_id',
+            'enabled',
+            'direct_deposit_enabled',
+            'direct_deposit_tax_id',
+            'direct_deposit_fallback_tax_id',
+            'priority',
+        ]);
+        $afterGuardrails = $updatedOffshore->guardrails->mapWithKeys(
             fn (OffshoreGuardrail $guardrail) => [$guardrail->resource => $guardrail->minimum_amount]
         )->all();
         $changes = [];
@@ -145,16 +162,33 @@ class OffshoreController extends Controller
             action: 'offshore_updated',
             outcome: 'success',
             severity: 'warning',
-            subject: $offshore,
+            subject: $updatedOffshore,
             context: [
                 'changes' => $changes,
+                'queued_direct_deposit_disenrollments' => $result->queuedDisenrollments,
             ],
             message: 'Offshore updated.'
         );
 
+        $message = 'Offshore updated successfully.';
+        $type = 'success';
+
+        if ($result->allianceIdChanged) {
+            $message = 'Direct Deposit was disabled and its tax IDs were cleared. Update both tax IDs before re-enabling it.';
+
+            if ($result->queuedDisenrollments > 0) {
+                $message .= " {$result->queuedDisenrollments} member disenrollment(s) were queued.";
+            }
+
+            $type = 'warning';
+        } elseif ($result->queuedDisenrollments > 0) {
+            $message = "Offshore updated. {$result->queuedDisenrollments} Direct Deposit disenrollment(s) were queued.";
+            $type = 'warning';
+        }
+
         return redirect()->route('admin.offshores.index')->with([
-            'alert-message' => 'Offshore updated successfully.',
-            'alert-type' => 'success',
+            'alert-message' => $message,
+            'alert-type' => $type,
         ]);
     }
 
@@ -167,7 +201,16 @@ class OffshoreController extends Controller
             fn (OffshoreGuardrail $guardrail) => [$guardrail->resource => $guardrail->minimum_amount]
         )->all();
 
-        $this->offshoreService->delete($offshore);
+        $deleted = $this->offshoreService->delete($offshore);
+
+        if (! $deleted) {
+            $pendingCount = $offshore->directDepositEnrollments()->count();
+
+            return redirect()->route('admin.offshores.index')->with([
+                'alert-message' => "Direct Deposit was disabled and {$pendingCount} enrollment(s) are being removed. Retry deletion after they finish.",
+                'alert-type' => 'warning',
+            ]);
+        }
 
         event(new OffshoreCacheInvalidated($offshore->id, 'deleted'));
 
@@ -248,9 +291,10 @@ class OffshoreController extends Controller
     {
         Gate::authorize('manage-offshores');
 
-        $updated = $this->offshoreService->update($offshore, [
+        $result = $this->offshoreService->update($offshore, [
             'enabled' => ! $offshore->enabled,
         ]);
+        $updated = $result->offshore;
 
         event(new OffshoreCacheInvalidated($updated->id, 'toggled'));
 
@@ -266,14 +310,21 @@ class OffshoreController extends Controller
                         'from' => $offshore->enabled,
                         'to' => $updated->enabled,
                     ],
+                    'direct_deposit_enabled' => [
+                        'from' => $offshore->direct_deposit_enabled,
+                        'to' => $updated->direct_deposit_enabled,
+                    ],
                 ],
+                'queued_direct_deposit_disenrollments' => $result->queuedDisenrollments,
             ],
             message: 'Offshore toggled.'
         );
 
         return redirect()->route('admin.offshores.index')->with([
-            'alert-message' => sprintf('%s is now %s.', $updated->name, $updated->enabled ? 'enabled' : 'disabled'),
-            'alert-type' => 'success',
+            'alert-message' => $result->queuedDisenrollments > 0
+                ? sprintf('%s is now disabled. %d Direct Deposit disenrollment(s) were queued.', $updated->name, $result->queuedDisenrollments)
+                : sprintf('%s is now %s.', $updated->name, $updated->enabled ? 'enabled' : 'disabled'),
+            'alert-type' => $result->queuedDisenrollments > 0 ? 'warning' : 'success',
         ]);
     }
 

@@ -16,6 +16,9 @@ class Offshore extends Model
         'name',
         'alliance_id',
         'enabled',
+        'direct_deposit_enabled',
+        'direct_deposit_tax_id',
+        'direct_deposit_fallback_tax_id',
         'priority',
         'api_key',
         'mutation_key',
@@ -23,6 +26,9 @@ class Offshore extends Model
 
     protected $casts = [
         'enabled' => 'boolean',
+        'direct_deposit_enabled' => 'boolean',
+        'direct_deposit_tax_id' => 'integer',
+        'direct_deposit_fallback_tax_id' => 'integer',
         'priority' => 'integer',
         'api_key' => 'encrypted',
         'mutation_key' => 'encrypted',
@@ -39,6 +45,14 @@ class Offshore extends Model
     public function guardrails(): HasMany
     {
         return $this->hasMany(OffshoreGuardrail::class);
+    }
+
+    /**
+     * @return HasMany<DirectDepositEnrollment>
+     */
+    public function directDepositEnrollments(): HasMany
+    {
+        return $this->hasMany(DirectDepositEnrollment::class);
     }
 
     public function scopeEnabled(Builder $query): Builder

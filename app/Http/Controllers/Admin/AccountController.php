@@ -74,7 +74,7 @@ class AccountController extends Controller
 
         if ($canViewDirectDeposit) {
             $brackets = DirectDepositTaxBracket::orderBy('city_number')->get();
-            $enrollments = DirectDepositEnrollment::with('account.user')->get();
+            $enrollments = DirectDepositEnrollment::with(['account.user', 'offshore'])->get();
             $ddTaxId = SettingService::getDirectDepositId();
             $fallbackTaxId = SettingService::getDirectDepositFallbackId();
         }

@@ -17,17 +17,9 @@ use Illuminate\Validation\Rules\Exists;
 
 class DirectDepositController extends Controller
 {
-    public DirectDepositService $directDepositService;
+    public function __construct(public readonly DirectDepositService $directDepositService) {}
 
-    public function __construct()
-    {
-        $this->directDepositService = app(DirectDepositService::class);
-    }
-
-    /**
-     * @return RedirectResponse
-     */
-    public function enroll(Request $request)
+    public function enroll(Request $request): RedirectResponse
     {
         $nation = Auth::user()->nation;
 
@@ -55,19 +47,21 @@ class DirectDepositController extends Controller
         ]);
     }
 
-    /**
-     * @return RedirectResponse
-     */
-    public function disenroll()
+    public function disenroll(): RedirectResponse
     {
         $nation = Auth::user()->nation;
 
-        $this->directDepositService->disenroll($nation);
-        app(InactivityModeService::class)->recordDirectDepositOptOut($nation);
+        $queued = $this->directDepositService->disenroll($nation);
+
+        if ($queued) {
+            app(InactivityModeService::class)->recordDirectDepositOptOut($nation);
+        }
 
         return back()->with([
-            'alert-message' => 'You have been disenrolled from Direct Deposit.',
-            'alert-type' => 'success',
+            'alert-message' => $queued
+                ? 'Your Direct Deposit disenrollment was queued. Deposits remain protected until your previous tax bracket is restored.'
+                : 'You are not enrolled in Direct Deposit.',
+            'alert-type' => $queued ? 'success' : 'info',
         ]);
     }
 

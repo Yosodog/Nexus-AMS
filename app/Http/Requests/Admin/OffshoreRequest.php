@@ -60,12 +60,40 @@ abstract class OffshoreRequest extends FormRequest
             'name' => $nameRule,
             'alliance_id' => $allianceRule,
             'enabled' => ['sometimes', 'boolean'],
+            'direct_deposit_enabled' => ['sometimes', 'boolean'],
+            'direct_deposit_tax_id' => [
+                Rule::requiredIf(fn (): bool => $this->boolean('direct_deposit_enabled')),
+                'nullable',
+                'integer',
+                'min:1',
+                'different:direct_deposit_fallback_tax_id',
+            ],
+            'direct_deposit_fallback_tax_id' => [
+                Rule::requiredIf(fn (): bool => $this->boolean('direct_deposit_enabled')),
+                'nullable',
+                'integer',
+                'min:1',
+                'different:direct_deposit_tax_id',
+            ],
             'priority' => ['sometimes', 'integer', 'min:0'],
             'api_key' => $apiKeyRule,
             'mutation_key' => $mutationKeyRule,
             'guardrails' => ['sometimes', 'array'],
             'guardrails.*.resource' => ['required_with:guardrails', 'string', Rule::in(OffshoreGuardrail::RESOURCES)],
             'guardrails.*.minimum_amount' => ['required_with:guardrails', 'numeric', 'min:0'],
+        ];
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    public function messages(): array
+    {
+        return [
+            'direct_deposit_tax_id.required' => 'Enter the offshore Direct Deposit tax ID before enabling Direct Deposit.',
+            'direct_deposit_tax_id.different' => 'The Direct Deposit and fallback tax IDs must be different.',
+            'direct_deposit_fallback_tax_id.required' => 'Enter the offshore fallback tax ID before enabling Direct Deposit.',
+            'direct_deposit_fallback_tax_id.different' => 'The Direct Deposit and fallback tax IDs must be different.',
         ];
     }
 

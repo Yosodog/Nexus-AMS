@@ -2,13 +2,15 @@
 
 namespace App\Services;
 
+use App\Models\DirectDepositEnrollment;
 use App\Models\Offshore;
 use Illuminate\Contracts\Cache\Repository;
 use Illuminate\Support\Collection;
 
 /**
  * Centralizes the definition of "our alliance" by combining the primary
- * alliance configured in the environment with any enabled offshores.
+ * alliance configured in the environment with enabled offshores and any
+ * offshore alliances still completing Direct Deposit disenrollment.
  *
  * This allows us to treat offshores as first-class members everywhere in the
  * application without scattering additional queries or environment lookups.
@@ -106,6 +108,16 @@ class AllianceMembershipService
             ->first();
 
         if (! $offshore) {
+            $offshore = DirectDepositEnrollment::query()
+                ->where('alliance_id', $allianceId)
+                ->whereNotNull('offshore_id')
+                ->whereNotNull('disenrollment_requested_at')
+                ->with('offshore')
+                ->first()
+                ?->offshore;
+        }
+
+        if (! $offshore) {
             return null;
         }
 
@@ -138,8 +150,16 @@ class AllianceMembershipService
             ->unique()
             ->values();
 
+        $pendingDirectDepositAllianceIds = DirectDepositEnrollment::query()
+            ->whereNotNull('offshore_id')
+            ->whereNotNull('disenrollment_requested_at')
+            ->pluck('alliance_id')
+            ->filter()
+            ->map(fn ($id) => (int) $id);
+
         return collect([$primaryAllianceId])
             ->merge($offshoreIds)
+            ->merge($pendingDirectDepositAllianceIds)
             ->filter(fn (int $id) => $id > 0)
             ->unique()
             ->values()

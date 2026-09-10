@@ -5,6 +5,7 @@ namespace Tests\Unit\Services;
 use App\Events\AllianceExpenseOccurred;
 use App\GraphQL\Models\BankRecord;
 use App\Models\Account;
+use App\Models\Alliance;
 use App\Models\DirectDepositLog;
 use App\Models\DirectDepositTaxBracket;
 use App\Models\MMRAssistantPurchase;
@@ -31,6 +32,13 @@ class MMRAssistantAutoCoverageTest extends TestCase
     {
         parent::setUp();
 
+        config()->set([
+            'services.pw.alliance_id' => 777,
+            'services.pw.api_key' => 'primary-api-key',
+            'services.pw.mutation_key' => 'primary-mutation-key',
+        ]);
+        Alliance::factory()->create(['id' => 777]);
+        SettingService::setDirectDepositFallbackId(556);
         SettingService::setMMRAssistantEnabled(true);
     }
 
@@ -253,7 +261,7 @@ class MMRAssistantAutoCoverageTest extends TestCase
      */
     private function createConfiguredNation(array $configOverrides = []): array
     {
-        $nation = Nation::factory()->create();
+        $nation = Nation::factory()->create(['alliance_id' => 777]);
         $account = new Account;
         $account->nation_id = $nation->id;
         $account->name = 'MMR Resources';

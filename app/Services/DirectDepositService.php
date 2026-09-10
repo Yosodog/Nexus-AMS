@@ -6,6 +6,7 @@ use App\DataTransferObjects\AllianceFinanceData;
 use App\Events\AllianceIncomeOccurred;
 use App\Exceptions\UserErrorException;
 use App\GraphQL\Models\BankRecord;
+use App\Jobs\FinalizeDirectDepositDisenrollment;
 use App\Models\Account;
 use App\Models\AllianceFinanceEntry;
 use App\Models\DirectDepositEnrollment;
@@ -13,6 +14,7 @@ use App\Models\DirectDepositLog;
 use App\Models\DirectDepositTaxBracket;
 use App\Models\GrowthCircleEnrollment;
 use App\Models\Nation;
+use App\Models\Offshore;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -22,21 +24,14 @@ use Throwable;
 
 class DirectDepositService
 {
-    public int $ddTaxId;
-
     public function __construct(
         protected SettingService $settings,
         protected AccountService $accountService,
-    ) {
-        $this->ddTaxId = SettingService::getDirectDepositId();
-    }
+        protected DirectDepositConfigurationResolver $configurationResolver,
+    ) {}
 
     public function process(BankRecord $record): BankRecord
     {
-        if ($record->tax_id != $this->ddTaxId) {
-            return $record; // Not a DD tax record
-        }
-
         $existingLog = DirectDepositLog::query()
             ->where('bank_record_id', $record->id)
             ->first();
@@ -52,9 +47,28 @@ class DirectDepositService
             return $record;
         }
 
+        $enrollment = DirectDepositEnrollment::query()
+            ->with('account')
+            ->where('nation_id', $nation->id)
+            ->first();
+        $configuration = $this->configurationResolver->forAlliance((int) $record->receiver_id);
+        $matchesEnrollment = $enrollment !== null
+            && (int) $enrollment->alliance_id === (int) $record->receiver_id
+            && (int) $enrollment->direct_deposit_tax_id === (int) $record->tax_id;
+        $matchesCurrentConfiguration = $enrollment === null
+            && $configuration->enabled
+            && $configuration->taxId !== null
+            && $configuration->taxId === (int) $record->tax_id;
+
+        if (! $matchesEnrollment && ! $matchesCurrentConfiguration) {
+            return $record;
+        }
+
         $bracket = $this->getApplicableBracket($nation);
         if (! $bracket) {
-            $fallbackTaxId = SettingService::getDirectDepositFallbackId();
+            $fallbackTaxId = $enrollment?->fallback_tax_id
+                ?? $configuration->fallbackTaxId
+                ?? SettingService::getDirectDepositFallbackId();
             Log::warning(
                 "DirectDeposit: No tax bracket configured for nation {$nation->id}; using fallback tax ID {$fallbackTaxId}"
             );
@@ -220,7 +234,7 @@ class DirectDepositService
             return $enrollment->account;
         }
 
-        if ($enrollment) {
+        if ($enrollment && $enrollment->disenrollment_requested_at === null) {
             $enrollment->delete();
         }
 
@@ -271,12 +285,18 @@ class DirectDepositService
 
     public function enroll(Nation $nation, Account $account): void
     {
-        $ddTaxId = $this->ddTaxId;
-
-        DB::transaction(function () use ($nation, $account, $ddTaxId): void {
+        $configuration = DB::transaction(function () use ($nation, $account) {
             $lockedNation = Nation::query()->whereKey($nation->id)->lockForUpdate()->first();
             if (! $lockedNation) {
                 throw new UserErrorException('Nation was not found.');
+            }
+
+            $configuration = $this->configurationResolver->forNation($lockedNation, lockForUpdate: true);
+
+            if (! $configuration->isAvailable()) {
+                throw new UserErrorException(
+                    $configuration->unavailableReason ?? 'Direct Deposit is not available for your alliance.'
+                );
             }
 
             if (GrowthCircleEnrollment::query()->where('nation_id', $lockedNation->id)->exists()) {
@@ -296,23 +316,40 @@ class DirectDepositService
                 throw new UserErrorException('Select an active account that belongs to your nation.');
             }
 
-            $previousTaxId = ((int) $lockedNation->tax_id === $ddTaxId)
-                ? SettingService::getDirectDepositFallbackId()
+            $existingEnrollment = DirectDepositEnrollment::query()
+                ->where('nation_id', $lockedNation->id)
+                ->lockForUpdate()
+                ->first();
+
+            if ($existingEnrollment?->disenrollment_requested_at !== null) {
+                throw new UserErrorException('Your Direct Deposit disenrollment is still pending.');
+            }
+
+            $previousTaxId = ((int) $lockedNation->tax_id === $configuration->taxId)
+                ? $configuration->fallbackTaxId
                 : (int) $lockedNation->tax_id;
 
             DirectDepositEnrollment::query()->updateOrCreate(
                 ['nation_id' => $lockedNation->id],
                 [
+                    'offshore_id' => $configuration->offshoreId,
+                    'alliance_id' => $configuration->allianceId,
                     'account_id' => $lockedAccount->id,
+                    'direct_deposit_tax_id' => $configuration->taxId,
+                    'fallback_tax_id' => $configuration->fallbackTaxId,
                     'previous_tax_id' => $previousTaxId,
                     'enrolled_at' => now(),
+                    'disenrollment_requested_at' => null,
                 ]
             );
+
+            return $configuration;
         });
 
         $mutation = new TaxBracketService;
-        $mutation->id = $ddTaxId;
+        $mutation->id = $configuration->taxId;
         $mutation->target_id = $nation->id;
+        $mutation->offshore_id = $configuration->offshoreId;
         $mutation->send();
     }
 
@@ -324,36 +361,46 @@ class DirectDepositService
             && ! $account->trashed();
     }
 
-    public function disenroll(Nation $nation): void
+    public function disenroll(Nation $nation): bool
     {
-        $enrollment = DirectDepositEnrollment::where('nation_id', $nation->id)->first();
+        return DB::transaction(function () use ($nation): bool {
+            $enrollment = DirectDepositEnrollment::query()
+                ->where('nation_id', $nation->id)
+                ->lockForUpdate()
+                ->first();
 
-        if (! $enrollment) {
-            return;
+            if (! $enrollment) {
+                return false;
+            }
+
+            return $this->requestDisenrollment($enrollment);
+        });
+    }
+
+    public function requestDisenrollmentsForOffshore(Offshore $offshore): int
+    {
+        $enrollments = DirectDepositEnrollment::query()
+            ->where('offshore_id', $offshore->id)
+            ->whereNull('disenrollment_requested_at')
+            ->lockForUpdate()
+            ->get();
+
+        foreach ($enrollments as $enrollment) {
+            $this->requestDisenrollment($enrollment);
         }
 
-        $targetTaxId = $enrollment->previous_tax_id;
-        $fallbackTaxId = SettingService::getDirectDepositFallbackId();
+        return $enrollments->count();
+    }
 
-        // Attempt to assign the previous tax bracket
-        try {
-            $mutation = new TaxBracketService;
-            $mutation->id = $targetTaxId;
-            $mutation->target_id = $nation->id;
-            $mutation->send();
-        } catch (Throwable $e) {
-            // Fallback if failure
-            Log::warning(
-                "Failed to assign previous tax ID {$targetTaxId} for nation {$nation->id}, retrying with fallback."
-            );
-
-            $fallbackMutation = new TaxBracketService;
-            $fallbackMutation->id = $fallbackTaxId;
-            $fallbackMutation->target_id = $nation->id;
-            $fallbackMutation->send();
+    private function requestDisenrollment(DirectDepositEnrollment $enrollment): bool
+    {
+        if ($enrollment->disenrollment_requested_at !== null) {
+            return false;
         }
 
-        // Delete enrollment
-        $enrollment->delete();
+        $enrollment->forceFill(['disenrollment_requested_at' => now()])->save();
+        FinalizeDirectDepositDisenrollment::dispatch($enrollment->id)->afterCommit();
+
+        return true;
     }
 }

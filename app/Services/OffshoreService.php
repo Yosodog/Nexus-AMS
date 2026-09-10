@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\DataTransferObjects\OffshoreUpdateResult;
 use App\Exceptions\PWQueryFailedException;
 use App\Models\Offshore;
 use App\Models\OffshoreGuardrail;
@@ -11,14 +12,19 @@ use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\App;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Validation\ValidationException;
 use Throwable;
 
 class OffshoreService
 {
     private const CACHE_FRESH_MINUTES = 360;
 
-    public function __construct(private readonly AllianceMembershipService $allianceMembershipService) {}
+    public function __construct(
+        private readonly AllianceMembershipService $allianceMembershipService,
+        private readonly ?DirectDepositService $directDepositService = null,
+    ) {}
 
     /**
      * @return Collection<int, mixed>
@@ -27,6 +33,11 @@ class OffshoreService
     {
         $query = Offshore::query()
             ->with('guardrails')
+            ->withCount([
+                'directDepositEnrollments',
+                'directDepositEnrollments as pending_direct_deposit_enrollments_count' => fn ($query) => $query
+                    ->whereNotNull('disenrollment_requested_at'),
+            ])
             ->orderByDesc('enabled')
             ->orderBy('priority');
 
@@ -58,31 +69,120 @@ class OffshoreService
 
     public function create(array $attributes, ?array $guardrails = null): Offshore
     {
-        $offshore = new Offshore($attributes);
-        $offshore->save();
+        if (array_key_exists('enabled', $attributes) && ! $attributes['enabled']) {
+            $attributes['direct_deposit_enabled'] = false;
+        }
 
-        $this->syncGuardrails($offshore, $guardrails);
+        $offshore = DB::transaction(function () use ($attributes, $guardrails): Offshore {
+            $offshore = new Offshore($attributes);
+            $offshore->save();
+
+            if ($offshore->direct_deposit_enabled) {
+                $this->validateDirectDepositConfiguration($offshore);
+            }
+
+            $this->syncGuardrails($offshore, $guardrails);
+
+            return $offshore->fresh('guardrails');
+        });
+
         $this->clearCaches($offshore);
         $this->refreshBalances($offshore, true);
 
-        return $offshore->fresh('guardrails');
+        return $offshore;
     }
 
-    public function update(Offshore $offshore, array $attributes, ?array $guardrails = null): Offshore
+    public function update(Offshore $offshore, array $attributes, ?array $guardrails = null): OffshoreUpdateResult
     {
-        $offshore->fill($attributes);
-        $offshore->save();
+        $result = DB::transaction(function () use ($offshore, $attributes, $guardrails): OffshoreUpdateResult {
+            $lockedOffshore = Offshore::query()->whereKey($offshore->id)->lockForUpdate()->firstOrFail();
+            $allianceIdChanged = array_key_exists('alliance_id', $attributes)
+                && (int) $attributes['alliance_id'] !== (int) $lockedOffshore->alliance_id;
+            $nextEnabled = array_key_exists('enabled', $attributes)
+                ? (bool) $attributes['enabled']
+                : $lockedOffshore->enabled;
+            $nextDirectDepositEnabled = array_key_exists('direct_deposit_enabled', $attributes)
+                ? (bool) $attributes['direct_deposit_enabled']
+                : $lockedOffshore->direct_deposit_enabled;
+            $offshoreDisabled = $lockedOffshore->enabled && ! $nextEnabled;
+            $directDepositDisabled = $lockedOffshore->direct_deposit_enabled && ! $nextDirectDepositEnabled;
+            $mustDisenroll = $allianceIdChanged || $offshoreDisabled || $directDepositDisabled;
+            $enrollmentCount = $lockedOffshore->directDepositEnrollments()->count();
+            $credentialsChanged = array_key_exists('api_key', $attributes)
+                || array_key_exists('mutation_key', $attributes);
 
-        $this->syncGuardrails($offshore, $guardrails);
-        $this->clearCaches($offshore);
+            if ($mustDisenroll && $enrollmentCount > 0 && $credentialsChanged) {
+                throw ValidationException::withMessages([
+                    'api_key' => 'Keep the current offshore credentials until all Direct Deposit disenrollments complete.',
+                ]);
+            }
 
-        return $offshore->fresh('guardrails');
+            $taxIdChanged = (array_key_exists('direct_deposit_tax_id', $attributes)
+                    && (int) $attributes['direct_deposit_tax_id'] !== (int) $lockedOffshore->direct_deposit_tax_id)
+                || (array_key_exists('direct_deposit_fallback_tax_id', $attributes)
+                    && (int) $attributes['direct_deposit_fallback_tax_id'] !== (int) $lockedOffshore->direct_deposit_fallback_tax_id);
+
+            if ($taxIdChanged && $nextDirectDepositEnabled && $enrollmentCount > 0 && ! $mustDisenroll) {
+                throw ValidationException::withMessages([
+                    'direct_deposit_tax_id' => 'Disable Direct Deposit before changing its tax ID while members are enrolled.',
+                ]);
+            }
+
+            if ($allianceIdChanged) {
+                $attributes['direct_deposit_enabled'] = false;
+                $attributes['direct_deposit_tax_id'] = null;
+                $attributes['direct_deposit_fallback_tax_id'] = null;
+            } elseif (! $nextEnabled) {
+                $attributes['direct_deposit_enabled'] = false;
+            }
+
+            $lockedOffshore->fill($attributes);
+
+            if ($lockedOffshore->direct_deposit_enabled) {
+                $this->validateDirectDepositConfiguration($lockedOffshore);
+            }
+
+            $lockedOffshore->save();
+
+            $queuedDisenrollments = $mustDisenroll
+                ? $this->resolveDirectDepositService()->requestDisenrollmentsForOffshore($lockedOffshore)
+                : 0;
+
+            $this->syncGuardrails($lockedOffshore, $guardrails);
+
+            return new OffshoreUpdateResult(
+                offshore: $lockedOffshore->fresh('guardrails'),
+                allianceIdChanged: $allianceIdChanged,
+                directDepositDisabled: $mustDisenroll,
+                queuedDisenrollments: $queuedDisenrollments,
+            );
+        });
+
+        $this->clearCaches($result->offshore);
+
+        return $result;
     }
 
-    public function delete(Offshore $offshore): void
+    public function delete(Offshore $offshore): bool
     {
-        $offshore->delete();
+        $deleted = DB::transaction(function () use ($offshore): bool {
+            $lockedOffshore = Offshore::query()->whereKey($offshore->id)->lockForUpdate()->firstOrFail();
+
+            if ($lockedOffshore->directDepositEnrollments()->exists()) {
+                $lockedOffshore->forceFill(['direct_deposit_enabled' => false])->save();
+                $this->resolveDirectDepositService()->requestDisenrollmentsForOffshore($lockedOffshore);
+
+                return false;
+            }
+
+            $lockedOffshore->delete();
+
+            return true;
+        });
+
         $this->clearCaches($offshore);
+
+        return $deleted;
     }
 
     public function guardrailFor(Offshore $offshore, string $resource): ?OffshoreGuardrail
@@ -151,6 +251,35 @@ class OffshoreService
         Cache::forget($this->balancesCacheKey($offshore));
         // Keep the alliance membership cache in sync so permission checks stay accurate.
         $this->allianceMembershipService->refresh();
+    }
+
+    private function resolveDirectDepositService(): DirectDepositService
+    {
+        return $this->directDepositService ?? app(DirectDepositService::class);
+    }
+
+    private function validateDirectDepositConfiguration(Offshore $offshore): void
+    {
+        $taxId = (int) $offshore->direct_deposit_tax_id;
+        $fallbackTaxId = (int) $offshore->direct_deposit_fallback_tax_id;
+
+        if ($taxId <= 0 || $fallbackTaxId <= 0) {
+            throw ValidationException::withMessages([
+                'direct_deposit_tax_id' => 'Both Direct Deposit tax IDs are required before enabling Direct Deposit.',
+            ]);
+        }
+
+        if ($taxId === $fallbackTaxId) {
+            throw ValidationException::withMessages([
+                'direct_deposit_fallback_tax_id' => 'The Direct Deposit and fallback tax IDs must be different.',
+            ]);
+        }
+
+        if (! $offshore->api_key_decrypted || ! $offshore->mutation_key_decrypted) {
+            throw ValidationException::withMessages([
+                'mutation_key' => 'Usable offshore API and mutation credentials are required before enabling Direct Deposit.',
+            ]);
+        }
     }
 
     /**

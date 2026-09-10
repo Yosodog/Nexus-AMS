@@ -24,12 +24,24 @@ class DirectDepositIdempotencyTest extends TestCase
 {
     use RefreshDatabase;
 
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        config()->set([
+            'services.pw.alliance_id' => 777,
+            'services.pw.api_key' => 'primary-api-key',
+            'services.pw.mutation_key' => 'primary-mutation-key',
+        ]);
+        SettingService::setDirectDepositFallbackId(556);
+    }
+
     public function test_retry_returns_retained_taxes_without_crediting_member_twice(): void
     {
         SettingService::setDirectDepositId(555);
         $this->createTenPercentBracket();
 
-        $nation = Nation::factory()->create(['num_cities' => 5]);
+        $nation = Nation::factory()->create(['alliance_id' => 777, 'num_cities' => 5]);
         $account = new Account;
         $account->nation_id = $nation->id;
         $account->name = 'Direct Deposit';
@@ -65,7 +77,7 @@ class DirectDepositIdempotencyTest extends TestCase
         SettingService::setMMRAssistantEnabled(true);
         $this->createTenPercentBracket();
 
-        $nation = Nation::factory()->create(['num_cities' => 5]);
+        $nation = Nation::factory()->create(['alliance_id' => 777, 'num_cities' => 5]);
         $account = new Account;
         $account->nation_id = $nation->id;
         $account->name = 'Direct Deposit';

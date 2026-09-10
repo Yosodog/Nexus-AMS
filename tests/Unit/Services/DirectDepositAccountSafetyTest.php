@@ -4,6 +4,7 @@ namespace Tests\Unit\Services;
 
 use App\Exceptions\UserErrorException;
 use App\Models\Account;
+use App\Models\Alliance;
 use App\Models\DirectDepositEnrollment;
 use App\Models\MMRConfig;
 use App\Models\Nation;
@@ -17,9 +18,23 @@ class DirectDepositAccountSafetyTest extends TestCase
 {
     use RefreshDatabase;
 
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        config()->set([
+            'services.pw.alliance_id' => 777,
+            'services.pw.api_key' => 'primary-api-key',
+            'services.pw.mutation_key' => 'primary-mutation-key',
+        ]);
+        Alliance::factory()->create(['id' => 777]);
+        SettingService::setDirectDepositId(555);
+        SettingService::setDirectDepositFallbackId(556);
+    }
+
     public function test_direct_deposit_falls_back_when_enrolled_account_is_frozen(): void
     {
-        $nation = Nation::factory()->create();
+        $nation = Nation::factory()->create(['alliance_id' => 777]);
         $frozenAccount = $this->createAccount($nation, 'Frozen', frozen: true);
         $activeAccount = $this->createAccount($nation, 'Active');
 
@@ -41,13 +56,35 @@ class DirectDepositAccountSafetyTest extends TestCase
 
     public function test_direct_deposit_enroll_rejects_frozen_accounts_before_tax_mutation(): void
     {
-        $nation = Nation::factory()->create();
+        $nation = Nation::factory()->create(['alliance_id' => 777]);
         $frozenAccount = $this->createAccount($nation, 'Frozen', frozen: true);
 
         $this->expectException(UserErrorException::class);
         $this->expectExceptionMessage('Select an active account that belongs to your nation.');
 
         app(DirectDepositService::class)->enroll($nation, $frozenAccount);
+    }
+
+    public function test_pending_disenrollment_is_preserved_when_its_account_is_frozen(): void
+    {
+        $nation = Nation::factory()->create(['alliance_id' => 777]);
+        $frozenAccount = $this->createAccount($nation, 'Frozen', frozen: true);
+        $activeAccount = $this->createAccount($nation, 'Active');
+        $enrollment = DirectDepositEnrollment::query()->create([
+            'nation_id' => $nation->id,
+            'alliance_id' => 777,
+            'account_id' => $frozenAccount->id,
+            'direct_deposit_tax_id' => 555,
+            'fallback_tax_id' => 556,
+            'previous_tax_id' => 123,
+            'enrolled_at' => now(),
+            'disenrollment_requested_at' => now(),
+        ]);
+
+        $account = app(DirectDepositService::class)->getDepositAccount($nation);
+
+        $this->assertTrue($activeAccount->is($account));
+        $this->assertDatabaseHas('direct_deposit_enrollments', ['id' => $enrollment->id]);
     }
 
     public function test_mmr_assistant_ignores_frozen_config_accounts(): void
