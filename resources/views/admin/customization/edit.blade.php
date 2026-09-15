@@ -77,8 +77,11 @@
             >
                 <textarea
                     id="customization-editor-input"
-                    class="textarea js-ckeditor w-full"
+                    class="textarea js-jodit w-full"
                     data-editor-input="true"
+                    data-editor-height="640"
+                    data-editor-upload-url="{{ $endpoints['upload'] }}"
+                    data-editor-csrf="{{ csrf_token() }}"
                     rows="14"
                 >{{ $initialContent }}</textarea>
             </div>
@@ -168,6 +171,6 @@
 @endsection
 
 @push('scripts')
-    @vite('resources/js/ckeditor.js')
+    @vite('resources/js/jodit.js')
     @vite('resources/js/customization/editor.js')
 @endpush

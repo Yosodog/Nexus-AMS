@@ -22,7 +22,7 @@
         "@fontsource-variable/commissioner": "^5.2.10",
         "@fontsource/barlow-condensed": "^5.2.8",
         "@laravel/passkeys": "0.2.0",
-        "ckeditor5": "^47.6.1",
-        "daisyui": "^5.0"
+        "daisyui": "^5.0",
+        "jodit": "^4.15.3"
     }
 }

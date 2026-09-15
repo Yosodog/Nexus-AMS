@@ -9,7 +9,6 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\Storage;
-use Illuminate\Support\Facades\URL;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 /**
@@ -18,7 +17,7 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 class CustomizationImageController extends Controller
 {
     /**
-     * Store an uploaded image and return a signed URL payload for Editor.js.
+     * Store an uploaded image and return a persistent public URL for Jodit.
      */
     public function store(CustomizationImageUploadRequest $request): JsonResponse
     {
@@ -27,16 +26,10 @@ class CustomizationImageController extends Controller
         $file = $request->file('image');
         $path = $file->store('custom-pages', 'public');
 
-        $signedUrl = URL::temporarySignedRoute(
-            'admin.customization.images.show',
-            now()->addMinutes(30),
-            ['token' => Crypt::encryptString($path)],
-        );
-
         return response()->json([
             'success' => 1,
             'file' => [
-                'url' => $signedUrl,
+                'url' => Storage::disk('public')->url($path),
                 'path' => $path,
             ],
         ], 201);

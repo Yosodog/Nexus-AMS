@@ -43,7 +43,7 @@
                     id="primary_message"
                     label="Primary message"
                     name="primary_message"
-                    class="js-ckeditor"
+                    class="js-jodit"
                     error-field="primary_message"
                     hint="This message is sent immediately after a nation becomes eligible."
                     rows="10"
@@ -73,7 +73,7 @@
                     id="follow_up_message"
                     label="Follow-up message"
                     name="follow_up_message"
-                    class="js-ckeditor"
+                    class="js-jodit"
                     error-field="follow_up_message"
                     hint="The follow-up is only sent if the nation is still unaffiliated when the delay expires."
                     rows="10"
@@ -156,5 +156,5 @@
 @endsection
 
 @push('scripts')
-    @vite('resources/js/ckeditor.js')
+    @vite('resources/js/jodit.js')
 @endpush

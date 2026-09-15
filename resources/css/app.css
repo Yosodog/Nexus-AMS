@@ -11,39 +11,32 @@
     unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
 }
 
-html[data-theme] .ck.ck-editor,
-html[data-theme] .ck.ck-balloon-panel,
-html[data-theme] .ck.ck-dropdown__panel,
-html[data-theme] .ck.ck-dialog {
-    --ck-border-radius: 0.375rem;
-    --ck-color-base-background: var(--color-base-100);
-    --ck-color-base-foreground: var(--color-base-200);
-    --ck-color-base-border: var(--nexus-rule-strong);
-    --ck-color-base-text: var(--color-base-content);
-    --ck-color-text: var(--color-base-content);
-    --ck-color-toolbar-background: var(--color-base-100);
-    --ck-color-toolbar-border: var(--nexus-rule-strong);
-    --ck-color-panel-background: var(--color-base-100);
-    --ck-color-panel-border: var(--nexus-rule-strong);
-    --ck-color-dropdown-panel-background: var(--color-base-100);
-    --ck-color-dropdown-panel-border: var(--nexus-rule-strong);
-    --ck-color-dialog-background: var(--color-base-100);
-    --ck-color-input-background: var(--color-base-100);
-    --ck-color-input-border: var(--nexus-rule-strong);
-    --ck-color-input-text: var(--color-base-content);
-    --ck-color-button-default-background: transparent;
-    --ck-color-button-default-hover-background: var(--color-base-200);
-    --ck-color-button-default-active-background: var(--color-base-300);
-    --ck-color-button-on-background: color-mix(in oklch, var(--color-primary) 16%, var(--color-base-100));
-    --ck-color-button-on-color: var(--color-primary);
-    --ck-color-button-on-hover-background: color-mix(in oklch, var(--color-primary) 22%, var(--color-base-100));
-    --ck-color-focus-border: var(--nexus-focus);
-    --ck-color-link-default: var(--color-primary);
-    --ck-color-engine-placeholder-text: color-mix(in oklch, var(--color-base-content) 68%, transparent);
-    --ck-color-shadow-drop: color-mix(in oklch, var(--color-base-content) 12%, transparent);
+html[data-theme] :where(.jodit-container, .jodit-popup, .jodit-dialog) {
+    --jd-border-radius-default: 0.375rem;
+    --jd-color-background-default: var(--color-base-100);
+    --jd-color-background-light-gray: var(--color-base-200);
+    --jd-color-background-gray: var(--color-base-300);
+    --jd-color-background-button-hover: var(--color-base-200);
+    --jd-color-background-selection: color-mix(in oklch, var(--color-primary) 18%, var(--color-base-100));
+    --jd-color-border: var(--nexus-rule-strong);
+    --jd-color-border-selected: var(--nexus-focus);
+    --jd-color-button-background-hover: var(--color-base-200);
+    --jd-color-dark: var(--color-base-content);
+    --jd-color-icon: var(--color-base-content);
+    --jd-color-label: var(--color-base-content);
+    --jd-color-panel: var(--color-base-100);
+    --jd-color-placeholder: color-mix(in oklch, var(--color-base-content) 68%, transparent);
+    --jd-color-text: var(--color-base-content);
+    --jd-color-text-icons: var(--color-base-content);
+    --jd-color-white: var(--color-base-100);
+    --jd-font-default: "Commissioner Variable", sans-serif;
 }
 
-html[data-theme] .ck.ck-editor__editable_inline {
+html[data-theme] .jodit-container {
+    width: 100%;
+}
+
+html[data-theme] .jodit-wysiwyg {
     min-height: 22rem;
     background: var(--color-base-100);
     color: var(--color-base-content);
@@ -867,6 +860,24 @@ html[data-theme] .ck.ck-editor__editable_inline {
         list-style: decimal;
     }
 
+    .apply-page-richtext ul.todo-list,
+    .jodit-wysiwyg ul.todo-list {
+        list-style: none;
+        padding-left: 0;
+    }
+
+    .apply-page-richtext .todo-list__label,
+    .jodit-wysiwyg .todo-list__label {
+        display: flex;
+        align-items: flex-start;
+        gap: 0.625rem;
+    }
+
+    .apply-page-richtext .todo-list__label input,
+    .jodit-wysiwyg .todo-list__label input {
+        margin-top: 0.35rem;
+    }
+
     .apply-page-richtext :where(img, iframe) {
         display: block;
         width: auto;
@@ -874,6 +885,20 @@ html[data-theme] .ck.ck-editor__editable_inline {
         margin-inline: auto;
         border: 1px solid var(--nexus-rule);
         border-radius: 0.375rem;
+    }
+
+    .apply-page-richtext figure.image,
+    .jodit-wysiwyg figure.image {
+        display: grid;
+        justify-items: center;
+        gap: 0.5rem;
+    }
+
+    .apply-page-richtext figure.image figcaption,
+    .jodit-wysiwyg figure.image figcaption {
+        color: color-mix(in oklch, var(--color-base-content) 68%, transparent);
+        font-size: 0.875rem;
+        text-align: center;
     }
 
     .apply-page-richtext iframe {
@@ -894,7 +919,16 @@ html[data-theme] .ck.ck-editor__editable_inline {
         border-collapse: collapse;
     }
 
-    .apply-page-richtext figure.table td {
+    .apply-page-richtext > table {
+        display: block;
+        width: 100%;
+        overflow-x: auto;
+        border: 1px solid var(--nexus-rule);
+        border-radius: 0.375rem;
+        border-collapse: collapse;
+    }
+
+    .apply-page-richtext table :where(th, td) {
         min-width: 14rem;
         border: 1px solid var(--nexus-rule);
         padding: 1rem;

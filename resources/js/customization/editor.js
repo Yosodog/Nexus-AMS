@@ -425,24 +425,24 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    let editorInstance = typeof window.getCkeditorInstance === 'function'
-        ? window.getCkeditorInstance(editorElement)
+    let editorInstance = typeof window.getRichTextEditorInstance === 'function'
+        ? window.getRichTextEditorInstance(editorElement)
         : null;
     let pendingContent = null;
 
     if (!editorInstance) {
-        editorElement.addEventListener('ckeditor:ready', (event) => {
+        editorElement.addEventListener('richtext:ready', (event) => {
             editorInstance = event.detail?.editor ?? null;
             if (editorInstance && pendingContent !== null) {
-                editorInstance.setData(pendingContent);
+                editorInstance.value = pendingContent;
                 pendingContent = null;
             }
         }, { once: true });
     }
 
     async function getContent() {
-        if (editorInstance && typeof editorInstance.getData === 'function') {
-            return editorInstance.getData();
+        if (editorInstance && typeof editorInstance.value === 'string') {
+            return editorInstance.value;
         }
 
         if (editorElement instanceof HTMLTextAreaElement) {
@@ -455,8 +455,8 @@ document.addEventListener('DOMContentLoaded', () => {
     function setContent(html) {
         const normalized = typeof html === 'string' ? html : '';
 
-        if (editorInstance && typeof editorInstance.setData === 'function') {
-            editorInstance.setData(normalized);
+        if (editorInstance && 'value' in editorInstance) {
+            editorInstance.value = normalized;
             pendingContent = null;
         } else if (editorElement instanceof HTMLTextAreaElement) {
             editorElement.value = normalized;
