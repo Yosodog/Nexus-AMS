@@ -3,6 +3,7 @@
 namespace App\Services\Settings;
 
 use App\Models\RecruitmentMessage;
+use Illuminate\Support\Carbon;
 
 class RecruitmentSettings
 {
@@ -148,6 +149,22 @@ class RecruitmentSettings
             ['type' => $type],
             ['message' => $message],
         );
+    }
+
+    public function getCurrentCohortStartedAt(): ?Carbon
+    {
+        $value = $this->settings->get('recruitment_current_cohort_started_at');
+
+        if (is_null($value) || $value === '') {
+            return null;
+        }
+
+        return Carbon::parse($value);
+    }
+
+    public function setCurrentCohortStartedAt(?Carbon $timestamp): void
+    {
+        $this->settings->set('recruitment_current_cohort_started_at', $timestamp?->toIso8601String());
     }
 
     private function normalizeSubject(string $subject): string

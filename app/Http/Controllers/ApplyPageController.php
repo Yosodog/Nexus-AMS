@@ -3,8 +3,10 @@
 namespace App\Http\Controllers;
 
 use App\Models\Page;
+use App\Models\RecruitmentMessage;
 use App\Services\AllianceMembershipService;
 use App\Services\PageRenderer;
+use App\Services\RecruitmentService;
 use App\Services\SeoService;
 use App\Services\SettingService;
 use Illuminate\Contracts\View\View;
@@ -73,6 +75,14 @@ class ApplyPageController extends Controller
         $applicationsOpen = SettingService::isApplicationsEnabled();
         $primaryAllianceId = $this->membershipService->getPrimaryAllianceId();
         $campaignContext = $this->campaignContext($request);
+
+        $trackingKey = $request->query('rm');
+        if (is_string($trackingKey) && $trackingKey !== '') {
+            $recruitmentMessage = RecruitmentMessage::withTrashed()->where('tracking_key', $trackingKey)->first();
+            if ($recruitmentMessage) {
+                app(RecruitmentService::class)->recordClick($recruitmentMessage, $request->ip(), $request->userAgent());
+            }
+        }
 
         return view('pages.apply', [
             'title' => 'Apply',

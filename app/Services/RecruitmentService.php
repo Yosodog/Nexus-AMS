@@ -8,9 +8,13 @@ use App\Exceptions\PWRateLimitHitException;
 use App\GraphQL\Models\Nation;
 use App\Jobs\SendRecruitmentMessage;
 use App\Models\RecruitedNation;
+use App\Models\RecruitmentMessage;
+use App\Models\RecruitmentMessageClick;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
 use RuntimeException;
 use Throwable;
 
@@ -25,7 +29,7 @@ class RecruitmentService
     ) {}
 
     /**
-     * Pull the newest nations and attempt to send the primary recruitment message.
+     * Pull the newest nations and send primary recruitment messages using an A/B testing pattern.
      */
     public function runRecruitmentCycle(): void
     {
@@ -53,8 +57,13 @@ class RecruitmentService
 
         $alreadyRecruited = RecruitedNation::whereIn('nation_id', $nationIds)->pluck('nation_id')->all();
 
-        $primarySubject = SettingService::getRecruitmentPrimarySubject();
-        $primaryMessage = SettingService::getRecruitmentPrimaryMessage();
+        $activeVariants = RecruitmentMessage::query()
+            ->variants()
+            ->active()
+            ->get();
+
+        $fallbackSubject = SettingService::getRecruitmentPrimarySubject();
+        $fallbackMessage = SettingService::getRecruitmentPrimaryMessage();
         $followUpEnabled = SettingService::isRecruitmentFollowUpEnabled();
 
         foreach ($nations as $nation) {
@@ -66,10 +75,29 @@ class RecruitmentService
                 continue;
             }
 
+            /** @var RecruitmentMessage|null $selectedVariant */
+            $selectedVariant = null;
+
+            if ($activeVariants->isNotEmpty()) {
+                // A/B testing selection: balance sends by picking the variant with the lowest current_sends.
+                $selectedVariant = $activeVariants
+                    ->sortBy(fn (RecruitmentMessage $variant) => [$variant->current_sends, $variant->id])
+                    ->first();
+
+                $subject = ! empty($selectedVariant->subject)
+                    ? $selectedVariant->subject
+                    : $fallbackSubject;
+
+                $message = $this->prepareMessageBody($selectedVariant);
+            } else {
+                $subject = $fallbackSubject;
+                $message = $fallbackMessage;
+            }
+
             $sent = $this->messageService->sendMessage(
                 $nation->id,
-                $primarySubject,
-                $primaryMessage
+                $subject,
+                $message
             );
 
             if (! $sent) {
@@ -80,8 +108,14 @@ class RecruitmentService
                 continue;
             }
 
+            if ($selectedVariant !== null) {
+                $selectedVariant->increment('lifetime_sends');
+                $selectedVariant->increment('current_sends');
+            }
+
             $record = RecruitedNation::create([
                 'nation_id' => $nation->id,
+                'recruitment_message_id' => $selectedVariant?->id,
                 'primary_sent_at' => now(),
             ]);
 
@@ -96,8 +130,127 @@ class RecruitmentService
     }
 
     /**
-     * Send the follow-up message when the delay has elapsed.
+     * Prepare the message body by injecting or appending the tracked apply link.
+     */
+    public function prepareMessageBody(RecruitmentMessage $variant): string
+    {
+        $trackingUrl = $variant->tracking_url;
+        $body = (string) $variant->message;
+
+        if (str_contains($body, '{apply_link}') || str_contains($body, '{apply_url}')) {
+            return str_replace(['{apply_link}', '{apply_url}'], $trackingUrl, $body);
+        }
+
+        // If tracking link is not in the template, append it cleanly.
+        if (str_contains($body, '</p>')) {
+            return $body.'<p><a href="'.e($trackingUrl).'">Apply to join: '.e($trackingUrl).'</a></p>';
+        }
+
+        return $body."\n\nApply to join: ".$trackingUrl;
+    }
+
+    /**
+     * Create a new recruitment message variant and reset the current A/B testing cohort.
      *
+     * @param  array{name: string, subject: string, message: string, is_active?: bool}  $data
+     */
+    public function createMessage(array $data): RecruitmentMessage
+    {
+        return DB::transaction(function () use ($data): RecruitmentMessage {
+            $message = RecruitmentMessage::create([
+                'name' => $data['name'],
+                'type' => 'variant',
+                'subject' => $data['subject'],
+                'message' => $data['message'],
+                'is_active' => $data['is_active'] ?? true,
+                'tracking_key' => Str::lower(Str::random(10)),
+            ]);
+
+            // Reset current cohort sends and clicks across all messages so the comparison starts afresh.
+            $this->resetCurrentCohort();
+
+            return $message;
+        });
+    }
+
+    /**
+     * Update an existing recruitment message variant.
+     *
+     * @param  array{name: string, subject: string, message: string, is_active?: bool}  $data
+     */
+    public function updateMessage(RecruitmentMessage $message, array $data): RecruitmentMessage
+    {
+        $message->update([
+            'name' => $data['name'],
+            'subject' => $data['subject'],
+            'message' => $data['message'],
+            'is_active' => $data['is_active'] ?? $message->is_active,
+        ]);
+
+        return $message;
+    }
+
+    /**
+     * Delete a recruitment message variant.
+     */
+    public function deleteMessage(RecruitmentMessage $message): void
+    {
+        $message->delete();
+    }
+
+    /**
+     * Toggle active state for a recruitment message variant.
+     */
+    public function toggleActive(RecruitmentMessage $message): bool
+    {
+        $message->update(['is_active' => ! $message->is_active]);
+
+        return $message->is_active;
+    }
+
+    /**
+     * Reset current cohort sends and clicks for all messages.
+     */
+    public function resetCurrentCohort(): void
+    {
+        RecruitmentMessage::query()->update([
+            'current_sends' => 0,
+            'current_clicks' => 0,
+        ]);
+
+        SettingService::setRecruitmentCurrentCohortStartedAt(now());
+    }
+
+    /**
+     * Record a click on a recruitment message link, preventing duplicates within the current session.
+     */
+    public function recordClick(RecruitmentMessage $message, ?string $ip = null, ?string $userAgent = null): bool
+    {
+        $sessionKey = 'recruitment_click_'.$message->id;
+
+        if (session()->has($sessionKey)) {
+            return false;
+        }
+
+        $message->increment('lifetime_clicks');
+        $message->increment('current_clicks');
+
+        $ipHash = $ip ? hash('sha256', $ip) : null;
+
+        RecruitmentMessageClick::create([
+            'recruitment_message_id' => $message->id,
+            'ip_hash' => $ipHash,
+            'user_agent' => $userAgent ? Str::limit($userAgent, 255, '') : null,
+            'created_at' => now(),
+        ]);
+
+        session()->put($sessionKey, now()->timestamp);
+
+        return true;
+    }
+
+    /**
+     * Send the follow-up message when the delay has elapsed.
      *
      * @throws ConnectionException
      * @throws PWQueryFailedException
