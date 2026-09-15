@@ -68,130 +68,238 @@
             </div>
         </dl>
 
-        <div class="grid scroll-mt-24 gap-6 xl:grid-cols-[minmax(0,2fr)_minmax(340px,1fr)]">
-            <div class="space-y-6">
-                {{-- A/B Testing Message Variants Card --}}
-                <x-card title="A/B Testing Message Pool">
-                    <x-slot:menu>
-                        <span class="text-xs nexus-text-muted">
-                            Current metrics reset automatically whenever a new message is added.
-                        </span>
-                    </x-slot:menu>
+        {{-- Full-Width A/B Testing Message Pool Card --}}
+        <div class="w-full">
+            <x-card title="A/B Testing Message Pool">
+                <x-slot:menu>
+                    <span class="text-xs nexus-text-muted">
+                        Current metrics reset automatically whenever a new message is added.
+                    </span>
+                </x-slot:menu>
 
-                    @if($variants->isEmpty())
-                        <div class="nexus-empty-state text-center py-8">
-                            <x-icon name="o-envelope" class="mx-auto size-12 text-base-content/40" />
-                            <h3 class="mt-2 text-sm font-semibold text-base-content">No message variants configured</h3>
-                            <p class="mt-1 text-sm text-base-content/70">Create individual recruitment messages to begin A/B testing outreach.</p>
-                            <div class="mt-4">
-                                <button type="button" class="btn btn-primary btn-sm" onclick="document.getElementById('createMessageModal').showModal()">
-                                    Add your first message
-                                </button>
-                            </div>
+                @if($variants->isEmpty())
+                    <div class="nexus-empty-state text-center py-10">
+                        <x-icon name="o-envelope" class="mx-auto size-12 text-base-content/40" />
+                        <h3 class="mt-2 text-base font-semibold text-base-content">No message variants configured</h3>
+                        <p class="mt-1 text-sm text-base-content/70">Create individual recruitment messages to begin A/B testing outreach.</p>
+                        <div class="mt-4">
+                            <button type="button" class="btn btn-primary btn-sm" onclick="document.getElementById('createMessageModal').showModal()">
+                                Add your first message
+                            </button>
                         </div>
-                    @else
-                        <div class="overflow-x-auto rounded-box border border-base-300">
-                            <table class="table table-zebra table-sm" data-sortable="false">
-                                <thead>
-                                    <tr>
-                                        <th scope="col">Variant</th>
-                                        <th scope="col">Status</th>
-                                        <th scope="col">Apply Link</th>
-                                        <th scope="col" class="text-right">Current Sends</th>
-                                        <th scope="col" class="text-right">Current Clicks</th>
-                                        <th scope="col" class="text-right">Current CTR</th>
-                                        <th scope="col" class="text-right">Lifetime</th>
-                                        <th scope="col" class="text-right">Actions</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    @foreach($variants as $variant)
-                                        @php
-                                            $currentSendShare = $totalCurrentSends > 0
-                                                ? round(($variant->current_sends / $totalCurrentSends) * 100, 1)
-                                                : 0.0;
-                                            $currentClickShare = $totalCurrentClicks > 0
-                                                ? round(($variant->current_clicks / $totalCurrentClicks) * 100, 1)
-                                                : 0.0;
-                                        @endphp
-                                        <tr class="{{ ! $variant->is_active ? 'opacity-60 bg-base-200/40' : '' }}">
-                                            <td>
-                                                <div class="font-medium text-base-content">{{ $variant->name }}</div>
-                                                <div class="text-xs nexus-text-muted truncate max-w-xs">{{ $variant->subject }}</div>
-                                            </td>
-                                            <td>
-                                                <span class="badge badge-sm {{ $variant->is_active ? 'badge-success' : 'badge-ghost' }}">
-                                                    {{ $variant->is_active ? 'Active' : 'Paused' }}
-                                                </span>
-                                            </td>
-                                            <td>
-                                                <div class="flex items-center gap-1">
-                                                    <input
-                                                        type="text"
-                                                        readonly
-                                                        value="{{ $variant->tracking_url }}"
-                                                        class="input input-xs input-bordered w-36 font-mono text-xs select-all"
-                                                    />
-                                                    <button
-                                                        type="button"
-                                                        class="btn btn-ghost btn-xs"
-                                                        title="Copy tracking link"
-                                                        onclick="navigator.clipboard.writeText('{{ $variant->tracking_url }}'); this.textContent = '✓'; setTimeout(() => this.textContent = 'Copy', 2000)"
-                                                    >
-                                                        Copy
-                                                    </button>
-                                                </div>
-                                            </td>
-                                            <td class="text-right font-mono tabular-nums">
+                    </div>
+                @else
+                    <div class="overflow-x-auto rounded-box border border-base-300 min-h-[180px]">
+                        <table class="table table-zebra table-md w-full" data-sortable="false">
+                            <thead>
+                                <tr class="text-xs uppercase text-base-content/70 border-b border-base-300 bg-base-200/50">
+                                    <th scope="col" class="py-3 px-4 font-semibold min-w-[200px]">Variant</th>
+                                    <th scope="col" class="py-3 px-3 font-semibold text-center">Status</th>
+                                    <th scope="col" class="py-3 px-4 font-semibold min-w-[320px]">Tracked Apply Link</th>
+                                    <th scope="col" class="py-3 px-4 font-semibold text-right whitespace-nowrap">Current Sends / Clicks</th>
+                                    <th scope="col" class="py-3 px-4 font-semibold text-right whitespace-nowrap">Current CTR</th>
+                                    <th scope="col" class="py-3 px-4 font-semibold text-right whitespace-nowrap">Lifetime Sends / Clicks</th>
+                                    <th scope="col" class="py-3 px-4 font-semibold text-right" data-sortable="false">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach($variants as $variant)
+                                    @php
+                                        $currentSendShare = $totalCurrentSends > 0
+                                            ? round(($variant->current_sends / $totalCurrentSends) * 100, 1)
+                                            : 0.0;
+                                        $currentClickShare = $totalCurrentClicks > 0
+                                            ? round(($variant->current_clicks / $totalCurrentClicks) * 100, 1)
+                                            : 0.0;
+                                    @endphp
+                                    <tr class="hover:bg-base-200/40 transition-colors {{ ! $variant->is_active ? 'opacity-60 bg-base-200/25' : '' }}">
+                                        <td class="py-3 px-4 min-w-[200px]">
+                                            <div class="font-semibold text-base-content">{{ $variant->name }}</div>
+                                            <div class="text-xs nexus-text-muted mt-0.5 max-w-sm truncate" title="{{ $variant->subject }}">{{ $variant->subject }}</div>
+                                        </td>
+                                        <td class="py-3 px-3 text-center whitespace-nowrap">
+                                            <span class="badge badge-sm font-medium {{ $variant->is_active ? 'badge-success gap-1' : 'badge-ghost gap-1' }}">
+                                                <span class="size-1.5 rounded-full {{ $variant->is_active ? 'bg-success-content' : 'bg-base-content/40' }}"></span>
+                                                {{ $variant->is_active ? 'Active' : 'Paused' }}
+                                            </span>
+                                        </td>
+                                        <td class="py-3 px-4 whitespace-nowrap min-w-[320px]">
+                                            <div class="flex items-center gap-1.5">
+                                                <input
+                                                    type="text"
+                                                    readonly
+                                                    value="{{ $variant->tracking_url }}"
+                                                    class="input input-xs input-bordered w-72 sm:w-80 font-mono text-xs select-all bg-base-100/80"
+                                                />
+                                                <button
+                                                    type="button"
+                                                    class="btn btn-ghost btn-xs text-xs"
+                                                    title="Copy tracking link"
+                                                    onclick="navigator.clipboard.writeText('{{ $variant->tracking_url }}'); this.textContent = '✓ Copied'; setTimeout(() => this.textContent = 'Copy', 2000)"
+                                                >
+                                                    Copy
+                                                </button>
+                                            </div>
+                                        </td>
+                                        <td class="py-3 px-4 text-right font-mono tabular-nums whitespace-nowrap">
+                                            <div class="font-medium text-base-content">
                                                 <span>{{ number_format($variant->current_sends) }}</span>
-                                                <span class="text-xs text-base-content/60">({{ $currentSendShare }}%)</span>
-                                            </td>
-                                            <td class="text-right font-mono tabular-nums">
+                                                <span class="text-xs text-base-content/60 font-sans">sends</span>
+                                                <span class="text-base-content/30 mx-1">/</span>
                                                 <span>{{ number_format($variant->current_clicks) }}</span>
-                                                <span class="text-xs text-base-content/60">({{ $currentClickShare }}%)</span>
-                                            </td>
-                                            <td class="text-right font-mono tabular-nums font-semibold {{ $variant->current_ctr >= $currentCohortCtr ? 'text-success' : 'text-base-content' }}">
+                                                <span class="text-xs text-base-content/60 font-sans">clicks</span>
+                                            </div>
+                                            <div class="text-xs text-base-content/60 font-sans">
+                                                {{ $currentSendShare }}% pool · {{ $currentClickShare }}% clicks
+                                            </div>
+                                        </td>
+                                        <td class="py-3 px-4 text-right font-mono tabular-nums whitespace-nowrap">
+                                            <span class="inline-flex items-center px-2.5 py-1 rounded text-xs font-bold {{ $variant->current_ctr >= $currentCohortCtr && $variant->current_sends > 0 ? 'bg-success/15 text-success' : 'bg-base-200 text-base-content' }}">
                                                 {{ $variant->current_ctr }}%
-                                            </td>
-                                            <td class="text-right font-mono tabular-nums text-xs">
-                                                <div>{{ number_format($variant->lifetime_sends) }}s / {{ number_format($variant->lifetime_clicks) }}c</div>
-                                                <div class="text-base-content/60">{{ $variant->lifetime_ctr }}% CTR</div>
-                                            </td>
-                                            <td class="text-right">
-                                                <div class="flex items-center justify-end gap-1">
-                                                    <button
-                                                        type="button"
-                                                        class="btn btn-ghost btn-xs"
-                                                        onclick="document.getElementById('editMessageModal-{{ $variant->id }}').showModal()"
-                                                        title="Edit variant"
-                                                    >
-                                                        Edit
-                                                    </button>
-
-                                                    <form method="POST" action="{{ route('admin.recruitment.messages.toggle', $variant) }}">
-                                                        @csrf
-                                                        <button type="submit" class="btn btn-ghost btn-xs" title="{{ $variant->is_active ? 'Pause variant' : 'Activate variant' }}">
-                                                            {{ $variant->is_active ? 'Pause' : 'Activate' }}
-                                                        </button>
-                                                    </form>
-
-                                                    <form method="POST" action="{{ route('admin.recruitment.messages.destroy', $variant) }}" onsubmit="return confirm('Remove variant \'{{ $variant->name }}\'?')">
-                                                        @csrf
-                                                        @method('DELETE')
-                                                        <button type="submit" class="btn btn-ghost btn-xs text-error" title="Delete variant">
-                                                            Delete
-                                                        </button>
-                                                    </form>
+                                            </span>
+                                        </td>
+                                        <td class="py-3 px-4 text-right font-mono tabular-nums whitespace-nowrap">
+                                            <div class="font-medium text-base-content text-sm">
+                                                <span>{{ number_format($variant->lifetime_sends) }}</span>
+                                                <span class="text-xs text-base-content/60 font-sans">sends</span>
+                                                <span class="text-base-content/30 mx-1">/</span>
+                                                <span>{{ number_format($variant->lifetime_clicks) }}</span>
+                                                <span class="text-xs text-base-content/60 font-sans">clicks</span>
+                                            </div>
+                                        </td>
+                                        <td class="py-3 px-4 text-right whitespace-nowrap">
+                                            <div class="dropdown {{ $loop->last && $loop->count > 1 ? 'dropdown-top' : 'dropdown-bottom' }} dropdown-end">
+                                                <div tabindex="0" role="button" class="btn btn-ghost btn-xs btn-circle" aria-label="Actions for {{ $variant->name }}">
+                                                    <x-icon name="o-ellipsis-vertical" class="size-4" />
                                                 </div>
-                                            </td>
-                                        </tr>
+                                                <ul tabindex="0" class="dropdown-content menu menu-sm bg-base-100 rounded-box z-30 w-36 p-1.5 shadow-lg border border-base-300">
+                                                    <li>
+                                                        <button
+                                                            type="button"
+                                                            class="flex items-center gap-2 py-1.5"
+                                                            onclick="document.getElementById('editMessageModal-{{ $variant->id }}').showModal(); if (document.activeElement) { document.activeElement.blur(); }"
+                                                        >
+                                                            <x-icon name="o-pencil-square" class="size-4" />
+                                                            <span>Edit</span>
+                                                        </button>
+                                                    </li>
+                                                    <li>
+                                                        <form method="POST" action="{{ route('admin.recruitment.messages.toggle', $variant) }}">
+                                                            @csrf
+                                                            <button type="submit" class="flex items-center gap-2 py-1.5 w-full text-left">
+                                                                <x-icon name="{{ $variant->is_active ? 'o-pause' : 'o-play' }}" class="size-4" />
+                                                                <span>{{ $variant->is_active ? 'Pause' : 'Activate' }}</span>
+                                                            </button>
+                                                        </form>
+                                                    </li>
+                                                    <li>
+                                                        <form method="POST" action="{{ route('admin.recruitment.messages.destroy', $variant) }}" onsubmit="return confirm('Remove variant \'{{ $variant->name }}\'?')">
+                                                            @csrf
+                                                            @method('DELETE')
+                                                            <button type="submit" class="flex items-center gap-2 py-1.5 w-full text-left text-error hover:bg-error/10">
+                                                                <x-icon name="o-trash" class="size-4 text-error" />
+                                                                <span>Delete</span>
+                                                            </button>
+                                                        </form>
+                                                    </li>
+                                                </ul>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                @endforeach
+                            </tbody>
+                        </table>
+                    </div>
+                @endif
+            </x-card>
+        </div>
+
+        {{-- Lower Section: Send Test Message, Latest Recruited Nations, and Outreach Settings --}}
+        <div class="grid scroll-mt-24 gap-6 lg:grid-cols-2">
+            <div class="space-y-6">
+                {{-- Send Test Message Card --}}
+                <x-card title="Send Test Message">
+                    @if($userNationId)
+                        <p class="text-sm nexus-text-muted">
+                            Test messages are sent to your nation (ID {{ $userNationId }}).
+                        </p>
+
+                        <form method="POST" action="{{ route('admin.recruitment.test') }}" class="space-y-4 mt-3">
+                            @csrf
+
+                            <div>
+                                <label for="test_type" class="fieldset-legend mb-0.5">Message target <span class="text-error">*</span></label>
+                                <select id="test_type" name="type" class="select w-full" onchange="document.getElementById('variantSelectGroup').style.display = (this.value === 'variant') ? 'block' : 'none';" required>
+                                    <option value="variant" @selected(old('type') === 'variant')>A/B Recruitment Variant</option>
+                                    <option value="follow_up" @selected(old('type') === 'follow_up')>Follow-up Message</option>
+                                </select>
+                            </div>
+
+                            <div id="variantSelectGroup" style="{{ old('type') === 'follow_up' ? 'display: none;' : 'display: block;' }}">
+                                <label for="message_id" class="fieldset-legend mb-0.5">Select variant</label>
+                                <select id="message_id" name="message_id" class="select w-full">
+                                    @foreach($variants as $variant)
+                                        <option value="{{ $variant->id }}" @selected(old('message_id') == $variant->id)>
+                                            {{ $variant->name }} ({{ $variant->subject }})
+                                        </option>
                                     @endforeach
-                                </tbody>
-                            </table>
+                                </select>
+                            </div>
+
+                            <button type="submit" class="btn btn-outline btn-primary w-full">
+                                Send test message
+                            </button>
+                        </form>
+                    @else
+                        <div class="alert alert-warning">
+                            Add your nation ID to your profile to send test messages.
                         </div>
                     @endif
                 </x-card>
 
+                {{-- Latest Recruited Nations Card --}}
+                <x-card title="Latest Recruited Nations">
+                    <div class="overflow-x-auto rounded-box border border-base-300">
+                        <table class="table table-zebra table-xs w-full" data-sortable="false">
+                            <thead>
+                                <tr>
+                                    <th scope="col">Leader</th>
+                                    <th scope="col">Variant</th>
+                                    <th scope="col">Sent</th>
+                                    <th scope="col">Follow Up</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @forelse ($latestNations as $nation)
+                                    <tr>
+                                        <td>
+                                            <div class="flex items-center gap-1.5">
+                                                <a href="https://politicsandwar.com/nation/id={{ $nation->nation_id }}" target="_blank" rel="noopener" class="link link-hover font-medium">
+                                                    {{ $nation->nation?->leader_name ?? $nation->nation_id }}
+                                                </a>
+                                                <span class="badge badge-xs {{ $nation->nation?->alliance_id == $primaryAllianceId ? 'badge-success' : 'badge-ghost' }}">
+                                                    {{ $nation->nation?->alliance_id == $primaryAllianceId ? 'Joined' : 'Pending' }}
+                                                </span>
+                                            </div>
+                                        </td>
+                                        <td class="text-xs truncate max-w-28" title="{{ $nation->recruitmentMessage?->name ?? 'Default' }}">
+                                            {{ $nation->recruitmentMessage?->name ?? '—' }}
+                                        </td>
+                                        <td class="text-xs text-base-content/70">{{ $nation->primary_sent_at?->diffForHumans() ?? '—' }}</td>
+                                        <td class="text-xs text-base-content/70">{{ $nation->follow_up_scheduled_for?->diffForHumans() ?? '—' }}</td>
+                                    </tr>
+                                @empty
+                                    <tr>
+                                        <td colspan="4" class="text-center text-xs py-4 text-base-content/60">No recent recruitment dispatches recorded.</td>
+                                    </tr>
+                                @endforelse
+                            </tbody>
+                        </table>
+                    </div>
+                </x-card>
+            </div>
+
+            <div class="space-y-6">
                 {{-- General Outreach & Follow-up Settings Card --}}
                 <x-card title="Automated Outreach &amp; Follow-up Settings">
                     <form id="recruitment-settings" method="POST" action="{{ route('admin.recruitment.update') }}" class="space-y-5">
@@ -242,89 +350,6 @@
                             </button>
                         </div>
                     </form>
-                </x-card>
-            </div>
-
-            <div class="space-y-6">
-                {{-- Send Test Message Card --}}
-                <x-card title="Send Test Message">
-                    @if($userNationId)
-                        <p class="text-sm nexus-text-muted">
-                            Test messages are sent to your nation (ID {{ $userNationId }}).
-                        </p>
-
-                        <form method="POST" action="{{ route('admin.recruitment.test') }}" class="space-y-4 mt-3">
-                            @csrf
-
-                            <div>
-                                <label for="test_type" class="fieldset-legend mb-0.5">Message target <span class="text-error">*</span></label>
-                                <select id="test_type" name="type" class="select w-full" onchange="document.getElementById('variantSelectGroup').style.display = (this.value === 'variant') ? 'block' : 'none';" required>
-                                    <option value="variant" @selected(old('type') === 'variant')>A/B Recruitment Variant</option>
-                                    <option value="follow_up" @selected(old('type') === 'follow_up')>Follow-up Message</option>
-                                </select>
-                            </div>
-
-                            <div id="variantSelectGroup" style="{{ old('type') === 'follow_up' ? 'display: none;' : 'display: block;' }}">
-                                <label for="message_id" class="fieldset-legend mb-0.5">Select variant</label>
-                                <select id="message_id" name="message_id" class="select w-full">
-                                    @foreach($variants as $variant)
-                                        <option value="{{ $variant->id }}" @selected(old('message_id') == $variant->id)>
-                                            {{ $variant->name }} ({{ $variant->subject }})
-                                        </option>
-                                    @endforeach
-                                </select>
-                            </div>
-
-                            <button type="submit" class="btn btn-outline btn-primary w-full">
-                                Send test message
-                            </button>
-                        </form>
-                    @else
-                        <div class="alert alert-warning">
-                            Add your nation ID to your profile to send test messages.
-                        </div>
-                    @endif
-                </x-card>
-
-                {{-- Latest Recruited Nations Card --}}
-                <x-card title="Latest Recruited Nations">
-                    <div class="overflow-x-auto rounded-box border border-base-300">
-                        <table class="table table-zebra table-xs" data-sortable="false">
-                            <thead>
-                                <tr>
-                                    <th scope="col">Leader</th>
-                                    <th scope="col">Variant</th>
-                                    <th scope="col">Sent</th>
-                                    <th scope="col">Follow Up</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                @forelse ($latestNations as $nation)
-                                    <tr>
-                                        <td>
-                                            <div class="flex items-center gap-1.5">
-                                                <a href="https://politicsandwar.com/nation/id={{ $nation->nation_id }}" target="_blank" rel="noopener" class="link link-hover font-medium">
-                                                    {{ $nation->nation?->leader_name ?? $nation->nation_id }}
-                                                </a>
-                                                <span class="badge badge-xs {{ $nation->nation?->alliance_id == $primaryAllianceId ? 'badge-success' : 'badge-ghost' }}">
-                                                    {{ $nation->nation?->alliance_id == $primaryAllianceId ? 'Joined' : 'Pending' }}
-                                                </span>
-                                            </div>
-                                        </td>
-                                        <td class="text-xs truncate max-w-28" title="{{ $nation->recruitmentMessage?->name ?? 'Default' }}">
-                                            {{ $nation->recruitmentMessage?->name ?? '—' }}
-                                        </td>
-                                        <td class="text-xs text-base-content/70">{{ $nation->primary_sent_at?->diffForHumans() ?? '—' }}</td>
-                                        <td class="text-xs text-base-content/70">{{ $nation->follow_up_scheduled_for?->diffForHumans() ?? '—' }}</td>
-                                    </tr>
-                                @empty
-                                    <tr>
-                                        <td colspan="4" class="text-center text-xs py-4 text-base-content/60">No recent recruitment dispatches recorded.</td>
-                                    </tr>
-                                @endforelse
-                            </tbody>
-                        </table>
-                    </div>
                 </x-card>
             </div>
         </div>
