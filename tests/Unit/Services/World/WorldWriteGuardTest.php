@@ -11,6 +11,8 @@ use App\Models\MarketPriceSnapshotItem;
 use App\Models\MarketTrade;
 use App\Models\Nation;
 use App\Models\RadiationSnapshot;
+use App\Models\RaidAttackObservation;
+use App\Models\RaidNationObservation;
 use App\Models\TradePrice;
 use App\Models\Treaty;
 use App\Models\User;
@@ -40,9 +42,11 @@ class WorldWriteGuardTest extends TestCase
             'market_price_snapshots' => MarketPriceSnapshot::class,
             'market_price_snapshot_items' => MarketPriceSnapshotItem::class,
             'radiation_snapshots' => RadiationSnapshot::class,
+            'raid_nation_observations' => RaidNationObservation::class,
+            'raid_attack_observations' => RaidAttackObservation::class,
         ];
 
-        $this->assertSame(1, WorldModelManifest::CONTRACT_VERSION);
+        $this->assertSame(2, WorldModelManifest::CONTRACT_VERSION);
         $this->assertSame($expectedModelsByTable, WorldModelManifest::modelsByTable());
         $this->assertSame(array_values($expectedModelsByTable), WorldModelManifest::models());
 

@@ -2,12 +2,18 @@
 
 namespace Tests\Unit\Services;
 
+use App\Models\Nation;
+use App\Models\RaidNationObservation;
 use App\Services\RaidFinderCache;
+use App\Services\RaidIntelligenceDemand;
+use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Cache;
 use Tests\TestCase;
 
 class RaidFinderCacheTest extends TestCase
 {
+    use RefreshDatabase;
+
     protected function setUp(): void
     {
         parent::setUp();
@@ -19,17 +25,17 @@ class RaidFinderCacheTest extends TestCase
     {
         $cache = app(RaidFinderCache::class);
 
-        $this->assertSame('raid-finder:v1:4242', $cache->key(4242));
-        $this->assertSame('raid-finder:v1:5151', $cache->key(5151));
+        $this->assertStringStartsWith('raid-finder:profit:planning:v1:4242:', $cache->key(4242));
+        $this->assertStringStartsWith('raid-finder:profit:planning:v1:5151:', $cache->key(5151));
 
         $cache->invalidatePolicy();
 
-        $this->assertSame('raid-finder:v2:4242', $cache->key(4242));
-        $this->assertSame('raid-finder:v2:5151', $cache->key(5151));
+        $this->assertStringStartsWith('raid-finder:profit:planning:v2:4242:', $cache->key(4242));
+        $this->assertStringStartsWith('raid-finder:profit:planning:v2:5151:', $cache->key(5151));
 
         $cache->invalidatePolicy();
 
-        $this->assertSame('raid-finder:v3:4242', $cache->key(4242));
+        $this->assertStringStartsWith('raid-finder:profit:planning:v3:4242:', $cache->key(4242));
     }
 
     public function test_snapshot_tracks_freshness_without_discarding_stale_data_immediately(): void
@@ -44,5 +50,51 @@ class RaidFinderCacheTest extends TestCase
 
         $this->assertFalse($cache->isFresh($snapshot));
         $this->assertSame($snapshot, $cache->snapshot(4242));
+    }
+
+    public function test_changed_intelligence_preserves_a_stale_fallback_but_never_marks_it_fresh(): void
+    {
+        $cache = app(RaidFinderCache::class);
+        $cache->store(4242, [['value' => 123]]);
+        RaidNationObservation::factory()->create(['nation_id' => 10]);
+        $snapshot = $cache->snapshot(4242);
+        $this->assertSame(123, $snapshot['targets'][0]['value']);
+        $this->assertFalse($cache->isFresh($snapshot));
+    }
+
+    public function test_changed_attacker_supplies_invalidates_a_budgeted_approach(): void
+    {
+        $nation = Nation::factory()->create();
+        $supplies = $nation->resources()->create(array_replace(
+            array_fill_keys(['money', 'coal', 'oil', 'uranium', 'iron', 'bauxite', 'lead', 'gasoline', 'munitions', 'steel', 'aluminum', 'food'], 0),
+            ['money' => 1000000, 'gasoline' => 100, 'munitions' => 100, 'credits' => 0],
+        ));
+        $cache = app(RaidFinderCache::class);
+        $before = $cache->key($nation->id);
+
+        $supplies->update(['munitions' => 1]);
+
+        $this->assertNotSame($before, $cache->key($nation->id));
+    }
+
+    public function test_target_refresh_demand_merges_searches_and_preserves_unconsumed_ids(): void
+    {
+        $demand = app(RaidIntelligenceDemand::class);
+        $demand->prioritize([10, 20]);
+        $demand->prioritize([20, 30, -1]);
+
+        $this->assertSame([10], $demand->take(1));
+        $demand->prioritize([40]);
+        $this->assertSame([20, 30, 40], $demand->take(100));
+        $this->assertSame([], $demand->take(100));
+    }
+
+    public function test_public_revision_invalidates_even_when_database_timestamps_have_not_changed(): void
+    {
+        $cache = app(RaidFinderCache::class);
+        $before = $cache->key(4242);
+        Cache::store(config('raids.intelligence_cache_store'))->forever('raid-intelligence:revision', 'corrected-public-attack');
+
+        $this->assertNotSame($before, $cache->key(4242));
     }
 }

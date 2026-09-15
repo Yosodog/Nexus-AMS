@@ -25,6 +25,8 @@ Route::prefix('v1')->middleware(['auth:sanctum', EnsureUserIsVerified::class, Di
 
     Route::get('/accounts', [AccountController::class, 'getUserAccounts']);
     Route::post('/accounts/{account}/deposit-request', [AccountController::class, 'createDepositRequest']);
+    Route::get('/defense/raid-finder/availability', [RaidFinderController::class, 'availability'])
+        ->middleware('throttle:6,1')->name('api.raid-finder.availability');
     Route::get('/defense/raid-finder/{nation_id?}', [RaidFinderController::class, 'show'])
         ->middleware('throttle:raid-finder')
         ->name('api.raid-finder.show');

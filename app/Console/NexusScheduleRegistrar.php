@@ -47,6 +47,7 @@ final readonly class NexusScheduleRegistrar
         }
 
         if ($this->capabilities->runsPublicWorldSchedules()) {
+            $schedule->command('raids:refresh-intelligence --limit=100')->everyMinute()->withoutOverlapping(5)->onOneServer()->when($whenPWUp);
             $this->registerPublicDependencySchedule($schedule);
         }
 
@@ -57,6 +58,7 @@ final readonly class NexusScheduleRegistrar
         if ($this->capabilities->runsTenantSchedules()) {
             $this->registerTenantFinancialSchedules($schedule, $whenPWUp);
             $this->registerTenantOperationalSchedules($schedule);
+            $schedule->command('raid:reconcile-predictions --days=30')->everyTenMinutes()->withoutOverlapping(10)->onOneServer();
         }
 
         if ($this->capabilities->runsPlatformBackups()) {

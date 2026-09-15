@@ -5,6 +5,7 @@ use App\Http\Controllers\CounterFinderController;
 use App\Http\Controllers\IntelReportController;
 use App\Http\Controllers\RaidFinderController;
 use App\Http\Controllers\RaidingLeaderboardController;
+use App\Http\Controllers\RaidResultsController;
 use App\Http\Controllers\RebuildingController;
 use App\Http\Controllers\WarAidController;
 use App\Http\Controllers\WarSimulatorController;
@@ -29,6 +30,8 @@ Route::prefix('defense')->middleware(['auth'])->group(function () {
     Route::get('/raid-finder', [RaidFinderController::class, 'index'])->name(
         'defense.raid-finder'
     )->middleware(BlockWhenPWDown::class);
+
+    Route::get('/raid-results', [RaidResultsController::class, 'index'])->name('defense.raid-results');
 
     Route::get('/war-stats', WarStatsController::class)->name('defense.war-stats');
     Route::get('/simulators', WarSimulatorController::class)->name('defense.simulators');

@@ -32,21 +32,23 @@ final class PercentileCalculator
     }
 
     /**
-     * @param  array<int, float|int>  $sortedValues
+     * @param  array<int, float|int>  $values
      */
-    private static function percentile(array $sortedValues, float $percentile): float
+    public static function percentile(array $values, float $percentile): float
     {
-        $count = count($sortedValues);
+        sort($values, SORT_NUMERIC);
+        $percentile = max(0.0, min(1.0, $percentile));
+        $count = count($values);
 
         if ($count === 1) {
-            return (float) $sortedValues[0];
+            return (float) $values[0];
         }
 
         $index = ($count - 1) * $percentile;
         $lowerIndex = (int) floor($index);
         $upperIndex = (int) ceil($index);
-        $lowerValue = (float) $sortedValues[$lowerIndex];
-        $upperValue = (float) $sortedValues[$upperIndex];
+        $lowerValue = (float) $values[$lowerIndex];
+        $upperValue = (float) $values[$upperIndex];
 
         if ($lowerIndex === $upperIndex) {
             return $lowerValue;

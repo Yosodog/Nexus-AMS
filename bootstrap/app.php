@@ -9,6 +9,7 @@ use App\Http\Middleware\SecurityHeaders;
 use App\Http\Middleware\UpdateLastActive;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
+use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -61,6 +62,17 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {
+        $exceptions->render(function (QueryException $exception, Request $request) {
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'message' => 'The request could not be completed. Please try again.',
+                    'state' => 'temporary_failure',
+                ], 500);
+            }
+
+            return response()->view('errors.500', [], 500);
+        });
+
         $isDiscordActorApi = static fn (Request $request): bool => $request->is('api/v1/discord/me/*')
             || $request->is('api/v1/discord/staff/*')
             || $request->is('api/v1/discord/applications/preview')

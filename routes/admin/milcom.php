@@ -10,6 +10,7 @@ use App\Http\Controllers\Admin\WarController as AdminWarController;
 use App\Http\Controllers\Admin\WarCounterController as AdminWarCounterController;
 use App\Http\Controllers\Admin\WarPlanController as AdminWarPlanController;
 use App\Http\Controllers\Admin\WarRoomController;
+use App\Http\Controllers\RaidResultsController;
 use App\Http\Middleware\BlockWhenPWDown;
 use App\Http\Middleware\RequireMilcomV2;
 use Illuminate\Support\Facades\Route;
@@ -164,3 +165,6 @@ Route::delete(
     '/defense/beige-alerts/alliances/{beigeAlertAlliance}',
     [BeigeAlertController::class, 'destroyAlliance']
 )->name('admin.beige-alerts.alliances.destroy');
+
+Route::get('/defense/raid-assessment', [RaidResultsController::class, 'admin'])
+    ->middleware('can:view-diagnostic-info')->name('admin.raid-assessment');

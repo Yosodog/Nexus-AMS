@@ -18,6 +18,7 @@ class NexusRuntimeScheduleMatrixTest extends TestCase
 {
     private const STANDALONE_EVENTS = [
         'health:record-process-heartbeats@* * * * *',
+        'raids:refresh-intelligence --limit=100@* * * * *',
         'pw:health-check@* * * * *',
         'sync:nations:rolling --scope=highscore@15 0 * * *',
         'sync:nations:rolling --scope=all@30 0 * * 1',
@@ -52,6 +53,7 @@ class NexusRuntimeScheduleMatrixTest extends TestCase
         'App\\Jobs\\ExpireFederationResourcesJob@*/5 * * * *',
         'App\\Jobs\\PruneFederationMessagesJob@30 2 * * *',
         'discord:sync-city-tiers@20 * * * *',
+        'raid:reconcile-predictions --days=30@*/10 * * * *',
         'backup:run@30 1,7,13,19 * * *',
         'backup:monitor@10 2 * * *',
         'backup:clean@20 2 * * *',
@@ -108,6 +110,7 @@ class NexusRuntimeScheduleMatrixTest extends TestCase
         'App\\Jobs\\ExpireFederationResourcesJob@*/5 * * * *',
         'App\\Jobs\\PruneFederationMessagesJob@30 2 * * *',
         'discord:sync-city-tiers@20 * * * *',
+        'raid:reconcile-predictions --days=30@*/10 * * * *',
         'taxes:collect@15 * * * *',
         'pw:sync-city-average@5 0 * * *',
         'military:sign-in@10 12 * * *',
@@ -125,6 +128,7 @@ class NexusRuntimeScheduleMatrixTest extends TestCase
     ];
 
     private const WORLD_WRITER_EVENTS = [
+        'raids:refresh-intelligence --limit=100@* * * * *',
         'pw:health-check@* * * * *',
         'sync:treaties@10 * * * *',
         'trades:update@10 * * * *',

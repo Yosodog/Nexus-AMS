@@ -73,7 +73,7 @@ class InternalRuntimeHealthTest extends TestCase
             ->assertJsonPath('release_id', 'test-release')
             ->assertJsonPath('runtime_mode', 'standalone')
             ->assertJsonPath('runtime_contract', 1)
-            ->assertJsonPath('tenant_schema', 42)
+            ->assertJsonPath('tenant_schema', 43)
             ->assertJsonPath('world_view_contract', null)
             ->assertJsonPath('capabilities', []);
 
@@ -89,7 +89,7 @@ class InternalRuntimeHealthTest extends TestCase
         config([
             'nexus.managed' => true,
             'nexus.tenant_id' => self::TENANT_ID,
-            'nexus.world_view_contract' => 3,
+            'nexus.world_view_contract' => 5,
         ]);
 
         $this->authorizedGet('/api/internal/v1/build')
@@ -110,7 +110,7 @@ class InternalRuntimeHealthTest extends TestCase
         config([
             'nexus.managed' => true,
             'nexus.tenant_id' => self::TENANT_ID,
-            'nexus.world_view_contract' => 3,
+            'nexus.world_view_contract' => 5,
             'nexus.tenant_events.enabled' => true,
         ]);
 
@@ -132,7 +132,7 @@ class InternalRuntimeHealthTest extends TestCase
         config([
             'nexus.managed' => true,
             'nexus.tenant_id' => self::TENANT_ID,
-            'nexus.world_view_contract' => 3,
+            'nexus.world_view_contract' => 5,
             'nexus.tenant_events.enabled' => true,
             'nexus.tenant_events.key_file' => '/missing/private/tenant-event-key',
         ]);
@@ -257,7 +257,7 @@ class InternalRuntimeHealthTest extends TestCase
         config([
             'nexus.managed' => true,
             'nexus.tenant_id' => self::TENANT_ID,
-            'nexus.world_view_contract' => 3,
+            'nexus.world_view_contract' => 5,
         ]);
 
         $this->authorizedGet('/api/internal/v1/readiness')
@@ -268,7 +268,7 @@ class InternalRuntimeHealthTest extends TestCase
             ->assertJsonPath('checks.release.status', 'compatible')
             ->assertJsonPath('checks.world_view_contract.status', 'compatible')
             ->assertJsonPath('checks.world_views.status', 'incompatible')
-            ->assertJsonPath('checks.world_views.incompatible_count', 11);
+            ->assertJsonPath('checks.world_views.incompatible_count', 13);
     }
 
     public function test_hosted_readiness_rejects_each_configured_compatibility_mismatch(): void

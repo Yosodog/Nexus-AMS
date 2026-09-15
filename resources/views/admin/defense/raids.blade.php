@@ -3,6 +3,11 @@
 @section('content')
     <x-header title="Raid Finder" separator use-h1>
         <x-slot:subtitle>Manage the global no-raid alliance list and the top-alliance exclusion cap.</x-slot:subtitle>
+        @can('view-diagnostic-info')
+            <x-slot:actions>
+                <a href="{{ route('admin.raid-assessment') }}" class="btn btn-outline btn-sm">Prediction assessment</a>
+            </x-slot:actions>
+        @endcan
     </x-header>
 
     <div class="mb-6 grid gap-6 xl:grid-cols-[minmax(0,24rem)_minmax(0,1fr)]">

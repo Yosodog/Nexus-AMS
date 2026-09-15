@@ -256,9 +256,15 @@ class AppServiceProvider extends ServiceProvider
         });
 
         RateLimiter::for('raid-finder', function (Request $request) {
+            $response = static fn (Request $request, array $headers) => response()->json([
+                'message' => 'Raid Finder is receiving too many requests. Please wait before retrying.',
+                'state' => 'rate_limited',
+                'source' => 'nexus',
+            ], 429, $headers);
+
             return [
-                Limit::perMinute(6)->by('raid-finder:user:'.$request->user()->getAuthIdentifier()),
-                Limit::perMinute(20)->by('raid-finder:ip:'.$request->ip()),
+                Limit::perMinute(60)->by('raid-finder:user:'.$request->user()->getAuthIdentifier())->response($response),
+                Limit::perMinute(180)->by('raid-finder:ip:'.$request->ip())->response($response),
             ];
         });
 

@@ -2,11 +2,13 @@
 
 namespace Tests\Feature\Jobs;
 
+use App\Events\WarAttackRecorded;
 use App\Jobs\CreateWarAttackJob;
 use App\Models\Nation;
 use App\Models\WarAttack;
 use App\Services\SubscriptionRecordQuarantine;
 use App\Services\World\WorldWriteGuard;
+use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Schema;
 use Tests\FeatureTestCase;
 
@@ -21,6 +23,7 @@ class CreateWarAttackJobTest extends FeatureTestCase
         $this->ensureIsolatedTestDatabase();
         Schema::dropAllTables();
         $this->createTables();
+        Event::fake([WarAttackRecorded::class]);
 
         $this->quarantineFile = sys_get_temp_dir().'/nexus-war-attack-quarantine-'.bin2hex(random_bytes(6)).'.jsonl';
         config()->set('subscriptions.ingestion.quarantine_file', $this->quarantineFile);

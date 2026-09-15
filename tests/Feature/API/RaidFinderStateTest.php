@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\API;
 
+use App\Exceptions\PWQueryFailedException;
 use App\Http\Middleware\DiscordVerifiedMiddleware;
 use App\Http\Middleware\EnsureMfaConfigured;
 use App\Http\Middleware\EnsureUserIsVerified;
@@ -9,7 +10,10 @@ use App\Models\Nation;
 use App\Models\User;
 use App\Services\RaidFinderCache;
 use App\Services\RaidFinderService;
+use App\Services\RaidIntelligenceRefreshService;
+use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Support\Facades\Cache;
 use Mockery\MockInterface;
 use Symfony\Component\HttpKernel\Exception\ServiceUnavailableHttpException;
@@ -40,6 +44,25 @@ class RaidFinderStateTest extends TestCase
         ]);
     }
 
+    public function test_database_errors_are_hidden_even_with_debugging_enabled(): void
+    {
+        $this->mock(RaidFinderCache::class, function (MockInterface $mock): void {
+            $mock->shouldReceive('snapshot')->twice()->andThrow(
+                new QueryException('mysql', 'select secret_column from private_table', [], new \PDOException('sensitive database details'))
+            );
+        });
+
+        foreach ([true, false] as $debug) {
+            config(['app.debug' => $debug]);
+            $this->raidFinderRequest()
+                ->assertStatus(500)
+                ->assertExactJson([
+                    'message' => 'The request could not be completed. Please try again.',
+                    'state' => 'temporary_failure',
+                ]);
+        }
+    }
+
     public function test_successful_results_include_freshness_metadata_and_are_cached(): void
     {
         $this->mock(RaidFinderService::class, function (MockInterface $mock): void {
@@ -54,7 +77,8 @@ class RaidFinderStateTest extends TestCase
             ->assertHeader('X-Nexus-Async-State', 'success')
             ->assertHeader('X-Nexus-Data-Stale', 'false')
             ->assertJsonPath('0.nation.id', 9876)
-            ->assertJsonPath('0.value', 42157764);
+            ->assertJsonPath('0.value', 42157764)
+            ->assertJsonPath('0.calculation.resources.money.post_loot', 9000000);
 
         $this->assertNotEmpty($firstResponse->headers->get('X-Nexus-Data-Updated-At'));
 
@@ -146,6 +170,48 @@ class RaidFinderStateTest extends TestCase
             ->assertJsonPath('state', 'rate_limited');
     }
 
+    public function test_availability_rate_limit_returns_structured_retry_response(): void
+    {
+        $target = Nation::factory()->create([
+            'alliance_id' => null,
+            'score' => $this->nation->score,
+            'color' => 'blue',
+        ]);
+        $this->mock(RaidIntelligenceRefreshService::class, function (MockInterface $mock): void {
+            $mock->shouldReceive('currentAvailability')
+                ->once()
+                ->andThrow(new PWQueryFailedException('Rate limit retry limit reached.', retryAfterSeconds: 37));
+        });
+
+        $this->availabilityRequest($target->id)
+            ->assertTooManyRequests()
+            ->assertHeader('X-Nexus-Async-State', 'rate_limited')
+            ->assertHeader('Retry-After', '37')
+            ->assertJsonPath('state', 'rate_limited')
+            ->assertJsonStructure(['message', 'state', 'support_id']);
+    }
+
+    public function test_availability_failure_returns_structured_temporary_error(): void
+    {
+        $target = Nation::factory()->create([
+            'alliance_id' => null,
+            'score' => $this->nation->score,
+            'color' => 'blue',
+        ]);
+        $this->mock(RaidIntelligenceRefreshService::class, function (MockInterface $mock): void {
+            $mock->shouldReceive('currentAvailability')
+                ->once()
+                ->andThrow(new ConnectionException('Politics & War is unavailable.'));
+        });
+
+        $this->availabilityRequest($target->id)
+            ->assertServiceUnavailable()
+            ->assertHeader('X-Nexus-Async-State', 'temporary_failure')
+            ->assertHeaderMissing('Retry-After')
+            ->assertJsonPath('state', 'temporary_failure')
+            ->assertJsonStructure(['message', 'state', 'support_id']);
+    }
+
     public function test_duplicate_refresh_does_not_start_another_external_request(): void
     {
         $cache = app(RaidFinderCache::class);
@@ -187,6 +253,16 @@ class RaidFinderStateTest extends TestCase
             ->getJson(route('api.raid-finder.show', ['nation_id' => $this->nation->id]));
     }
 
+    private function availabilityRequest(int $targetId)
+    {
+        return $this->actingAs($this->user)
+            ->withoutMiddleware($this->optionalIdentityMiddleware())
+            ->getJson(route('api.raid-finder.availability', [
+                'nation_id' => $this->nation->id,
+                'target_id' => $targetId,
+            ]));
+    }
+
     /**
      * @return array<int, class-string>
      */
@@ -217,6 +293,7 @@ class RaidFinderStateTest extends TestCase
                 'score' => 7654.32,
             ],
             'value' => 42157764,
+            'calculation' => ['resources' => ['money' => ['post_loot' => 9000000]]],
             'last_beige' => 38750000,
             'defensive_wars' => 1,
         ];

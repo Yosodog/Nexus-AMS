@@ -5,6 +5,7 @@ import { tmpdir } from 'node:os';
 const shellEscape = (value: string) => `'${value.replaceAll("'", "'\\''")}'`;
 const configuredPhpCommand = process.env.PLAYWRIGHT_PHP_COMMAND?.trim();
 const configuredPhpBinary = process.env.PLAYWRIGHT_PHP_BINARY?.trim();
+const configuredPlaywrightChannel = process.env.PLAYWRIGHT_CHANNEL?.trim();
 const phpCommand = configuredPhpCommand
   || (configuredPhpBinary ? shellEscape(configuredPhpBinary) : 'herd php');
 const browserDatabase = process.env.PLAYWRIGHT_DB_DATABASE?.trim()
@@ -46,6 +47,7 @@ export default defineConfig({
   use: {
     baseURL: process.env.PLAYWRIGHT_BASE_URL ?? 'http://localhost:8011',
     trace: 'on-first-retry',
+    ...(configuredPlaywrightChannel ? { channel: configuredPlaywrightChannel } : {}),
   },
   webServer: process.env.PLAYWRIGHT_SKIP_WEBSERVER
     ? undefined

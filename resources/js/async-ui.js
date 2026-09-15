@@ -104,7 +104,11 @@ export const requestJson = async (input, init = {}) => {
             window.dispatchEvent(new CustomEvent('nexus:session-expired'));
         }
 
-        throw new AsyncRequestError(body?.message ?? 'The request could not be completed.', {
+        const message = response.status >= 500
+            ? 'The request could not be completed. Please try again.'
+            : body?.message ?? 'The request could not be completed.';
+
+        throw new AsyncRequestError(message, {
             status: response.status,
             state,
             retryAfter: parseRetryAfter(response),

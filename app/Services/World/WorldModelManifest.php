@@ -9,6 +9,8 @@ use App\Models\MarketPriceSnapshotItem;
 use App\Models\MarketTrade;
 use App\Models\Nation;
 use App\Models\RadiationSnapshot;
+use App\Models\RaidAttackObservation;
+use App\Models\RaidNationObservation;
 use App\Models\TradePrice;
 use App\Models\Treaty;
 use App\Models\War;
@@ -17,7 +19,7 @@ use Illuminate\Database\Eloquent\Model;
 
 final class WorldModelManifest
 {
-    public const CONTRACT_VERSION = 1;
+    public const CONTRACT_VERSION = 2;
 
     /**
      * @var array<string, class-string<Model>>
@@ -34,6 +36,8 @@ final class WorldModelManifest
         'market_price_snapshots' => MarketPriceSnapshot::class,
         'market_price_snapshot_items' => MarketPriceSnapshotItem::class,
         'radiation_snapshots' => RadiationSnapshot::class,
+        'raid_nation_observations' => RaidNationObservation::class,
+        'raid_attack_observations' => RaidAttackObservation::class,
     ];
 
     /**

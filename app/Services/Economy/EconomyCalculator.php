@@ -22,7 +22,8 @@ final class EconomyCalculator
     public function calculateNation(
         Nation $nation,
         ?RadiationSnapshot $radiationSnapshot,
-        MarketPriceSet $prices
+        MarketPriceSet $prices,
+        ?CarbonInterface $asOf = null,
     ): array {
         $profit = EconomyRules::emptyResourceBuffer();
         $components = [
@@ -34,7 +35,7 @@ final class EconomyCalculator
         ];
 
         foreach ($nation->cities as $city) {
-            $cityResult = $this->calculateCity($nation, $city, $radiationSnapshot, $prices);
+            $cityResult = $this->calculateCity($nation, $city, $radiationSnapshot, $prices, $asOf);
             $profit = $this->sumResourceBuffers($profit, $cityResult['resource_profit_per_day']);
             $components['city_income_per_day'] += $cityResult['city_income_per_day'];
             $components['power_cost_per_day'] += $cityResult['power_cost_per_day'];

@@ -11,11 +11,15 @@ use App\Events\WarStateChanged;
 use App\Listeners\AuditLogin;
 use App\Listeners\AuditLoginFailed;
 use App\Listeners\AuditLogout;
+use App\Listeners\CaptureRaidOutcomeOnAttackRecorded;
+use App\Listeners\CaptureRaidPredictionOnWarDeclared;
 use App\Listeners\CreateCounterOnWarDeclared;
 use App\Listeners\IngestMilcomIncident;
 use App\Listeners\ReconcileMilcomWarState;
+use App\Listeners\ReconcileRaidPredictionOnWarStateChanged;
 use App\Listeners\RecordAllianceExpense;
 use App\Listeners\RecordAllianceIncome;
+use App\Listeners\RefreshRaidIntelligenceOnAttackRecorded;
 use App\Listeners\ScheduledTaskLifecycleSubscriber;
 use App\Listeners\SendAllianceDepartureDiscordNotification;
 use App\Listeners\SendWarDeclaredDiscordNotification;
@@ -55,15 +59,19 @@ class EventServiceProvider extends ServiceProvider
             AuditLogout::class,
         ],
         WarDeclared::class => [
+            CaptureRaidPredictionOnWarDeclared::class,
             IngestMilcomIncident::class,
             ReconcileMilcomWarState::class,
             CreateCounterOnWarDeclared::class,
             SendWarDeclaredDiscordNotification::class,
         ],
         WarStateChanged::class => [
+            ReconcileRaidPredictionOnWarStateChanged::class,
             ReconcileMilcomWarState::class,
         ],
         WarAttackRecorded::class => [
+            RefreshRaidIntelligenceOnAttackRecorded::class,
+            CaptureRaidOutcomeOnAttackRecorded::class,
             ReconcileMilcomWarState::class,
         ],
         NationAllianceChanged::class => [

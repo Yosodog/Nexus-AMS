@@ -8,6 +8,7 @@ use App\Services\WarSimulator\Simulators\AirstrikeSimulator;
 use App\Services\WarSimulator\Simulators\GroundAttackSimulator;
 use App\Services\WarSimulator\Simulators\NavalAttackSimulator;
 use App\Services\WarSimulator\Support\PercentileCalculator;
+use App\Services\WarSimulator\Support\RaidLootFormula;
 use App\Services\WarSimulator\Support\WarSimModifiers;
 use App\Services\WarSimulator\Support\WarSimRng;
 
@@ -19,6 +20,19 @@ final class WarSimulationService
         private AirstrikeSimulator $airstrikeSimulator,
         private NavalAttackSimulator $navalAttackSimulator,
     ) {}
+
+    /** Resistance lost for failure, pyrrhic victory, moderate success, or immense triumph. */
+    public function resistanceDamage(string $attackType, int $outcome): int
+    {
+        $damage = match ($attackType) {
+            'ground' => [0, 4, 7, 10],
+            'air' => [0, 6, 9, 12],
+            'naval' => [0, 8, 11, 14],
+            default => throw new \InvalidArgumentException('Unsupported resistance attack type.'),
+        };
+
+        return $damage[max(0, min(3, $outcome))];
+    }
 
     /**
      * @return array<string, mixed>
@@ -162,6 +176,40 @@ final class WarSimulationService
         ];
     }
 
+    /**
+     * Simulate one action with the same modifiers and simulator used by the
+     * full war simulator. Raid planning uses this entry point to apply each
+     * action to a mutable battle state in sequence.
+     *
+     * @return array<string, mixed>
+     */
+    public function simulateAction(WarSimRequestData $request, ?WarSimRng $rng = null): array
+    {
+        return $this->simulateIteration(
+            $request,
+            $this->buildModifiers($request),
+            $rng ?? new WarSimRng($request->seed),
+        );
+    }
+
+    public function victoryLootFraction(WarSimRequestData $request): float
+    {
+        return RaidLootFormula::victoryLootFraction($this->buildModifiers($request)->victoryLootMultiplier());
+    }
+
+    public function bankLootMultiplier(WarSimRequestData $request): float
+    {
+        return $this->buildModifiers($request)->bankLootMultiplier();
+    }
+
+    /**
+     * @return array<string, float>
+     */
+    public function actionConsumables(WarSimRequestData $request, string $side = 'attacker'): array
+    {
+        return $this->calculateConsumablesForSide($request, $side);
+    }
+
     private function clampIterations(int $iterations): int
     {
         return max(100, min(20000, $iterations));
@@ -205,7 +253,17 @@ final class WarSimulationService
         $defenderPolicy = $request->context->defenderPolicy;
 
         $attackerLootPolicyFactor = $attackerPolicy === 'PIRATE' ? 1.4 : 1.0;
-        $defenderLootPolicyFactor = $defenderPolicy === 'MONEYBAGS' ? 0.6 : 1.0;
+        $defenderLootPolicyFactor = match ($defenderPolicy) {
+            'MONEYBAGS' => 0.6,
+            'GUARDIAN' => 0.8,
+            default => 1.0,
+        };
+        $pirateEconomy = $request->context->attackerPirateEconomy;
+        $advancedPirateEconomy = $request->context->attackerAdvancedPirateEconomy;
+        $attackerGroundLootProjectFactor = ($pirateEconomy ? 1.05 : 1.0)
+            * ($advancedPirateEconomy ? 1.05 : 1.0);
+        $attackerVictoryLootProjectFactor = $advancedPirateEconomy ? 1.10 : 1.0;
+        $attackerBankLootProjectFactor = $advancedPirateEconomy ? 1.10 : 1.0;
 
         $attackerInfraPolicyFactor = $attackerPolicy === 'ATTRITION' ? 1.1 : 1.0;
         $defenderInfraPolicyFactor = 1.0;
@@ -249,6 +307,9 @@ final class WarSimulationService
             defenderTankStrengthFactor: $defenderTankStrengthFactor,
             attackerCasualtyFactor: $attackerCasualtyFactor,
             defenderCasualtyFactor: $defenderCasualtyFactor,
+            attackerGroundLootProjectFactor: $attackerGroundLootProjectFactor,
+            attackerVictoryLootProjectFactor: $attackerVictoryLootProjectFactor,
+            attackerBankLootProjectFactor: $attackerBankLootProjectFactor,
         );
     }
 

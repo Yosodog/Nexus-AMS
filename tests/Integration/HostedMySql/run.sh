@@ -118,4 +118,6 @@ php artisan test --compact \
     tests/Integration/HostedFreshMigrationTest.php \
     tests/Integration/StandaloneFreshMigrationTest.php \
     tests/Integration/RuntimeUpgradeMigrationTest.php \
-    tests/Integration/WorldReferenceTest.php
+    tests/Integration/WorldReferenceTest.php \
+    tests/Integration/RaidPredictionIdentityTest.php \
+    tests/Feature/RaidWorkflowTest.php

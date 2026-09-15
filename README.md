@@ -232,6 +232,12 @@ Nexus Cloud is the managed deployment path under development. The application al
 
 Self-hosted installations should use `NEXUS_RUNTIME=standalone` through Nexus Setup. The hosted runtime modes are for operator-managed development and pilots.
 
+## Raid predictions and outcomes
+
+The raid finder ranks targets by personalized expected net return, with suggested attack approaches, costs, confidence, and current availability checks. Results update as background evaluation progresses, and uncertain estimates remain clearly labeled.
+
+Member Raid declarations are captured automatically, including wars declared outside the finder. **My raid results** compares predictions with actual outcomes using the original prices. Authorized admins can review rolling 30-day accuracy through **Prediction assessment** in raid settings.
+
 ## Contributing
 
 Keep changes focused and follow the conventions in [AGENTS.md](AGENTS.md). Use descriptive, present-tense commit messages. Pull requests should describe user-visible effects and call out migrations, cache clears, scheduler changes, or queue-worker restarts.

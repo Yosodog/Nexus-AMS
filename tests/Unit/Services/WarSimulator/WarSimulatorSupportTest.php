@@ -29,7 +29,7 @@ class WarSimulatorSupportTest extends UnitTestCase
         $this->assertSame(7.0, $first->nextFloat(7, 3));
     }
 
-    public function test_modifiers_multiply_loot_and_infrastructure_factors(): void
+    public function test_modifiers_combine_loot_and_infrastructure_factors(): void
     {
         $modifiers = new WarSimModifiers(
             warTypeInfraFactor: 0.5,
@@ -46,7 +46,7 @@ class WarSimulatorSupportTest extends UnitTestCase
             defenderCasualtyFactor: 1.0,
         );
 
-        $this->assertEqualsWithDelta(0.84, $modifiers->lootMultiplier(), 0.00001);
+        $this->assertEqualsWithDelta(1.0, $modifiers->lootMultiplier(), 0.00001);
         $this->assertEqualsWithDelta(0.5445, $modifiers->infraMultiplier(), 0.00001);
     }
 }

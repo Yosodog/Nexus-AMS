@@ -22,6 +22,11 @@ class HostedFreshMigrationTest extends TestCase
      * @var list<array{0: string, 1: string}>
      */
     private const TENANT_WORLD_REFERENCES = [
+        ['raid_predictions', 'war_id'],
+        ['raid_predictions', 'attacker_nation_id'],
+        ['raid_predictions', 'target_nation_id'],
+        ['raid_predictions', 'attacker_alliance_id'],
+        ['raid_outcome_attacks', 'war_id'],
         ['beige_alert_alliances', 'alliance_id'],
         ['milcom_operation_alliances', 'alliance_id'],
         ['offshores', 'alliance_id'],
@@ -122,7 +127,7 @@ class HostedFreshMigrationTest extends TestCase
             $this->assertFalse(Schema::hasTable($worldTable), "Hosted migration created world table [{$worldTable}].");
         }
 
-        foreach (['accounts', 'audit_results', 'bootstrap_redemptions', 'milcom_operations', 'process_heartbeats', 'scheduled_task_runs', 'tenant_callback_deliveries'] as $tenantTable) {
+        foreach (['raid_predictions', 'raid_outcome_attacks', 'accounts', 'audit_results', 'bootstrap_redemptions', 'milcom_operations', 'process_heartbeats', 'scheduled_task_runs', 'tenant_callback_deliveries'] as $tenantTable) {
             $this->assertTrue(Schema::hasTable($tenantTable), "Hosted migration omitted tenant table [{$tenantTable}].");
         }
 
@@ -257,7 +262,7 @@ class HostedFreshMigrationTest extends TestCase
             'nexus.tenant_id' => '01JZ0000000000000000000000',
             'nexus.release_id' => 'hosted-test-release',
             'nexus.runtime_contract' => 1,
-            'nexus.world_view_contract' => 3,
+            'nexus.world_view_contract' => 5,
         ]);
 
         $snapshot = app(RuntimeReadinessService::class)->readiness();

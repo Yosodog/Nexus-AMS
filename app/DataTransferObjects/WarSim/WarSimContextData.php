@@ -13,6 +13,8 @@ final readonly class WarSimContextData
         public string $blockadeOwner,
         public bool $blitzActiveAttacker,
         public bool $blitzActiveDefender,
+        public bool $attackerPirateEconomy = false,
+        public bool $attackerAdvancedPirateEconomy = false,
     ) {}
 
     /**
@@ -29,6 +31,8 @@ final readonly class WarSimContextData
             blockadeOwner: (string) ($payload['blockade_owner'] ?? 'none'),
             blitzActiveAttacker: (bool) ($payload['blitz_active_attacker'] ?? false),
             blitzActiveDefender: (bool) ($payload['blitz_active_defender'] ?? false),
+            attackerPirateEconomy: (bool) ($payload['attacker_pirate_economy'] ?? false),
+            attackerAdvancedPirateEconomy: (bool) ($payload['attacker_advanced_pirate_economy'] ?? false),
         );
     }
 
@@ -37,7 +41,7 @@ final readonly class WarSimContextData
      */
     public function toArray(): array
     {
-        return [
+        $payload = [
             'war_type' => $this->warType,
             'attacker_policy' => $this->attackerPolicy,
             'defender_policy' => $this->defenderPolicy,
@@ -47,5 +51,13 @@ final readonly class WarSimContextData
             'blitz_active_attacker' => $this->blitzActiveAttacker,
             'blitz_active_defender' => $this->blitzActiveDefender,
         ];
+        if ($this->attackerPirateEconomy) {
+            $payload['attacker_pirate_economy'] = true;
+        }
+        if ($this->attackerAdvancedPirateEconomy) {
+            $payload['attacker_advanced_pirate_economy'] = true;
+        }
+
+        return $payload;
     }
 }
