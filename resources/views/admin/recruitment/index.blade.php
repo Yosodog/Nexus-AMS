@@ -89,7 +89,7 @@
                         </div>
                     </div>
                 @else
-                    <div class="overflow-x-auto rounded-box border border-base-300 min-h-[180px]">
+                    <div class="overflow-x-auto rounded-box border border-base-300">
                         <table class="table table-zebra table-md w-full" data-sortable="false">
                             <thead>
                                 <tr class="text-xs uppercase text-base-content/70 border-b border-base-300 bg-base-200/50">
@@ -168,42 +168,19 @@
                                             </div>
                                         </td>
                                         <td class="py-3 px-4 text-right whitespace-nowrap">
-                                            <div class="dropdown {{ $loop->last && $loop->count > 1 ? 'dropdown-top' : 'dropdown-bottom' }} dropdown-end">
-                                                <div tabindex="0" role="button" class="btn btn-ghost btn-xs btn-circle" aria-label="Actions for {{ $variant->name }}">
-                                                    <x-icon name="o-ellipsis-vertical" class="size-4" />
-                                                </div>
-                                                <ul tabindex="0" class="dropdown-content menu menu-sm bg-base-100 rounded-box z-30 w-36 p-1.5 shadow-lg border border-base-300">
-                                                    <li>
-                                                        <button
-                                                            type="button"
-                                                            class="flex items-center gap-2 py-1.5"
-                                                            onclick="document.getElementById('editMessageModal-{{ $variant->id }}').showModal(); if (document.activeElement) { document.activeElement.blur(); }"
-                                                        >
-                                                            <x-icon name="o-pencil-square" class="size-4" />
-                                                            <span>Edit</span>
-                                                        </button>
-                                                    </li>
-                                                    <li>
-                                                        <form method="POST" action="{{ route('admin.recruitment.messages.toggle', $variant) }}">
-                                                            @csrf
-                                                            <button type="submit" class="flex items-center gap-2 py-1.5 w-full text-left">
-                                                                <x-icon name="{{ $variant->is_active ? 'o-pause' : 'o-play' }}" class="size-4" />
-                                                                <span>{{ $variant->is_active ? 'Pause' : 'Activate' }}</span>
-                                                            </button>
-                                                        </form>
-                                                    </li>
-                                                    <li>
-                                                        <form method="POST" action="{{ route('admin.recruitment.messages.destroy', $variant) }}" onsubmit="return confirm('Remove variant \'{{ $variant->name }}\'?')">
-                                                            @csrf
-                                                            @method('DELETE')
-                                                            <button type="submit" class="flex items-center gap-2 py-1.5 w-full text-left text-error hover:bg-error/10">
-                                                                <x-icon name="o-trash" class="size-4 text-error" />
-                                                                <span>Delete</span>
-                                                            </button>
-                                                        </form>
-                                                    </li>
-                                                </ul>
-                                            </div>
+                                            <button
+                                                type="button"
+                                                class="btn btn-ghost btn-xs btn-circle"
+                                                onclick="toggleVariantActionMenu(this, event)"
+                                                data-variant-id="{{ $variant->id }}"
+                                                data-variant-name="{{ $variant->name }}"
+                                                data-is-active="{{ $variant->is_active ? '1' : '0' }}"
+                                                data-toggle-url="{{ route('admin.recruitment.messages.toggle', $variant) }}"
+                                                data-delete-url="{{ route('admin.recruitment.messages.destroy', $variant) }}"
+                                                aria-label="Actions for {{ $variant->name }}"
+                                            >
+                                                <x-icon name="o-ellipsis-vertical" class="size-4 pointer-events-none" />
+                                            </button>
                                         </td>
                                     </tr>
                                 @endforeach
@@ -495,6 +472,158 @@
     @endforeach
 @endsection
 
+@push('modals')
+    {{-- Floating Action Menu: Rendered at body root level so it can never be clipped by overflow --}}
+    <div
+        id="variantActionMenu"
+        class="fixed z-[9999] hidden bg-base-100 rounded-box shadow-2xl border border-base-300 p-1.5 w-36 text-xs"
+        role="menu"
+        tabindex="-1"
+    >
+        <ul class="menu menu-sm p-0 space-y-0.5">
+            <li>
+                <button type="button" onclick="triggerVariantEditModal()" class="flex items-center gap-2 py-1.5 w-full text-left">
+                    <x-icon name="o-pencil-square" class="size-4" />
+                    <span>Edit</span>
+                </button>
+            </li>
+            <li>
+                <form id="variantActionToggleForm" method="POST" action="">
+                    @csrf
+                    <button type="submit" class="flex items-center gap-2 py-1.5 w-full text-left">
+                        <span id="variantActionTogglePause" class="items-center gap-2" style="display: inline-flex;">
+                            <x-icon name="o-pause" class="size-4" />
+                            <span>Pause</span>
+                        </span>
+                        <span id="variantActionToggleActivate" class="items-center gap-2" style="display: none;">
+                            <x-icon name="o-play" class="size-4" />
+                            <span>Activate</span>
+                        </span>
+                    </button>
+                </form>
+            </li>
+            <li>
+                <form id="variantActionDeleteForm" method="POST" action="" onsubmit="return confirm(this.dataset.confirmMessage || 'Delete this variant?')">
+                    @csrf
+                    @method('DELETE')
+                    <button type="submit" class="flex items-center gap-2 py-1.5 w-full text-left text-error hover:bg-error/10">
+                        <x-icon name="o-trash" class="size-4 text-error" />
+                        <span>Delete</span>
+                    </button>
+                </form>
+            </li>
+        </ul>
+    </div>
+@endpush
+
 @push('scripts')
     @vite('resources/js/jodit.js')
+    <script>
+        window.toggleVariantActionMenu = function(btn, event) {
+            if (event) {
+                event.stopPropagation();
+            }
+
+            const menu = document.getElementById('variantActionMenu');
+            if (!menu) {
+                return;
+            }
+
+            if (window._currentVariantMenuTrigger === btn && !menu.classList.contains('hidden')) {
+                window.hideVariantActionMenu();
+                return;
+            }
+
+            window._currentVariantMenuTrigger = btn;
+            window._activeVariantId = btn.dataset.variantId;
+
+            const variantName = btn.dataset.variantName;
+            const isActive = btn.dataset.isActive === '1';
+
+            const toggleForm = document.getElementById('variantActionToggleForm');
+            const togglePause = document.getElementById('variantActionTogglePause');
+            const toggleActivate = document.getElementById('variantActionToggleActivate');
+            if (toggleForm) {
+                toggleForm.action = btn.dataset.toggleUrl;
+            }
+            if (togglePause && toggleActivate) {
+                if (isActive) {
+                    togglePause.style.display = 'inline-flex';
+                    toggleActivate.style.display = 'none';
+                } else {
+                    togglePause.style.display = 'none';
+                    toggleActivate.style.display = 'inline-flex';
+                }
+            }
+
+            const deleteForm = document.getElementById('variantActionDeleteForm');
+            if (deleteForm) {
+                deleteForm.action = btn.dataset.deleteUrl;
+                deleteForm.dataset.confirmMessage = `Remove variant '${variantName}'?`;
+            }
+
+            menu.classList.remove('hidden');
+
+            const rect = btn.getBoundingClientRect();
+            const menuWidth = menu.offsetWidth || 144;
+            const menuHeight = menu.offsetHeight || 116;
+
+            let left = rect.right - menuWidth;
+            if (left < 10) {
+                left = 10;
+            }
+            if (left + menuWidth > window.innerWidth - 10) {
+                left = window.innerWidth - menuWidth - 10;
+            }
+
+            let top = rect.bottom + 4;
+            if (top + menuHeight > window.innerHeight - 10) {
+                top = rect.top - menuHeight - 4;
+            }
+
+            menu.style.left = `${Math.round(left)}px`;
+            menu.style.top = `${Math.round(top)}px`;
+        };
+
+        window.hideVariantActionMenu = function() {
+            const menu = document.getElementById('variantActionMenu');
+            if (menu) {
+                menu.classList.add('hidden');
+            }
+            window._currentVariantMenuTrigger = null;
+        };
+
+        window.triggerVariantEditModal = function() {
+            if (window._activeVariantId) {
+                const modal = document.getElementById(`editMessageModal-${window._activeVariantId}`);
+                if (modal && typeof modal.showModal === 'function') {
+                    modal.showModal();
+                }
+            }
+            window.hideVariantActionMenu();
+        };
+
+        document.addEventListener('click', function(e) {
+            const menu = document.getElementById('variantActionMenu');
+            if (menu && !menu.classList.contains('hidden')) {
+                if (!menu.contains(e.target) && !e.target.closest('button[onclick*="toggleVariantActionMenu"]')) {
+                    window.hideVariantActionMenu();
+                }
+            }
+        });
+
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                window.hideVariantActionMenu();
+            }
+        });
+
+        window.addEventListener('scroll', function() {
+            window.hideVariantActionMenu();
+        });
+
+        window.addEventListener('resize', function() {
+            window.hideVariantActionMenu();
+        });
+    </script>
 @endpush
