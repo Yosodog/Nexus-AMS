@@ -181,7 +181,7 @@ class RaidFinderController extends Controller
         $availability = [];
         if ($this->requestedNationId !== null) {
             $targetIds = $targets
-                ->filter(fn (array $target): bool => isset($target['availability'], $target['nation']['id']))
+                ->filter(fn (array $target): bool => isset($target['nation']['id']))
                 ->pluck('nation.id')
                 ->map(fn ($id): int => (int) $id)
                 ->filter(fn (int $id): bool => $id > 0)
@@ -200,7 +200,7 @@ class RaidFinderController extends Controller
             }
 
             return $target;
-        })->reject(fn (array $target): bool => isset($target['availability']) && $target['availability']['eligible'] === false && ! ($target['availability']['planning_only'] ?? false))->values()->all();
+        })->reject(fn (array $target): bool => (int) ($target['defensive_wars'] ?? 0) >= 3 || isset($target['availability']) && $target['availability']['eligible'] === false && ! ($target['availability']['planning_only'] ?? false))->values()->all();
 
         return response()->json($targets, 200, $headers);
     }

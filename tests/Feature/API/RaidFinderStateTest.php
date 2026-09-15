@@ -66,6 +66,7 @@ class RaidFinderStateTest extends TestCase
     public function test_successful_results_include_freshness_metadata_and_are_cached(): void
     {
         $this->mock(RaidFinderService::class, function (MockInterface $mock): void {
+            $mock->shouldReceive('availabilityBatch')->andReturn([])->byDefault();
             $mock->shouldReceive('findTargets')
                 ->once()
                 ->with($this->nation->id)
@@ -87,9 +88,23 @@ class RaidFinderStateTest extends TestCase
             ->assertExactJson($firstResponse->json());
     }
 
+    public function test_cached_targets_without_availability_are_rechecked_and_full_targets_removed(): void
+    {
+        app(RaidFinderCache::class)->store($this->nation->id, [$this->serializedTarget()]);
+        $this->mock(RaidFinderService::class, function (MockInterface $mock): void {
+            $mock->shouldReceive('availabilityBatch')->once()->with($this->nation->id, [9876])->andReturn([
+                9876 => ['eligible' => false, 'planning_only' => false, 'defensive_wars' => 3],
+            ]);
+            $mock->shouldNotReceive('findTargets');
+        });
+
+        $this->raidFinderRequest()->assertOk()->assertExactJson([]);
+    }
+
     public function test_empty_result_is_a_successful_fresh_snapshot(): void
     {
         $this->mock(RaidFinderService::class, function (MockInterface $mock): void {
+            $mock->shouldReceive('availabilityBatch')->andReturn([])->byDefault();
             $mock->shouldReceive('findTargets')->once()->andReturn(collect());
         });
 
@@ -107,6 +122,7 @@ class RaidFinderStateTest extends TestCase
         $this->travel(31)->minutes();
 
         $this->mock(RaidFinderService::class, function (MockInterface $mock): void {
+            $mock->shouldReceive('availabilityBatch')->andReturn([])->byDefault();
             $mock->shouldReceive('findTargets')
                 ->once()
                 ->andThrow(new ServiceUnavailableHttpException(null, 'Unavailable'));
@@ -127,6 +143,7 @@ class RaidFinderStateTest extends TestCase
         $this->travel(31)->minutes();
 
         $this->mock(RaidFinderService::class, function (MockInterface $mock): void {
+            $mock->shouldReceive('availabilityBatch')->andReturn([])->byDefault();
             $mock->shouldReceive('findTargets')
                 ->once()
                 ->andThrow(new TooManyRequestsHttpException(45, 'Rate limited'));
@@ -143,6 +160,7 @@ class RaidFinderStateTest extends TestCase
     public function test_temporary_failure_without_saved_data_returns_a_recoverable_error(): void
     {
         $this->mock(RaidFinderService::class, function (MockInterface $mock): void {
+            $mock->shouldReceive('availabilityBatch')->andReturn([])->byDefault();
             $mock->shouldReceive('findTargets')
                 ->once()
                 ->andThrow(new ServiceUnavailableHttpException(null, 'Unavailable'));
@@ -158,6 +176,7 @@ class RaidFinderStateTest extends TestCase
     public function test_rate_limit_without_saved_data_returns_retry_timing(): void
     {
         $this->mock(RaidFinderService::class, function (MockInterface $mock): void {
+            $mock->shouldReceive('availabilityBatch')->andReturn([])->byDefault();
             $mock->shouldReceive('findTargets')
                 ->once()
                 ->andThrow(new TooManyRequestsHttpException(30, 'Rate limited'));
@@ -219,6 +238,7 @@ class RaidFinderStateTest extends TestCase
         $this->assertTrue($lock->get());
 
         $this->mock(RaidFinderService::class, function (MockInterface $mock): void {
+            $mock->shouldReceive('availabilityBatch')->andReturn([])->byDefault();
             $mock->shouldNotReceive('findTargets');
         });
 

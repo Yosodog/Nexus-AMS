@@ -179,11 +179,14 @@ class RaidFinderService
             $id = (int) $storedNation->id;
             $observedAt = $observed[$id]['observed_at'] ?? null;
             if ($storedNation->updated_at !== null && ($observedAt === null || $storedNation->updated_at->gt(CarbonImmutable::parse($observedAt)))) {
+                $knownDefensiveWars = (int) ($observed[$id]['defensive_wars_count'] ?? 0);
+                $knownOffensiveWars = (int) ($observed[$id]['offensive_wars_count'] ?? 0);
                 $observed[$id] = array_replace($observed[$id] ?? [], $storedNation->only([
                     'score', 'alliance_id', 'vacation_mode_turns', 'beige_turns', 'color',
                     'defensive_wars_count', 'offensive_wars_count', 'pirate_economy', 'advanced_pirate_economy',
                 ]), ['observed_at' => $storedNation->updated_at->toIso8601String()]);
-                unset($observed[$id]['active_wars']);
+                $observed[$id]['defensive_wars_count'] = max($knownDefensiveWars, (int) $storedNation->defensive_wars_count);
+                $observed[$id]['offensive_wars_count'] = max($knownOffensiveWars, (int) $storedNation->offensive_wars_count);
             }
         }
         $nation = $nations->get($nationId);

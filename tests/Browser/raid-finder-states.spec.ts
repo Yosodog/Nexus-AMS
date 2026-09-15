@@ -597,3 +597,22 @@ for (const width of [1440, 390]) {
     await detail.locator('[data-raid-detail-panel]').screenshot({ path: `/tmp/raid-evidence-${width}.png` });
   });
 }
+
+test('full defensive slots never appear as raid suggestions even for planning', async ({ page }) => {
+  await page.route('**/api/v1/defense/raid-finder/**', route => route.fulfill({ status: 200, headers: successHeaders(), body: JSON.stringify([
+    { ...target, defensive_wars: 3, availability: { eligible: false, planning_only: true, defensive_wars: 3 } },
+    { ...target, nation: { ...target.nation, id: 555, leader_name: 'Open target' }, defensive_wars: 2 },
+  ]) }));
+  await page.goto('/_browser/login/member?redirect=/defense/raid-finder');
+  await expect(page.getByRole('link', { name: 'Open target', exact: true })).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Target Leader', exact: true })).toHaveCount(0);
+});
+
+test('availability check removes a target whose defensive slots filled', async ({ page }) => {
+  await page.route('**/api/v1/defense/raid-finder/**', route => route.fulfill({ status: 200, headers: successHeaders(), body: JSON.stringify([target]) }));
+  await page.goto('/_browser/login/member?redirect=/defense/raid-finder');
+  await page.route('**/*availability*', route => route.fulfill({ status: 200, headers: successHeaders(), body: JSON.stringify({ eligible: false, planning_only: false, defensive_wars: 3, reasons: ['All defensive slots are occupied.'] }) }));
+  await page.locator('[data-raid-inspect]').first().click();
+  await page.getByRole('button', { name: 'Check availability', exact: true }).click();
+  await expect(page.getByRole('link', { name: 'Target Leader', exact: true })).toHaveCount(0);
+});

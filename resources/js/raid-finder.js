@@ -1190,13 +1190,13 @@ const initializeRaidFinder = (root) => {
                 const leader = String(target.nation?.leader_name ?? '').toLocaleLowerCase();
                 const alliance = String(target.nation?.alliance?.name ?? '').toLocaleLowerCase();
                 const cities = firstNumber(target.nation?.num_cities) ?? 0;
-                const wars = firstNumber(target.defensive_wars) ?? 0;
+                const wars = Math.max(firstNumber(target.defensive_wars) ?? 0, firstNumber(targetAvailability(target).defensive_wars) ?? 0);
                 const historicalLoot = firstNumber(target.value, target.last_beige, targetPrediction(target).historical_loot);
                 const expectedReturn = targetExpectedNet(target);
                 const inactivity = inactivityDays(target);
                 const rank = militaryRank(target);
 
-                return (search === '' || leader.includes(search) || alliance.includes(search))
+                return wars < 3 && (search === '' || leader.includes(search) || alliance.includes(search))
                     && (minimumCities === null || cities >= minimumCities)
                     && (maximumCities === null || cities <= maximumCities)
                     && (maximumWars === null || wars <= maximumWars)
@@ -1619,6 +1619,12 @@ const initializeRaidFinder = (root) => {
             }
 
             target.availability = payload;
+            if (asNumber(payload.defensive_wars) !== null) target.defensive_wars = Number(payload.defensive_wars);
+            if (Number(payload.defensive_wars) >= 3) {
+                applyFilters();
+                announce(`${target.nation?.leader_name ?? 'Target'} removed: all defensive slots are occupied.`);
+                return;
+            }
             renderAvailability(row, detailRow, target);
             announce(`${target.nation?.leader_name ?? 'Target'} availability checked: ${availabilityStatus(target)}.`);
         } catch (error) {

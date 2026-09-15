@@ -41,13 +41,39 @@ class RaidFinderProfitTest extends TestCase
         $this->assertContains('You are already fighting this target.', app(RaidFinderService::class)->availability($own->id, $target->id)['reasons']);
     }
 
+    public function test_general_nation_update_cannot_erase_observed_full_defensive_slots(): void
+    {
+        Cache::forever('alliances:membership:ids', [777]);
+        $own = Nation::factory()->create(['alliance_id' => 777, 'score' => 1000]);
+        $target = Nation::factory()->create(['alliance_id' => null, 'score' => 1000, 'color' => 'blue', 'beige_turns' => 0, 'vacation_mode_turns' => 0, 'defensive_wars_count' => 0]);
+        RaidNationObservation::factory()->create([
+            'nation_id' => $target->id, 'observed_at' => now()->subHour(),
+            'payload' => ['score' => 1000, 'defensive_wars_count' => 3, 'active_wars' => [
+                ['id' => 1, 'att_id' => 900, 'def_id' => $target->id],
+                ['id' => 2, 'att_id' => 901, 'def_id' => $target->id],
+                ['id' => 3, 'att_id' => 902, 'def_id' => $target->id],
+            ]],
+        ]);
+        $availability = app(RaidFinderService::class)->availability($own->id, $target->id);
+        $this->assertFalse($availability['eligible']);
+        $this->assertFalse($availability['planning_only']);
+        $this->assertSame(3, $availability['defensive_wars']);
+
+        RaidNationObservation::factory()->create([
+            'nation_id' => $target->id, 'observed_at' => now()->addSecond(),
+            'payload' => ['score' => 1000, 'defensive_wars_count' => 2, 'active_wars' => []],
+        ]);
+        $this->travel(2)->seconds();
+        $this->assertTrue(app(RaidFinderService::class)->availability($own->id, $target->id)['eligible']);
+    }
+
     public function test_newer_subscription_state_overrides_old_raid_availability(): void
     {
         Cache::forever('alliances:membership:ids', [777]);
         $own = Nation::factory()->create(['alliance_id' => 777, 'score' => 1000, 'vacation_mode_turns' => 0, 'offensive_wars_count' => 0]);
         $target = Nation::factory()->create(['alliance_id' => null, 'score' => 1000, 'color' => 'blue', 'beige_turns' => 0, 'vacation_mode_turns' => 0, 'defensive_wars_count' => 0]);
         RaidNationObservation::factory()->create(['nation_id' => $target->id, 'observed_at' => now()->subHour(), 'payload' => [
-            'score' => 1000, 'color' => 'beige', 'beige_turns' => 10, 'defensive_wars_count' => 3,
+            'score' => 1000, 'color' => 'beige', 'beige_turns' => 10, 'defensive_wars_count' => 0,
         ]]);
         $this->assertTrue(app(RaidFinderService::class)->availability($own->id, $target->id)['eligible']);
         $target->update(['defensive_wars_count' => 3]);
