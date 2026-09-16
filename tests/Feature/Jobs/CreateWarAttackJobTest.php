@@ -82,6 +82,7 @@ class CreateWarAttackJobTest extends FeatureTestCase
         WarAttack::query()->insert([
             $this->warAttackRow(7101, now()->subDays(89)),
             $this->warAttackRow(7102, now()->subDays(91)),
+            [...$this->warAttackRow(7104, now()->subDays(91)), 'is_legacy_history' => true],
         ]);
 
         $job = new CreateWarAttackJob([
@@ -96,6 +97,7 @@ class CreateWarAttackJobTest extends FeatureTestCase
         $this->assertDatabaseHas('war_attacks', ['id' => 7101]);
         $this->assertDatabaseMissing('war_attacks', ['id' => 7102]);
         $this->assertDatabaseHas('war_attacks', ['id' => 7103]);
+        $this->assertDatabaseHas('war_attacks', ['id' => 7104, 'is_legacy_history' => true]);
     }
 
     /** @return array<string, mixed> */
@@ -108,6 +110,7 @@ class CreateWarAttackJobTest extends FeatureTestCase
             'def_id' => 2002,
             'war_id' => 901,
             'type' => 'GROUND',
+            'is_legacy_history' => false,
         ];
     }
 
@@ -128,6 +131,7 @@ class CreateWarAttackJobTest extends FeatureTestCase
             $table->unsignedBigInteger('war_id');
             $table->json('improvements_destroyed')->nullable();
             $table->json('cities_infra_before')->nullable();
+            $table->boolean('is_legacy_history')->default(false);
             $table->timestamps();
         });
     }

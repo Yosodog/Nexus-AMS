@@ -141,7 +141,7 @@ The chart component applies theme-aware labels, rules, and scale colors and upda
 
 ## Editors and authored content
 
-CKEditor is loaded only on pages that need it. Preview, draft, publish, version, and restore actions remain separate. Admin-authored HTML must be sanitized on the server before it is rendered with `{!! !!}`.
+Jodit is loaded only on pages that need it. Preview, draft, publish, version, and restore actions remain separate. Admin-authored HTML must be sanitized on the server before it is rendered with `{!! !!}`.
 
 Editor chrome and content must be readable in both themes. Do not add a second rich-text editor or restore the removed EditorJS dependency set without a concrete migration plan.
 

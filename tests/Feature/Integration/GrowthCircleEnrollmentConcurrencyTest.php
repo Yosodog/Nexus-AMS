@@ -85,11 +85,51 @@ class GrowthCircleEnrollmentConcurrencyTest extends MySqlIntegrationTestCase
 
         $basePath = sys_get_temp_dir().'/nexus-growth-circle-'.Str::uuid();
         $startedPath = $basePath.'.started';
+        $lockedPath = $basePath.'.locked';
         $resultPath = $basePath.'.json';
         $processId = null;
         $childStatus = null;
         $childWasBlocked = false;
         $enrollmentExistedWhileLocked = false;
+
+        DB::disconnect('mysql');
+        DB::purge('mysql');
+
+        $processId = pcntl_fork();
+
+        if ($processId === -1) {
+            throw new RuntimeException('Unable to fork the Growth Circles concurrency worker.');
+        }
+
+        if ($processId === 0) {
+            $deadline = microtime(true) + 5;
+            while (! is_file($lockedPath) && microtime(true) < $deadline) {
+                usleep(1000);
+                clearstatcache(true, $lockedPath);
+            }
+
+            try {
+                if (! is_file($lockedPath)) {
+                    throw new RuntimeException('The parent did not acquire the nation lock.');
+                }
+
+                DB::purge('mysql');
+                DB::reconnect('mysql');
+                file_put_contents($startedPath, 'started');
+
+                app(GrowthCircleService::class)->disenroll($nation, logAudit: false);
+                $result = ['status' => 'ok'];
+            } catch (Throwable $exception) {
+                $result = [
+                    'status' => 'error',
+                    'class' => $exception::class,
+                    'message' => $exception->getMessage(),
+                ];
+            }
+
+            file_put_contents($resultPath, json_encode($result, JSON_THROW_ON_ERROR));
+            exit(0);
+        }
 
         DB::beginTransaction();
 
@@ -98,32 +138,7 @@ class GrowthCircleEnrollmentConcurrencyTest extends MySqlIntegrationTestCase
                 ->whereKey($nation->id)
                 ->lockForUpdate()
                 ->firstOrFail();
-
-            $processId = pcntl_fork();
-
-            if ($processId === -1) {
-                throw new RuntimeException('Unable to fork the Growth Circles concurrency worker.');
-            }
-
-            if ($processId === 0) {
-                DB::purge('mysql');
-                DB::reconnect('mysql');
-                file_put_contents($startedPath, 'started');
-
-                try {
-                    app(GrowthCircleService::class)->disenroll($nation, logAudit: false);
-                    $result = ['status' => 'ok'];
-                } catch (Throwable $exception) {
-                    $result = [
-                        'status' => 'error',
-                        'class' => $exception::class,
-                        'message' => $exception->getMessage(),
-                    ];
-                }
-
-                file_put_contents($resultPath, json_encode($result, JSON_THROW_ON_ERROR));
-                exit(0);
-            }
+            file_put_contents($lockedPath, 'locked');
 
             $deadline = microtime(true) + 5;
 
@@ -164,6 +179,7 @@ class GrowthCircleEnrollmentConcurrencyTest extends MySqlIntegrationTestCase
             );
             $this->assertDatabaseMissing('growth_circle_enrollments', ['id' => $enrollment->id]);
         } finally {
+            @unlink($lockedPath);
             @unlink($startedPath);
             @unlink($resultPath);
         }

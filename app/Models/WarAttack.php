@@ -113,6 +113,7 @@ class WarAttack extends Model
     {
         try {
             self::query()
+                ->where('is_legacy_history', false)
                 ->where('date', '<', now()->subDays($days))
                 ->delete();
         } catch (Throwable $exception) {
