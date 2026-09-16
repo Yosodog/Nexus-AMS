@@ -741,6 +741,26 @@ class SettingService
         app(RecruitmentSettings::class)->setFollowUpMessage($message);
     }
 
+    public static function getRecruitmentCurrentCohortStartedAt(): ?Carbon
+    {
+        return app(RecruitmentSettings::class)->getCurrentCohortStartedAt();
+    }
+
+    public static function setRecruitmentCurrentCohortStartedAt(?Carbon $timestamp): void
+    {
+        app(RecruitmentSettings::class)->setCurrentCohortStartedAt($timestamp);
+    }
+
+    public static function getRecruitmentCurrentCohortKey(): string
+    {
+        return app(RecruitmentSettings::class)->getCurrentCohortKey();
+    }
+
+    public static function setRecruitmentCurrentCohortKey(string $key): void
+    {
+        app(RecruitmentSettings::class)->setCurrentCohortKey($key);
+    }
+
     public static function getHomepageHeadline(string $allianceName): string
     {
         return app(PublicSiteSettings::class)->getHomepageHeadline($allianceName);

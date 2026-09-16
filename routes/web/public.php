@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\ApplyPageController;
 use App\Http\Controllers\HomeController;
+use App\Http\Controllers\RecruitmentTrackingController;
 use App\Http\Controllers\SeoController;
 use App\Http\Controllers\Testing\BrowserTestController;
 use App\Http\Controllers\WellKnownFederationController;
@@ -15,6 +16,9 @@ Route::get('/.well-known/nexus-federation', WellKnownFederationController::class
 Route::get('/', HomeController::class)->name('home');
 
 Route::get('/apply', [ApplyPageController::class, 'show'])->name('apply.show');
+Route::get('/r/{tracking_key}', [RecruitmentTrackingController::class, 'click'])
+    ->middleware('throttle:10,1')
+    ->name('recruitment.click');
 Route::get('/apply/start', [ApplyPageController::class, 'start'])
     ->middleware('throttle:60,1')
     ->name('apply.start');

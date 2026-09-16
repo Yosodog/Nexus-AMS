@@ -9,6 +9,7 @@ class RecruitedNation extends Model
 {
     protected $fillable = [
         'nation_id',
+        'recruitment_message_id',
         'primary_sent_at',
         'follow_up_scheduled_for',
         'follow_up_sent_at',
@@ -21,10 +22,18 @@ class RecruitedNation extends Model
     ];
 
     /**
-     * @return BelongsTo
+     * @return BelongsTo<Nation, $this>
      */
-    public function nation()
+    public function nation(): BelongsTo
     {
         return $this->belongsTo(Nation::class);
+    }
+
+    /**
+     * @return BelongsTo<RecruitmentMessage, $this>
+     */
+    public function recruitmentMessage(): BelongsTo
+    {
+        return $this->belongsTo(RecruitmentMessage::class);
     }
 }

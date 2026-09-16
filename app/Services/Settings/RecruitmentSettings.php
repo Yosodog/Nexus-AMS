@@ -3,6 +3,7 @@
 namespace App\Services\Settings;
 
 use App\Models\RecruitmentMessage;
+use Illuminate\Support\Carbon;
 
 class RecruitmentSettings
 {
@@ -146,8 +147,46 @@ class RecruitmentSettings
     {
         RecruitmentMessage::query()->updateOrCreate(
             ['type' => $type],
-            ['message' => $message],
+            [
+                'name' => $type === 'primary' ? 'Default Recruitment Pitch' : 'Follow-up Message',
+                'message' => $message,
+                'is_active' => $type === 'primary',
+            ],
         );
+    }
+
+    public function getCurrentCohortStartedAt(): ?Carbon
+    {
+        $value = $this->settings->get('recruitment_current_cohort_started_at');
+
+        if (is_null($value) || $value === '') {
+            return null;
+        }
+
+        return Carbon::parse($value);
+    }
+
+    public function setCurrentCohortStartedAt(?Carbon $timestamp): void
+    {
+        $this->settings->set('recruitment_current_cohort_started_at', $timestamp?->toIso8601String());
+    }
+
+    public function getCurrentCohortKey(): string
+    {
+        $value = $this->settings->get('recruitment_current_cohort_key');
+
+        if (! is_string($value) || $value === '') {
+            $this->setCurrentCohortKey('initial');
+
+            return 'initial';
+        }
+
+        return $value;
+    }
+
+    public function setCurrentCohortKey(string $key): void
+    {
+        $this->settings->set('recruitment_current_cohort_key', $key);
     }
 
     private function normalizeSubject(string $subject): string
