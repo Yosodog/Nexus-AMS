@@ -87,6 +87,24 @@ class RecruitmentABTestingTest extends TestCase
         $this->assertSame(0, $new->lifetime_clicks);
         $this->assertNotEmpty($new->tracking_key);
         $this->assertNotNull(SettingService::getRecruitmentCurrentCohortStartedAt());
+        $this->assertNotNull(SettingService::getRecruitmentCurrentCohortKey());
+    }
+
+    public function test_admin_can_create_an_inactive_variant(): void
+    {
+        $admin = $this->createAdmin(['view-recruitment', 'manage-recruitment']);
+
+        $this->actingAs($admin)
+            ->post(route('admin.recruitment.messages.store'), [
+                'name' => 'Paused Challenger',
+                'subject' => 'Paused Subject',
+                'message' => '<p>Paused body</p>',
+            ])
+            ->assertRedirect(route('admin.recruitment.index'));
+
+        $this->assertFalse(
+            RecruitmentMessage::where('name', 'Paused Challenger')->firstOrFail()->is_active
+        );
     }
 
     public function test_admin_can_update_variant(): void
@@ -114,6 +132,22 @@ class RecruitmentABTestingTest extends TestCase
         $this->assertSame('Updated Title', $variant->name);
         $this->assertSame('Updated Subject', $variant->subject);
         $this->assertSame('<p>New body with {apply_link}</p>', $variant->message);
+    }
+
+    public function test_admin_can_deactivate_variant_from_edit_form(): void
+    {
+        $admin = $this->createAdmin(['view-recruitment', 'manage-recruitment']);
+        $variant = RecruitmentMessage::factory()->create(['is_active' => true]);
+
+        $this->actingAs($admin)
+            ->put(route('admin.recruitment.messages.update', $variant), [
+                'name' => 'Paused Variant',
+                'subject' => 'Paused Subject',
+                'message' => '<p>Paused body</p>',
+            ])
+            ->assertRedirect(route('admin.recruitment.index'));
+
+        $this->assertFalse($variant->fresh()->is_active);
     }
 
     public function test_admin_can_toggle_variant_active_status(): void
@@ -179,7 +213,8 @@ class RecruitmentABTestingTest extends TestCase
             'current_clicks' => 2,
         ]);
 
-        $response = $this->get(route('recruitment.click', ['tracking_key' => 'track123abc']));
+        $trackingUrl = $variant->tracking_url;
+        $response = $this->get($trackingUrl);
 
         $response->assertRedirect(route('apply.show', [
             'utm_source' => 'recruitment',
@@ -204,7 +239,9 @@ class RecruitmentABTestingTest extends TestCase
             'current_clicks' => 0,
         ]);
 
-        $this->get(route('recruitment.click', ['tracking_key' => 'dedup789xyz']))
+        $trackingUrl = $variant->tracking_url;
+
+        $this->get($trackingUrl)
             ->assertRedirect();
 
         $this->assertSame(1, $variant->fresh()->lifetime_clicks);
@@ -212,7 +249,7 @@ class RecruitmentABTestingTest extends TestCase
         $this->assertSame(1, RecruitmentMessageClick::where('recruitment_message_id', $variant->id)->count());
 
         // Repeat click in same session
-        $this->get(route('recruitment.click', ['tracking_key' => 'dedup789xyz']))
+        $this->get($trackingUrl)
             ->assertRedirect();
 
         $this->assertSame(1, $variant->fresh()->lifetime_clicks);
@@ -228,13 +265,87 @@ class RecruitmentABTestingTest extends TestCase
             'current_clicks' => 0,
         ]);
 
-        $this->get(route('apply.show', ['rm' => 'directrm456']))
+        SettingService::setRecruitmentCurrentCohortKey('direct-cohort');
+
+        $this->get(route('apply.show', [
+            'rm' => 'directrm456',
+            'cohort' => 'direct-cohort',
+        ]))
             ->assertOk();
 
         $variant->refresh();
         $this->assertSame(1, $variant->lifetime_clicks);
         $this->assertSame(1, $variant->current_clicks);
         $this->assertSame(1, RecruitmentMessageClick::where('recruitment_message_id', $variant->id)->count());
+    }
+
+    public function test_clicks_from_an_old_cohort_do_not_increment_current_metrics(): void
+    {
+        SettingService::setRecruitmentCurrentCohortKey('old-cohort');
+
+        $variant = RecruitmentMessage::factory()->create([
+            'tracking_key' => 'cohort123',
+            'lifetime_clicks' => 0,
+            'current_clicks' => 0,
+        ]);
+
+        $oldTrackingUrl = $variant->trackingUrl('old-cohort');
+        app(RecruitmentService::class)->resetCurrentCohort();
+
+        $this->get($oldTrackingUrl)->assertRedirect();
+
+        $variant->refresh();
+        $this->assertSame(1, $variant->lifetime_clicks);
+        $this->assertSame(0, $variant->current_clicks);
+
+        $this->get($variant->tracking_url)->assertRedirect();
+
+        $variant->refresh();
+        $this->assertSame(2, $variant->lifetime_clicks);
+        $this->assertSame(1, $variant->current_clicks);
+    }
+
+    public function test_tracking_link_deduplicates_same_ip_across_sessions(): void
+    {
+        SettingService::setRecruitmentCurrentCohortKey('dedupe-cohort');
+
+        $variant = RecruitmentMessage::factory()->create([
+            'lifetime_clicks' => 0,
+            'current_clicks' => 0,
+        ]);
+
+        $service = app(RecruitmentService::class);
+
+        $this->assertTrue($service->recordClick($variant, '203.0.113.10', 'Browser A', 'dedupe-cohort'));
+        $this->assertFalse($service->recordClick($variant, '203.0.113.10', 'Browser B', 'dedupe-cohort'));
+
+        $variant->refresh();
+        $this->assertSame(1, $variant->lifetime_clicks);
+        $this->assertSame(1, $variant->current_clicks);
+        $this->assertSame(1, RecruitmentMessageClick::where('recruitment_message_id', $variant->id)->count());
+    }
+
+    public function test_invalid_cohort_key_is_recorded_as_legacy_without_affecting_current_metrics(): void
+    {
+        SettingService::setRecruitmentCurrentCohortKey('current-cohort');
+        $variant = RecruitmentMessage::factory()->create([
+            'tracking_key' => 'invalidcohort',
+            'lifetime_clicks' => 0,
+            'current_clicks' => 0,
+        ]);
+
+        $this->get(route('recruitment.click', [
+            'tracking_key' => $variant->tracking_key,
+            'cohort' => str_repeat('x', 100),
+        ]))->assertRedirect();
+
+        $variant->refresh();
+        $this->assertSame(1, $variant->lifetime_clicks);
+        $this->assertSame(0, $variant->current_clicks);
+        $this->assertDatabaseHas('recruitment_message_clicks', [
+            'recruitment_message_id' => $variant->id,
+            'cohort_key' => 'legacy',
+        ]);
     }
 
     public function test_recruitment_cycle_distributes_messages_in_ab_testing_pattern(): void

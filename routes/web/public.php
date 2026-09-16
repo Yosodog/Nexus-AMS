@@ -17,6 +17,7 @@ Route::get('/', HomeController::class)->name('home');
 
 Route::get('/apply', [ApplyPageController::class, 'show'])->name('apply.show');
 Route::get('/r/{tracking_key}', [RecruitmentTrackingController::class, 'click'])
+    ->middleware('throttle:10,1')
     ->name('recruitment.click');
 Route::get('/apply/start', [ApplyPageController::class, 'start'])
     ->middleware('throttle:60,1')

@@ -10,6 +10,7 @@ use App\Jobs\SendRecruitmentMessage;
 use App\Models\RecruitedNation;
 use App\Models\RecruitmentMessage;
 use App\Models\RecruitmentMessageClick;
+use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
@@ -62,6 +63,10 @@ class RecruitmentService
             ->active()
             ->get();
 
+        $cohortKey = $activeVariants->isNotEmpty()
+            ? $this->currentCohortKey()
+            : null;
+
         $fallbackSubject = null;
         $fallbackMessage = null;
         $followUpEnabled = SettingService::isRecruitmentFollowUpEnabled();
@@ -91,7 +96,7 @@ class RecruitmentService
                     $subject = $fallbackSubject;
                 }
 
-                $message = $this->prepareMessageBody($selectedVariant);
+                $message = $this->prepareMessageBody($selectedVariant, $cohortKey);
             } else {
                 $fallbackSubject ??= SettingService::getRecruitmentPrimarySubject();
                 $fallbackMessage ??= SettingService::getRecruitmentPrimaryMessage();
@@ -138,9 +143,9 @@ class RecruitmentService
     /**
      * Prepare the message body by injecting or appending the tracked apply link.
      */
-    public function prepareMessageBody(RecruitmentMessage $variant): string
+    public function prepareMessageBody(RecruitmentMessage $variant, ?string $cohortKey = null): string
     {
-        $trackingUrl = $variant->tracking_url;
+        $trackingUrl = $variant->trackingUrl($cohortKey ?? $this->currentCohortKey());
         $body = (string) $variant->message;
 
         if (str_contains($body, '{apply_link}') || str_contains($body, '{apply_url}')) {
@@ -219,40 +224,66 @@ class RecruitmentService
      */
     public function resetCurrentCohort(): void
     {
-        RecruitmentMessage::query()->update([
-            'current_sends' => 0,
-            'current_clicks' => 0,
-        ]);
+        DB::transaction(function (): void {
+            RecruitmentMessage::query()->update([
+                'current_sends' => 0,
+                'current_clicks' => 0,
+            ]);
 
-        SettingService::setRecruitmentCurrentCohortStartedAt(now());
+            SettingService::setRecruitmentCurrentCohortStartedAt(now());
+            SettingService::setRecruitmentCurrentCohortKey(Str::lower(Str::random(16)));
+        });
     }
 
     /**
-     * Record a click on a recruitment message link, preventing duplicates within the current session.
+     * Record a click on a recruitment message link once per IP address, variant, and cohort.
      */
-    public function recordClick(RecruitmentMessage $message, ?string $ip = null, ?string $userAgent = null): bool
-    {
-        $sessionKey = 'recruitment_click_'.$message->id;
+    public function recordClick(
+        RecruitmentMessage $message,
+        ?string $ip = null,
+        ?string $userAgent = null,
+        ?string $cohortKey = null,
+    ): bool {
+        $attributedCohortKey = is_string($cohortKey)
+            && preg_match('/\A[a-z0-9_-]{1,32}\z/', $cohortKey) === 1
+                ? $cohortKey
+                : 'legacy';
+        $visitorIdentity = $ip ?: session()->getId();
+        $ipHash = hash_hmac('sha256', $visitorIdentity, (string) config('app.key'));
 
-        if (session()->has($sessionKey)) {
+        try {
+            return DB::transaction(function () use ($message, $userAgent, $attributedCohortKey, $ipHash): bool {
+                RecruitmentMessageClick::create([
+                    'recruitment_message_id' => $message->id,
+                    'cohort_key' => $attributedCohortKey,
+                    'ip_hash' => $ipHash,
+                    'user_agent' => $userAgent ? Str::limit($userAgent, 255, '') : null,
+                    'created_at' => now(),
+                ]);
+
+                $message->increment('lifetime_clicks');
+
+                $currentCohortKey = SettingService::getRecruitmentCurrentCohortKey();
+                if (hash_equals($currentCohortKey, $attributedCohortKey)) {
+                    $message->increment('current_clicks');
+                }
+
+                return true;
+            });
+        } catch (UniqueConstraintViolationException) {
             return false;
         }
+    }
 
-        $message->increment('lifetime_clicks');
-        $message->increment('current_clicks');
+    private function currentCohortKey(): string
+    {
+        $cohortKey = SettingService::getRecruitmentCurrentCohortKey();
 
-        $ipHash = $ip ? hash('sha256', $ip) : null;
+        if (SettingService::getRecruitmentCurrentCohortStartedAt() === null) {
+            SettingService::setRecruitmentCurrentCohortStartedAt(now());
+        }
 
-        RecruitmentMessageClick::create([
-            'recruitment_message_id' => $message->id,
-            'ip_hash' => $ipHash,
-            'user_agent' => $userAgent ? Str::limit($userAgent, 255, '') : null,
-            'created_at' => now(),
-        ]);
-
-        session()->put($sessionKey, now()->timestamp);
-
-        return true;
+        return $cohortKey;
     }
 
     /**

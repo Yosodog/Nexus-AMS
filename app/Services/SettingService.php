@@ -751,6 +751,16 @@ class SettingService
         app(RecruitmentSettings::class)->setCurrentCohortStartedAt($timestamp);
     }
 
+    public static function getRecruitmentCurrentCohortKey(): string
+    {
+        return app(RecruitmentSettings::class)->getCurrentCohortKey();
+    }
+
+    public static function setRecruitmentCurrentCohortKey(string $key): void
+    {
+        app(RecruitmentSettings::class)->setCurrentCohortKey($key);
+    }
+
     public static function getHomepageHeadline(string $allianceName): string
     {
         return app(PublicSiteSettings::class)->getHomepageHeadline($allianceName);

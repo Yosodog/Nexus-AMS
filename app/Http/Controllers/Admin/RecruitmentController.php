@@ -151,7 +151,7 @@ class RecruitmentController
             'name' => $request->string('name')->toString(),
             'subject' => $request->string('subject')->toString(),
             'message' => $request->input('message'),
-            'is_active' => $request->boolean('is_active', true),
+            'is_active' => $request->boolean('is_active'),
         ]);
 
         $this->auditLogger->success(
@@ -183,7 +183,7 @@ class RecruitmentController
             'name' => $request->string('name')->toString(),
             'subject' => $request->string('subject')->toString(),
             'message' => $request->input('message'),
-            'is_active' => $request->boolean('is_active', true),
+            'is_active' => $request->boolean('is_active'),
         ]);
 
         $this->auditLogger->success(

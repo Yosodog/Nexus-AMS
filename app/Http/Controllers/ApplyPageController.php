@@ -80,7 +80,12 @@ class ApplyPageController extends Controller
         if (is_string($trackingKey) && $trackingKey !== '') {
             $recruitmentMessage = RecruitmentMessage::withTrashed()->where('tracking_key', $trackingKey)->first();
             if ($recruitmentMessage) {
-                app(RecruitmentService::class)->recordClick($recruitmentMessage, $request->ip(), $request->userAgent());
+                app(RecruitmentService::class)->recordClick(
+                    $recruitmentMessage,
+                    $request->ip(),
+                    $request->userAgent(),
+                    $request->string('cohort')->toString() ?: null,
+                );
             }
         }
 

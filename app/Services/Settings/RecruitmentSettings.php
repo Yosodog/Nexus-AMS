@@ -171,6 +171,24 @@ class RecruitmentSettings
         $this->settings->set('recruitment_current_cohort_started_at', $timestamp?->toIso8601String());
     }
 
+    public function getCurrentCohortKey(): string
+    {
+        $value = $this->settings->get('recruitment_current_cohort_key');
+
+        if (! is_string($value) || $value === '') {
+            $this->setCurrentCohortKey('initial');
+
+            return 'initial';
+        }
+
+        return $value;
+    }
+
+    public function setCurrentCohortKey(string $key): void
+    {
+        $this->settings->set('recruitment_current_cohort_key', $key);
+    }
+
     private function normalizeSubject(string $subject): string
     {
         return mb_substr(trim($subject), 0, self::SUBJECT_MAX_LENGTH);

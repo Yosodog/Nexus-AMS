@@ -29,7 +29,8 @@ class RecruitmentTrackingController extends Controller
         $this->recruitmentService->recordClick(
             $message,
             $request->ip(),
-            $request->userAgent()
+            $request->userAgent(),
+            $request->string('cohort')->toString() ?: null,
         );
 
         return redirect()->route('apply.show', [

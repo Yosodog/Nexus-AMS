@@ -11,6 +11,7 @@ class RecruitmentMessageClick extends Model
 
     protected $fillable = [
         'recruitment_message_id',
+        'cohort_key',
         'ip_hash',
         'user_agent',
         'created_at',

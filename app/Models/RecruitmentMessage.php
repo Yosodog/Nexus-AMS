@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Services\SettingService;
 use Database\Factories\RecruitmentMessageFactory;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -94,11 +95,22 @@ class RecruitmentMessage extends Model
      */
     public function getTrackingUrlAttribute(): string
     {
+        return $this->trackingUrl(SettingService::getRecruitmentCurrentCohortKey());
+    }
+
+    /**
+     * Build a tracking URL for a specific A/B testing cohort.
+     */
+    public function trackingUrl(?string $cohortKey): string
+    {
         if (empty($this->tracking_key)) {
             return route('apply.show');
         }
 
-        return route('recruitment.click', ['tracking_key' => $this->tracking_key]);
+        return route('recruitment.click', array_filter([
+            'tracking_key' => $this->tracking_key,
+            'cohort' => $cohortKey,
+        ]));
     }
 
     /**

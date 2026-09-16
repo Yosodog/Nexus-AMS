@@ -58,6 +58,23 @@ return new class extends Migration
                     'subject' => mb_substr(trim($followUpSubject), 0, 50),
                     'is_active' => false,
                 ]);
+
+            $recoveredVariants = DB::table('recruitment_messages')
+                ->where('type', 'like', 'legacy_variant_%')
+                ->whereNull('name')
+                ->get(['id']);
+
+            foreach ($recoveredVariants as $variant) {
+                DB::table('recruitment_messages')
+                    ->where('id', $variant->id)
+                    ->update([
+                        'type' => 'variant',
+                        'name' => 'Recovered Variant '.$variant->id,
+                        'subject' => mb_substr(trim($primarySubject), 0, 50),
+                        'tracking_key' => Str::lower(Str::random(10)),
+                        'is_active' => false,
+                    ]);
+            }
         }
 
         if (Schema::hasTable('recruited_nations') && ! Schema::hasColumn('recruited_nations', 'recruitment_message_id')) {
@@ -70,21 +87,24 @@ return new class extends Migration
             });
         }
 
-        if (Schema::hasTable('recruitment_message_clicks')) {
-            Schema::drop('recruitment_message_clicks');
+        if (! Schema::hasTable('recruitment_message_clicks')) {
+            Schema::create('recruitment_message_clicks', function (Blueprint $table) {
+                $table->id();
+                $table->foreignId('recruitment_message_id')
+                    ->constrained('recruitment_messages')
+                    ->cascadeOnDelete();
+                $table->string('cohort_key', 32)->default('legacy');
+                $table->string('ip_hash', 64);
+                $table->string('user_agent', 255)->nullable();
+                $table->timestamp('created_at')->useCurrent();
+
+                $table->index(['recruitment_message_id', 'created_at'], 'rm_clicks_message_created_idx');
+                $table->unique(
+                    ['recruitment_message_id', 'cohort_key', 'ip_hash'],
+                    'rm_clicks_message_cohort_ip_unique'
+                );
+            });
         }
-
-        Schema::create('recruitment_message_clicks', function (Blueprint $table) {
-            $table->id();
-            $table->foreignId('recruitment_message_id')
-                ->constrained('recruitment_messages')
-                ->cascadeOnDelete();
-            $table->string('ip_hash', 64)->nullable();
-            $table->string('user_agent', 255)->nullable();
-            $table->timestamp('created_at')->useCurrent();
-
-            $table->index(['recruitment_message_id', 'created_at'], 'rm_clicks_message_created_idx');
-        });
     }
 
     /**
@@ -101,7 +121,18 @@ return new class extends Migration
         }
 
         if (Schema::hasTable('recruitment_messages') && Schema::hasColumn('recruitment_messages', 'name')) {
+            $variants = DB::table('recruitment_messages')
+                ->whereNotIn('type', ['primary', 'follow_up'])
+                ->get(['id']);
+
+            foreach ($variants as $variant) {
+                DB::table('recruitment_messages')
+                    ->where('id', $variant->id)
+                    ->update(['type' => 'legacy_variant_'.$variant->id]);
+            }
+
             Schema::table('recruitment_messages', function (Blueprint $table) {
+                $table->dropUnique(['tracking_key']);
                 $table->dropColumn([
                     'name',
                     'subject',
