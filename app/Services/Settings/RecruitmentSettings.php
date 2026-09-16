@@ -147,7 +147,11 @@ class RecruitmentSettings
     {
         RecruitmentMessage::query()->updateOrCreate(
             ['type' => $type],
-            ['message' => $message],
+            [
+                'name' => $type === 'primary' ? 'Default Recruitment Pitch' : 'Follow-up Message',
+                'message' => $message,
+                'is_active' => $type === 'primary',
+            ],
         );
     }
 

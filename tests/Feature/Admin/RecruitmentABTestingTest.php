@@ -3,6 +3,7 @@
 namespace Tests\Feature\Admin;
 
 use App\GraphQL\Models\Nation;
+use App\Jobs\SendRecruitmentMessage;
 use App\Models\RecruitedNation;
 use App\Models\RecruitmentMessage;
 use App\Models\RecruitmentMessageClick;
@@ -12,6 +13,8 @@ use App\Services\RecruitmentService;
 use App\Services\SettingService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Queue;
 use Mockery;
 use Tests\Concerns\BuildsTestUsers;
 use Tests\TestCase;
@@ -343,6 +346,376 @@ class RecruitmentABTestingTest extends TestCase
             ->assertSessionHas('alert-type', 'success');
     }
 
+    public function test_artisan_recruit_nations_command_executes_cycle_and_rotates_variants_in_least_sent_order(): void
+    {
+        SettingService::setRecruitmentEnabled(true);
+        SettingService::setRecruitmentFollowUpEnabled(true);
+        Queue::fake([SendRecruitmentMessage::class]);
+        RecruitmentMessage::query()->delete();
+
+        $variantA = RecruitmentMessage::factory()->create([
+            'name' => 'Variant Alpha',
+            'subject' => 'Subject Alpha',
+            'message' => '<p>Alpha {apply_link}</p>',
+            'current_sends' => 2,
+            'lifetime_sends' => 10,
+        ]);
+
+        $variantB = RecruitmentMessage::factory()->create([
+            'name' => 'Variant Bravo',
+            'subject' => 'Subject Bravo',
+            'message' => '<p>Bravo {apply_url}</p>',
+            'current_sends' => 0,
+            'lifetime_sends' => 5,
+        ]);
+
+        $variantC = RecruitmentMessage::factory()->create([
+            'name' => 'Variant Charlie',
+            'subject' => 'Subject Charlie',
+            'message' => '<p>Charlie pitch</p>',
+            'current_sends' => 1,
+            'lifetime_sends' => 8,
+        ]);
+
+        $nations = collect([
+            $this->makeNation(2001, 'Leader 2001'),
+            $this->makeNation(2002, 'Leader 2002'),
+            $this->makeNation(2003, 'Leader 2003'),
+            $this->makeNation(2004, 'Leader 2004'),
+        ]);
+
+        $sentMessages = [];
+        $messageService = Mockery::mock(PWMessageService::class);
+        $messageService->shouldReceive('sendMessage')
+            ->times(4)
+            ->andReturnUsing(function ($nationId, $subject, $body) use (&$sentMessages) {
+                $sentMessages[] = [
+                    'nation_id' => $nationId,
+                    'subject' => $subject,
+                    'body' => $body,
+                ];
+
+                return true;
+            });
+
+        $this->bindTestRecruitmentService($messageService, $nations);
+
+        $this->artisan('recruit:nations')->assertSuccessful();
+
+        $this->assertCount(4, $sentMessages);
+
+        // Verification of rotation sequence based on least-sent balancing:
+        // Nation 2001: picks Variant B (0 sends). B becomes 1.
+        $this->assertSame(2001, $sentMessages[0]['nation_id']);
+        $this->assertSame('Subject Bravo', $sentMessages[0]['subject']);
+        $this->assertStringContainsString($variantB->tracking_url, $sentMessages[0]['body']);
+
+        // Nation 2002: B (1 send) vs C (1 send) vs A (2 sends). B has lower id than C, so picks B. B becomes 2.
+        $this->assertSame(2002, $sentMessages[1]['nation_id']);
+        $this->assertSame('Subject Bravo', $sentMessages[1]['subject']);
+        $this->assertStringContainsString($variantB->tracking_url, $sentMessages[1]['body']);
+
+        // Nation 2003: picks Variant C (1 send). C becomes 2.
+        $this->assertSame(2003, $sentMessages[2]['nation_id']);
+        $this->assertSame('Subject Charlie', $sentMessages[2]['subject']);
+        $this->assertStringContainsString($variantC->tracking_url, $sentMessages[2]['body']);
+
+        // Nation 2004: all three variants have 2 sends; picks Variant A (lowest id). A becomes 3.
+        $this->assertSame(2004, $sentMessages[3]['nation_id']);
+        $this->assertSame('Subject Alpha', $sentMessages[3]['subject']);
+        $this->assertStringContainsString($variantA->tracking_url, $sentMessages[3]['body']);
+
+        // Database sends updated
+        $variantA->refresh();
+        $variantB->refresh();
+        $variantC->refresh();
+
+        $this->assertSame(3, $variantA->current_sends);
+        $this->assertSame(11, $variantA->lifetime_sends);
+        $this->assertSame(2, $variantB->current_sends);
+        $this->assertSame(7, $variantB->lifetime_sends);
+        $this->assertSame(2, $variantC->current_sends);
+        $this->assertSame(9, $variantC->lifetime_sends);
+
+        // Recruited nations records created with correct variant mappings
+        $this->assertSame(4, RecruitedNation::count());
+        $this->assertSame(1, RecruitedNation::where('recruitment_message_id', $variantA->id)->count());
+        $this->assertSame(2, RecruitedNation::where('recruitment_message_id', $variantB->id)->count());
+        $this->assertSame(1, RecruitedNation::where('recruitment_message_id', $variantC->id)->count());
+
+        // Follow-up jobs queued for each recruited nation
+        Queue::assertPushed(SendRecruitmentMessage::class, 4);
+    }
+
+    public function test_artisan_recruit_nations_falls_back_to_settings_when_no_active_variants_exist(): void
+    {
+        SettingService::setRecruitmentEnabled(true);
+        SettingService::setRecruitmentFollowUpEnabled(true);
+        SettingService::setRecruitmentPrimarySubject('Global Default Subject');
+        SettingService::setRecruitmentPrimaryMessage('<p>Global Default Body</p>');
+        Queue::fake([SendRecruitmentMessage::class]);
+
+        // Ensure all variants in the message pool are paused/inactive so system falls back to settings
+        RecruitmentMessage::query()->update(['is_active' => false]);
+
+        $nations = collect([
+            $this->makeNation(3001, 'Leader 3001'),
+            $this->makeNation(3002, 'Leader 3002'),
+        ]);
+
+        $sentMessages = [];
+        $messageService = Mockery::mock(PWMessageService::class);
+        $messageService->shouldReceive('sendMessage')
+            ->twice()
+            ->andReturnUsing(function ($nationId, $subject, $body) use (&$sentMessages) {
+                $sentMessages[] = [
+                    'nation_id' => $nationId,
+                    'subject' => $subject,
+                    'body' => $body,
+                ];
+
+                return true;
+            });
+
+        $this->bindTestRecruitmentService($messageService, $nations);
+
+        $this->artisan('recruit:nations')->assertSuccessful();
+
+        $this->assertCount(2, $sentMessages);
+        $this->assertSame('Global Default Subject', $sentMessages[0]['subject']);
+        $this->assertSame('<p>Global Default Body</p>', $sentMessages[0]['body']);
+        $this->assertSame('Global Default Subject', $sentMessages[1]['subject']);
+        $this->assertSame('<p>Global Default Body</p>', $sentMessages[1]['body']);
+
+        // Null recruitment_message_id preserves backwards compatibility
+        $records = RecruitedNation::whereIn('nation_id', [3001, 3002])->get();
+        $this->assertCount(2, $records);
+        $this->assertNull($records[0]->recruitment_message_id);
+        $this->assertNull($records[1]->recruitment_message_id);
+
+        Queue::assertPushed(SendRecruitmentMessage::class, 2);
+    }
+
+    public function test_recruitment_cycle_skips_nations_already_recruited(): void
+    {
+        SettingService::setRecruitmentEnabled(true);
+        RecruitmentMessage::query()->delete();
+
+        $variant = RecruitmentMessage::factory()->create([
+            'is_active' => true,
+            'current_sends' => 0,
+            'lifetime_sends' => 0,
+        ]);
+
+        RecruitedNation::create([
+            'nation_id' => 4001,
+            'primary_sent_at' => now()->subDay(),
+        ]);
+
+        $nations = collect([
+            $this->makeNation(4001, 'Already Recruited'),
+            $this->makeNation(4002, 'Brand New Nation'),
+        ]);
+
+        $messageService = Mockery::mock(PWMessageService::class);
+        $messageService->shouldReceive('sendMessage')
+            ->once()
+            ->withArgs(function ($nationId) {
+                return $nationId === 4002;
+            })
+            ->andReturn(true);
+
+        $this->bindTestRecruitmentService($messageService, $nations);
+
+        $this->artisan('recruit:nations')->assertSuccessful();
+
+        $variant->refresh();
+        $this->assertSame(1, $variant->current_sends);
+        $this->assertSame(1, $variant->lifetime_sends);
+        $this->assertSame(2, RecruitedNation::count());
+    }
+
+    public function test_recruitment_cycle_respects_disabled_setting(): void
+    {
+        SettingService::setRecruitmentEnabled(false);
+        RecruitmentMessage::query()->delete();
+
+        RecruitmentMessage::factory()->create(['is_active' => true]);
+
+        $nations = collect([
+            $this->makeNation(5001, 'Leader 5001'),
+        ]);
+
+        $messageService = Mockery::mock(PWMessageService::class);
+        $messageService->shouldNotReceive('sendMessage');
+
+        $this->bindTestRecruitmentService($messageService, $nations);
+
+        $this->artisan('recruit:nations')->assertSuccessful();
+
+        $this->assertSame(0, RecruitedNation::count());
+    }
+
+    public function test_multi_cycle_rotation_persists_across_separate_command_runs(): void
+    {
+        SettingService::setRecruitmentEnabled(true);
+        SettingService::setRecruitmentFollowUpEnabled(false);
+        RecruitmentMessage::query()->delete();
+
+        $variantA = RecruitmentMessage::factory()->create([
+            'name' => 'Variant Alpha',
+            'is_active' => true,
+            'current_sends' => 0,
+            'lifetime_sends' => 0,
+        ]);
+
+        $variantB = RecruitmentMessage::factory()->create([
+            'name' => 'Variant Bravo',
+            'is_active' => true,
+            'current_sends' => 0,
+            'lifetime_sends' => 0,
+        ]);
+
+        $messageService = Mockery::mock(PWMessageService::class);
+        $messageService->shouldReceive('sendMessage')->times(3)->andReturn(true);
+
+        // Cycle 1: first cron execution with 1 nation
+        $service1 = $this->bindTestRecruitmentService($messageService, collect([
+            $this->makeNation(6001, 'Leader 6001'),
+        ]));
+        $this->artisan('recruit:nations')->assertSuccessful();
+
+        $variantA->refresh();
+        $variantB->refresh();
+        $this->assertSame(1, $variantA->current_sends);
+        $this->assertSame(0, $variantB->current_sends);
+
+        // Cycle 2: second cron execution with 1 nation (picks Variant B because B has 0 sends)
+        $this->bindTestRecruitmentService($messageService, collect([
+            $this->makeNation(6002, 'Leader 6002'),
+        ]));
+        $this->artisan('recruit:nations')->assertSuccessful();
+
+        $variantA->refresh();
+        $variantB->refresh();
+        $this->assertSame(1, $variantA->current_sends);
+        $this->assertSame(1, $variantB->current_sends);
+
+        // Cycle 3: third cron execution with 1 nation (both have 1 send, picks Variant A due to tiebreak)
+        $this->bindTestRecruitmentService($messageService, collect([
+            $this->makeNation(6003, 'Leader 6003'),
+        ]));
+        $this->artisan('recruit:nations')->assertSuccessful();
+
+        $variantA->refresh();
+        $variantB->refresh();
+        $this->assertSame(2, $variantA->current_sends);
+        $this->assertSame(1, $variantB->current_sends);
+    }
+
+    public function test_send_recruitment_message_job_executes_follow_up_for_unaligned_nation(): void
+    {
+        SettingService::setRecruitmentEnabled(true);
+        SettingService::setRecruitmentFollowUpEnabled(true);
+        SettingService::setRecruitmentFollowUpSubject('Are you still looking for a home?');
+        SettingService::setRecruitmentFollowUpMessage('Join our alliance today!');
+
+        $record = RecruitedNation::create([
+            'nation_id' => 7001,
+            'primary_sent_at' => now()->subHours(61),
+            'follow_up_scheduled_for' => now()->subHour(),
+        ]);
+
+        Http::fake([
+            '*' => Http::response([
+                'data' => [
+                    'nations' => [
+                        'data' => [
+                            [
+                                'id' => 7001,
+                                'nation_name' => 'Unaligned Nation',
+                                'leader_name' => 'Solo Leader',
+                                'alliance_id' => null,
+                            ],
+                        ],
+                    ],
+                ],
+            ], 200),
+        ]);
+
+        $messageService = Mockery::mock(PWMessageService::class);
+        $messageService->shouldReceive('sendMessage')
+            ->once()
+            ->with(7001, 'Are you still looking for a home?', 'Join our alliance today!')
+            ->andReturn(true);
+
+        $this->app->instance(PWMessageService::class, $messageService);
+
+        SendRecruitmentMessage::dispatchSync($record->id);
+
+        $record->refresh();
+        $this->assertNotNull($record->follow_up_sent_at);
+    }
+
+    public function test_send_recruitment_message_job_skips_nation_if_already_joined_alliance(): void
+    {
+        SettingService::setRecruitmentEnabled(true);
+        SettingService::setRecruitmentFollowUpEnabled(true);
+
+        $record = RecruitedNation::create([
+            'nation_id' => 7002,
+            'primary_sent_at' => now()->subHours(61),
+        ]);
+
+        Http::fake([
+            '*' => Http::response([
+                'data' => [
+                    'nations' => [
+                        'data' => [
+                            [
+                                'id' => 7002,
+                                'nation_name' => 'Aligned Nation',
+                                'leader_name' => 'Alliance Leader',
+                                'alliance_id' => 9999,
+                            ],
+                        ],
+                    ],
+                ],
+            ], 200),
+        ]);
+
+        $messageService = Mockery::mock(PWMessageService::class);
+        $messageService->shouldNotReceive('sendMessage');
+
+        $this->app->instance(PWMessageService::class, $messageService);
+
+        SendRecruitmentMessage::dispatchSync($record->id);
+
+        $record->refresh();
+        $this->assertNull($record->follow_up_sent_at);
+    }
+
+    public function test_send_recruitment_message_job_skips_when_follow_up_disabled(): void
+    {
+        SettingService::setRecruitmentEnabled(true);
+        SettingService::setRecruitmentFollowUpEnabled(false);
+
+        $record = RecruitedNation::create([
+            'nation_id' => 7003,
+            'primary_sent_at' => now()->subHours(61),
+        ]);
+
+        $messageService = Mockery::mock(PWMessageService::class);
+        $messageService->shouldNotReceive('sendMessage');
+
+        $this->app->instance(PWMessageService::class, $messageService);
+
+        SendRecruitmentMessage::dispatchSync($record->id);
+
+        $record->refresh();
+        $this->assertNull($record->follow_up_sent_at);
+    }
+
     /**
      * @param  array<int, string>  $permissions
      */
@@ -362,5 +735,30 @@ class RecruitmentABTestingTest extends TestCase
         $nation->alliance_id = null;
 
         return $nation;
+    }
+
+    private function bindTestRecruitmentService(PWMessageService $messageService, Collection $nations): RecruitmentService
+    {
+        $service = new class($messageService, $nations) extends RecruitmentService
+        {
+            public function __construct(PWMessageService $service, private Collection $testNations)
+            {
+                parent::__construct($service);
+            }
+
+            public function setTestNations(Collection $nations): void
+            {
+                $this->testNations = $nations;
+            }
+
+            protected function fetchRecentNations(): Collection
+            {
+                return $this->testNations;
+            }
+        };
+
+        $this->app->instance(RecruitmentService::class, $service);
+
+        return $service;
     }
 }

@@ -62,8 +62,8 @@ class RecruitmentService
             ->active()
             ->get();
 
-        $fallbackSubject = SettingService::getRecruitmentPrimarySubject();
-        $fallbackMessage = SettingService::getRecruitmentPrimaryMessage();
+        $fallbackSubject = null;
+        $fallbackMessage = null;
         $followUpEnabled = SettingService::isRecruitmentFollowUpEnabled();
 
         foreach ($nations as $nation) {
@@ -84,12 +84,18 @@ class RecruitmentService
                     ->sortBy(fn (RecruitmentMessage $variant) => [$variant->current_sends, $variant->id])
                     ->first();
 
-                $subject = ! empty($selectedVariant->subject)
-                    ? $selectedVariant->subject
-                    : $fallbackSubject;
+                if (! empty($selectedVariant->subject)) {
+                    $subject = $selectedVariant->subject;
+                } else {
+                    $fallbackSubject ??= SettingService::getRecruitmentPrimarySubject();
+                    $subject = $fallbackSubject;
+                }
 
                 $message = $this->prepareMessageBody($selectedVariant);
             } else {
+                $fallbackSubject ??= SettingService::getRecruitmentPrimarySubject();
+                $fallbackMessage ??= SettingService::getRecruitmentPrimaryMessage();
+
                 $subject = $fallbackSubject;
                 $message = $fallbackMessage;
             }
