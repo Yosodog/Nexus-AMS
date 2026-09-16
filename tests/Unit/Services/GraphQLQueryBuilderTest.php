@@ -26,4 +26,32 @@ class GraphQLQueryBuilderTest extends UnitTestCase
             $query
         );
     }
+
+    public function test_it_does_not_escape_apostrophes_in_string_arguments(): void
+    {
+        $query = (new GraphQLQueryBuilder)
+            ->setRootField('bankWithdraw')
+            ->addArgument('note', "Withdraw from reggie's pockets")
+            ->addFields('id')
+            ->build();
+
+        $this->assertSame(
+            'query { bankWithdraw(note: "Withdraw from reggie\'s pockets") { id } }',
+            $query
+        );
+    }
+
+    public function test_it_uses_graphql_compatible_escapes_for_string_arguments(): void
+    {
+        $query = (new GraphQLQueryBuilder)
+            ->setRootField('bankWithdraw')
+            ->addArgument('note', "A \"quoted\" path \\ with\na new line\tand a tab")
+            ->addFields('id')
+            ->build();
+
+        $this->assertSame(
+            'query { bankWithdraw(note: "A \\"quoted\\" path \\\\ with\\na new line\\tand a tab") { id } }',
+            $query
+        );
+    }
 }

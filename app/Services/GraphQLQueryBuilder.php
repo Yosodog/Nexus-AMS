@@ -104,7 +104,10 @@ class GraphQLQueryBuilder
             $value instanceof GraphQLLiteral => (string) $value,
             $value instanceof \UnitEnum => $value->name,
             is_bool($value) => $value ? 'true' : 'false',
-            is_string($value) => '"'.addslashes($value).'"',
+            is_string($value) => json_encode(
+                $value,
+                JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE
+            ),
             is_array($value) => $this->formatArrayValue($value),
             is_null($value) => 'null',
             default => (string) $value,
