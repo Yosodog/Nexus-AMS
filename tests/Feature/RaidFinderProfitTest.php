@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\Nation;
 use App\Models\RaidNationObservation;
 use App\Services\RaidFinderService;
+use App\Services\RaidIntelligenceRefreshService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Queue;
@@ -89,6 +90,9 @@ class RaidFinderProfitTest extends TestCase
             'id' => $own->id, 'score' => 1000, 'offensive_wars_count' => 5,
             'pirate_economy' => false, 'advanced_pirate_economy' => false,
         ]]);
+        $this->mock(RaidIntelligenceRefreshService::class)
+            ->shouldReceive('refresh')
+            ->once();
         Queue::fake();
         $result = app(RaidFinderService::class)->findTargets($own->id)->firstWhere('nation.id', $target->id);
         $this->assertNotNull($result);

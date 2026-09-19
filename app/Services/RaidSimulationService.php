@@ -1109,6 +1109,10 @@ final class RaidSimulationService
         if ($highestPopulation === null && $populations->isNotEmpty()) {
             $highestPopulation = (float) $populations->max();
         }
+        $averageInfra = $this->number($nation['avg_infra'] ?? null);
+        if ($averageInfra === null && $infrastructures->isNotEmpty()) {
+            $averageInfra = (float) $infrastructures->average();
+        }
 
         $cityCount = $this->number($nation['cities_count'] ?? $nation['num_cities'] ?? null);
         if ($cityCount === null && is_numeric($nation['cities'] ?? null)) {
@@ -1138,7 +1142,7 @@ final class RaidSimulationService
             'cities' => max(0, (int) ($cityCount ?? 0)),
             'highest_city_infra' => max(0.0, $highestInfra ?? 0.0),
             'highest_city_population' => max(0, (int) ($highestPopulation ?? 0)),
-            'avg_infra' => $this->number($nation['avg_infra'] ?? null),
+            'avg_infra' => $averageInfra,
             'research' => $research,
             'military_research' => is_array($nation['military_research'] ?? null) ? $nation['military_research'] : [],
             'projects' => $projects,

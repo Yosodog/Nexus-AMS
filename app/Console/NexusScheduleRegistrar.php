@@ -47,7 +47,9 @@ final readonly class NexusScheduleRegistrar
         }
 
         if ($this->capabilities->runsPublicWorldSchedules()) {
-            $schedule->command('raids:refresh-intelligence --limit=100')->everyMinute()->withoutOverlapping(5)->onOneServer()->when($whenPWUp);
+            $schedule->command('raids:refresh-intelligence --priority-only --limit=100')->everyMinute()->withoutOverlapping(5)->onOneServer()->when($whenPWUp);
+            $schedule->command('raids:refresh-intelligence --background --limit=500')->everyFifteenMinutes()->withoutOverlapping(14)->onOneServer()->when($whenPWUp);
+            $schedule->command('raids:prune-intelligence')->hourlyAt(17)->withoutOverlapping(30)->onOneServer();
             $this->registerPublicDependencySchedule($schedule);
         }
 

@@ -15,7 +15,7 @@ class RefreshRaidTargetsCommandTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_it_queues_one_job_for_the_full_scheduled_target_set(): void
+    public function test_priority_refresh_does_not_fill_from_the_global_cursor(): void
     {
         Queue::fake();
         Cache::flush();
@@ -23,13 +23,28 @@ class RefreshRaidTargetsCommandTest extends TestCase
         app(RaidIntelligenceDemand::class)->prioritize([$nations[3]->id]);
 
         $this->artisan('raids:refresh-intelligence', ['--limit' => 4])
-            ->expectsOutputToContain('Queued 4 nations.')
+            ->expectsOutputToContain('Queued 1 nations.')
             ->assertSuccessful();
 
         Queue::assertPushed(RefreshRaidIntelligence::class, 1);
         Queue::assertPushed(RefreshRaidIntelligence::class, function (RefreshRaidIntelligence $job) use ($nations): bool {
-            return $job->nationIds === $nations->pluck('id')->all();
+            return $job->nationIds === [(int) $nations[3]->id];
         });
+    }
+
+    public function test_background_refresh_advances_the_global_cursor_without_priority_demand(): void
+    {
+        Queue::fake();
+        Cache::flush();
+        $nations = Nation::factory()->count(4)->create();
+        app(RaidIntelligenceDemand::class)->prioritize([$nations[3]->id]);
+
+        $this->artisan('raids:refresh-intelligence', ['--background' => true, '--limit' => 3])
+            ->expectsOutputToContain('Queued 3 nations.')
+            ->assertSuccessful();
+
+        Queue::assertPushed(RefreshRaidIntelligence::class, fn (RefreshRaidIntelligence $job): bool => $job->nationIds === $nations->take(3)->pluck('id')->all());
+        $this->assertSame([(int) $nations[3]->id], app(RaidIntelligenceDemand::class)->take(10));
     }
 
     public function test_retry_window_replaces_the_low_attempt_limit(): void

@@ -6,6 +6,7 @@ use App\Models\Nation;
 use App\Models\RaidAttackObservation;
 use App\Models\RaidNationObservation;
 use App\Services\RaidFinderService;
+use App\Services\RaidIntelligenceRefreshService;
 use App\Services\RaidIntelligenceService;
 use Carbon\CarbonImmutable;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -240,6 +241,9 @@ class RaidFinderPerformanceTest extends TestCase
             ];
         });
         $this->app->instance(RaidIntelligenceService::class, $intelligence);
+        $this->mock(RaidIntelligenceRefreshService::class)
+            ->shouldReceive('refresh')
+            ->once();
 
         $results = app(RaidFinderService::class)->findTargets($own->id);
 

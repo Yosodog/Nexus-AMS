@@ -13,6 +13,13 @@ class RaidNationObservation extends Model
 
     protected function casts(): array
     {
-        return ['observed_at' => 'immutable_datetime', 'payload' => 'array', 'provenance_war_ids' => 'array'];
+        return [
+            'current_key' => 'integer',
+            'observed_at' => 'immutable_datetime',
+            'valid_from' => 'immutable_datetime',
+            'confirmed_through' => 'immutable_datetime',
+            'payload' => 'array',
+            'provenance_war_ids' => 'array',
+        ];
     }
 }

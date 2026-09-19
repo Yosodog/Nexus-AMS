@@ -194,14 +194,21 @@ class RaidIntelligenceService
         }
         $history = RaidNationObservation::query()
             ->where('nation_id', $targetId)
-            ->where('observed_at', $excludedWarId === null ? '<=' : '<', $cutoff)
-            ->orderByDesc('observed_at')->limit(96)->get()->reverse();
+            ->where('valid_from', $excludedWarId === null ? '<=' : '<', $cutoff)
+            ->where(function ($query) use ($cutoff): void {
+                $query->where('confirmed_through', '>=', $cutoff->subDays((int) config('raids.history_days', 31)))
+                    ->orWhere('current_key', 1);
+            })
+            ->orderBy('valid_from')
+            ->orderBy('id')
+            ->get();
         $target['production_context'] = [];
         foreach ($history as $snapshot) {
             if (! $this->isClean($snapshot, $excludedWarId)) {
                 continue;
             }
-            $context = $this->withEconomy($snapshot->payload + ['observed_at' => $snapshot->observed_at->toIso8601String()], $prices, $snapshot->observed_at, false, $excludedWarId);
+            $effectiveAt = $snapshot->valid_from ?? $snapshot->observed_at;
+            $context = $this->withEconomy($snapshot->payload + ['observed_at' => $effectiveAt->toIso8601String()], $prices, $effectiveAt, false, $excludedWarId);
             $target['production_context'][] = Arr::only($context, ['observed_at', 'daily_output', 'daily_expenses', 'daily_net', 'vacation_mode_turns', 'production_processes']);
         }
         $stockpile = $this->stockpiles->estimate($target, $observations, $attacks, $cutoff, $excludedWarId);
@@ -461,29 +468,12 @@ class RaidIntelligenceService
             return [];
         }
 
-        $table = (new RaidNationObservation)->getTable();
-        $query = RaidNationObservation::query()
-            ->whereIn($table.'.nation_id', $nationIds)
-            ->where($table.'.observed_at', $excludedWarId === null ? '<=' : '<', $cutoff);
-        if ($excludedWarId === null) {
-            $query->whereNotExists(function ($newer) use ($table, $cutoff): void {
-                $newer->selectRaw('1')->from($table.' as newer')
-                    ->whereColumn('newer.nation_id', $table.'.nation_id')
-                    ->where('newer.observed_at', '<=', $cutoff)
-                    ->where(function ($date) use ($table): void {
-                        $date->whereColumn('newer.observed_at', '>', $table.'.observed_at')
-                            ->orWhere(function ($sameDate) use ($table): void {
-                                $sameDate->whereColumn('newer.observed_at', $table.'.observed_at')
-                                    ->whereColumn('newer.id', '>', $table.'.id');
-                            });
-                    });
-            });
-        } else {
-            // Keep the excluded-war read bounded while leaving enough history
-            // for each nation to find a clean row when a capture excludes a war.
-            $query->latest('observed_at')->latest('id')->limit(count($nationIds) * 96);
-        }
-        $snapshots = $query->latest('observed_at')->latest('id')->get();
+        $snapshots = RaidNationObservation::query()
+            ->whereIn('nation_id', $nationIds)
+            ->where('valid_from', $excludedWarId === null ? '<=' : '<', $cutoff)
+            ->orderByDesc('valid_from')
+            ->orderByDesc('id')
+            ->get();
         $latest = [];
 
         foreach ($snapshots as $snapshot) {
@@ -503,10 +493,12 @@ class RaidIntelligenceService
 
     private function isClean(RaidNationObservation $snapshot, ?int $excludedWarId): bool
     {
+        $effectiveAt = $snapshot->valid_from ?? $snapshot->observed_at;
+
         return $excludedWarId === null || (
             ! in_array($excludedWarId, $snapshot->provenance_war_ids ?? [], true)
-            && ! WarAttack::query()->where('war_id', $excludedWarId)->where('date', '<=', $snapshot->observed_at)->exists()
-            && ! RaidAttackObservation::query()->where('war_id', $excludedWarId)->where('occurred_at', '<=', $snapshot->observed_at)->exists()
+            && ! WarAttack::query()->where('war_id', $excludedWarId)->where('date', '<=', $effectiveAt)->exists()
+            && ! RaidAttackObservation::query()->where('war_id', $excludedWarId)->where('occurred_at', '<=', $effectiveAt)->exists()
         );
     }
 

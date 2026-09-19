@@ -14,7 +14,13 @@ use Illuminate\Support\Str;
 
 class RaidIntelligenceRefreshService
 {
-    public function __construct(private QueryService $queries, private WorldWriteGuard $guard, private RaidIntelligenceService $intelligence, private MarketValuationService $valuation) {}
+    public function __construct(
+        private QueryService $queries,
+        private WorldWriteGuard $guard,
+        private RaidIntelligenceService $intelligence,
+        private MarketValuationService $valuation,
+        private RaidNationSnapshotCompactor $compactor,
+    ) {}
 
     /** @return list<string> */
     public static function publicFields(): array
@@ -26,22 +32,26 @@ class RaidIntelligenceRefreshService
     }
 
     /** @param list<int> $nationIds */
-    public function refresh(array $nationIds): void
+    public function refresh(array $nationIds, bool $force = false): void
     {
         $this->guard->assertCanWrite(RaidNationObservation::class);
         $nationIds = array_values(array_unique(array_filter(array_map('intval', $nationIds), fn (int $id): bool => $id > 0)));
-        $fresh = RaidNationObservation::query()->whereIn('nation_id', $nationIds)
-            ->where('observed_at', '>=', now()->subSeconds((int) config('raids.fresh_seconds', 300)))
-            ->get(['nation_id', 'observed_at'])->groupBy('nation_id');
-        $nationIds = array_values(array_filter($nationIds, function (int $id) use ($fresh): bool {
-            $last = $fresh->get($id)?->max('observed_at');
+        if (! $force) {
+            $fresh = RaidNationObservation::query()->whereIn('nation_id', $nationIds)
+                ->where('current_key', 1)
+                ->where('observed_at', '>=', now()->subSeconds((int) config('raids.fresh_seconds', 300)))
+                ->get(['nation_id', 'observed_at'])->groupBy('nation_id');
+            $nationIds = array_values(array_filter($nationIds, function (int $id) use ($fresh): bool {
+                $last = $fresh->get($id)?->max('observed_at');
 
-            return $last === null || RaidAttackObservation::query()
-                ->where(fn ($query) => $query->where('att_id', $id)->orWhere('def_id', $id))
-                ->where('occurred_at', '>=', $last)->exists();
-        }));
+                return $last === null || RaidAttackObservation::query()
+                    ->where(fn ($query) => $query->where('att_id', $id)->orWhere('def_id', $id))
+                    ->where('occurred_at', '>=', $last)->exists();
+            }));
+        }
         foreach (array_chunk($nationIds, max(1, (int) config('raids.batch_size', 25))) as $ids) {
             $wars = $this->history($ids);
+            $evidenceNationIds = $this->evidenceNationIds($ids);
             $query = (new GraphQLQueryBuilder)->setRootField('nations')->addArgument('id', $ids)
                 ->addArgument('first', count($ids))
                 ->addNestedField('data', function (GraphQLQueryBuilder $builder): void {
@@ -53,6 +63,7 @@ class RaidIntelligenceRefreshService
                 });
             $rows = $this->queries->sendQuery($query, handlePagination: false);
             $observedAt = CarbonImmutable::now();
+            $stateChanged = false;
             foreach ($rows as $raw) {
                 $payload = json_decode(json_encode($raw, JSON_THROW_ON_ERROR), true, flags: JSON_THROW_ON_ERROR);
                 $id = (int) ($payload['id'] ?? 0);
@@ -66,6 +77,11 @@ class RaidIntelligenceRefreshService
                 $payload['cities'] = array_map(fn (array $city): array => Arr::only($city, SelectionSetHelper::citySet()), $payload['cities'] ?? []);
                 $payload['active_wars'] = array_values(array_filter($wars, fn (array $war): bool => ((int) $war['att_id'] === $id || (int) $war['def_id'] === $id)
                     && empty($war['end_date']) && (int) ($war['turns_left'] ?? 0) > 0 && (int) ($war['winner_id'] ?? 0) === 0));
+                $payload['is_fortified'] = collect($payload['active_wars'])->contains(
+                    static fn (array $war): bool => (int) ($war['att_id'] ?? 0) === $id
+                        ? (bool) ($war['att_fortify'] ?? false)
+                        : (bool) ($war['def_fortify'] ?? false),
+                );
                 $payload['history_complete'] = (bool) Cache::get('raid-history-complete:'.implode(',', $ids), false);
                 $provenance = RaidAttackObservation::query()->where(fn ($q) => $q->where('att_id', $id)->orWhere('def_id', $id))
                     ->where('occurred_at', '<=', now())->distinct()->pluck('war_id')->map(fn ($v): int => (int) $v)->all();
@@ -74,13 +90,153 @@ class RaidIntelligenceRefreshService
                 } catch (\Throwable) {
                     $payload['economy_unavailable'] = 'Market or economy context is not available.';
                 }
-                RaidNationObservation::query()->create([
-                    'nation_id' => $id, 'observed_at' => $observedAt, 'payload' => $payload,
-                    'provenance_war_ids' => $provenance, 'source' => 'public_api',
-                ]);
+                $payload = $this->compactor->compact($payload);
+                $stateChanged = $this->persistObservation(
+                    $id,
+                    $payload,
+                    $provenance,
+                    $observedAt,
+                    in_array($id, $evidenceNationIds, true),
+                ) || $stateChanged;
             }
-            Cache::store(config('raids.intelligence_cache_store'))->forever('raid-intelligence:revision', (string) Str::uuid());
+            if ($stateChanged) {
+                Cache::store(config('raids.intelligence_cache_store'))->forever('raid-intelligence:revision', (string) Str::uuid());
+            }
         }
+    }
+
+    /** @param list<int> $ids @return list<int> */
+    private function evidenceNationIds(array $ids): array
+    {
+        $cutoff = now()->subDays((int) config('raids.checkpoint_retention_days', 31));
+        $attackerIds = RaidAttackObservation::query()
+            ->whereIn('att_id', $ids)
+            ->where('occurred_at', '>=', $cutoff)
+            ->pluck('att_id');
+        $defenderIds = RaidAttackObservation::query()
+            ->whereIn('def_id', $ids)
+            ->where('occurred_at', '>=', $cutoff)
+            ->pluck('def_id');
+
+        return $attackerIds->merge($defenderIds)
+            ->map(static fn (mixed $id): int => (int) $id)
+            ->unique()
+            ->values()
+            ->all();
+    }
+
+    /** @param array<string, mixed> $payload @param list<int> $provenance */
+    private function persistObservation(
+        int $nationId,
+        array $payload,
+        array $provenance,
+        CarbonImmutable $observedAt,
+        bool $hasRecentEvidence,
+    ): bool {
+        $stateHash = $this->compactor->hash($payload, $provenance);
+
+        return RaidNationObservation::query()->getConnection()->transaction(function () use (
+            $nationId,
+            $payload,
+            $provenance,
+            $observedAt,
+            $hasRecentEvidence,
+            $stateHash,
+        ): bool {
+            $current = RaidNationObservation::query()
+                ->where('nation_id', $nationId)
+                ->where('current_key', 1)
+                ->lockForUpdate()
+                ->first();
+            if ($current === null) {
+                RaidNationObservation::query()->create($this->observationAttributes(
+                    $nationId,
+                    $payload,
+                    $provenance,
+                    $stateHash,
+                    $observedAt,
+                ));
+
+                return true;
+            }
+
+            if (is_string($current->state_hash) && hash_equals($current->state_hash, $stateHash)) {
+                $current->forceFill([
+                    'observed_at' => $observedAt,
+                    'confirmed_through' => $observedAt,
+                    'payload' => $payload,
+                    'provenance_war_ids' => $provenance,
+                    'source' => 'public_api',
+                ])->save();
+
+                return false;
+            }
+
+            $preserveHistory = $hasRecentEvidence
+                || $this->hasActiveWar($current->payload ?? [])
+                || $this->hasActiveWar($payload);
+            if ($preserveHistory) {
+                $current->forceFill([
+                    'current_key' => null,
+                    'payload' => $this->compactor->compact($current->payload ?? []),
+                    'valid_from' => $current->valid_from ?? $current->observed_at,
+                    'confirmed_through' => $current->confirmed_through ?? $current->observed_at,
+                ])->save();
+                RaidNationObservation::query()->create($this->observationAttributes(
+                    $nationId,
+                    $payload,
+                    $provenance,
+                    $stateHash,
+                    $observedAt,
+                ));
+
+                return true;
+            }
+
+            $current->forceFill($this->observationAttributes(
+                $nationId,
+                $payload,
+                $provenance,
+                $stateHash,
+                $observedAt,
+            ))->save();
+
+            return true;
+        }, 3);
+    }
+
+    /**
+     * @param  array<string, mixed>  $payload
+     * @param  list<int>  $provenance
+     * @return array<string, mixed>
+     */
+    private function observationAttributes(
+        int $nationId,
+        array $payload,
+        array $provenance,
+        string $stateHash,
+        CarbonImmutable $observedAt,
+    ): array {
+        return [
+            'nation_id' => $nationId,
+            'current_key' => 1,
+            'state_hash' => $stateHash,
+            'observed_at' => $observedAt,
+            'valid_from' => $observedAt,
+            'confirmed_through' => $observedAt,
+            'payload' => $payload,
+            'provenance_war_ids' => $provenance,
+            'source' => 'public_api',
+        ];
+    }
+
+    /** @param array<string, mixed> $payload */
+    private function hasActiveWar(array $payload): bool
+    {
+        return collect($payload['active_wars'] ?? [])->contains(static fn (mixed $war): bool => is_array($war)
+            && empty($war['end_date'])
+            && (int) ($war['turns_left'] ?? 1) > 0
+            && (int) ($war['winner_id'] ?? 0) === 0);
     }
 
     /**
@@ -130,7 +286,7 @@ class RaidIntelligenceRefreshService
                 'after' => now()->utc()->subDays((int) config('raids.history_days', 30))->toDateTimeString(),
                 'orderBy' => [['column' => GraphQLQueryBuilder::literal('DATE'), 'order' => GraphQLQueryBuilder::literal('DESC')]],
             ])->addNestedField('data', function (GraphQLQueryBuilder $builder): void {
-                $builder->addFields(['id', 'date', 'end_date', 'att_id', 'def_id', 'war_type', 'winner_id', 'turns_left', 'att_resistance', 'def_resistance', 'att_alliance_id', 'def_alliance_id'])
+                $builder->addFields(['id', 'date', 'end_date', 'att_id', 'def_id', 'war_type', 'winner_id', 'turns_left', 'att_resistance', 'def_resistance', 'att_fortify', 'def_fortify', 'att_alliance_id', 'def_alliance_id'])
                     ->addNestedField('attacks', fn (GraphQLQueryBuilder $attack) => $attack->addFields([
                         'id', 'date', 'att_id', 'def_id', 'type', 'victor', 'money_stolen', 'money_looted', 'loot_info',
                         'coal_looted', 'oil_looted', 'uranium_looted', 'iron_looted', 'bauxite_looted', 'lead_looted',
@@ -153,11 +309,16 @@ class RaidIntelligenceRefreshService
                     $attack['original_defender_id'] = (int) $war['def_id'];
                     $attack['att_alliance_id'] = (int) ($war['att_alliance_id'] ?? 0);
                     $attack['def_alliance_id'] = (int) ($war['def_alliance_id'] ?? 0);
-                    RaidAttackObservation::query()->updateOrCreate(['id' => (int) $attack['id']], [
+                    $observation = RaidAttackObservation::query()->firstOrNew(['id' => (int) $attack['id']]);
+                    $observation->fill([
                         'war_id' => (int) $war['id'], 'att_id' => (int) ($attack['att_id'] ?? $war['att_id']),
                         'def_id' => (int) ($attack['def_id'] ?? $war['def_id']),
-                        'occurred_at' => CarbonImmutable::parse($attack['date']), 'observed_at' => now(), 'payload' => $attack,
+                        'occurred_at' => CarbonImmutable::parse($attack['date']), 'payload' => $attack,
                     ]);
+                    if (! $observation->exists || $observation->isDirty()) {
+                        $observation->observed_at = now();
+                        $observation->save();
+                    }
                 }
                 unset($war['attacks']);
                 $wars[] = $war;

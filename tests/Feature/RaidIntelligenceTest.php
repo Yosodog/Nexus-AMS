@@ -80,7 +80,7 @@ class RaidIntelligenceTest extends TestCase
         $queries->shouldReceive('sendQuery')->once()->ordered()
             ->withArgs(fn ($builder, ...$args): bool => $builder->getRootField() === 'wars'
                 && str_contains($builder->build(), 'page: 1')
-                && str_contains($builder->build(), 'after: "2026-08-15 02:16:16"'))
+                && str_contains($builder->build(), 'after: "2026-08-14 02:16:16"'))
             ->andReturn((object) [(object) [
                 'id' => 55, 'att_id' => 800, 'def_id' => 900, 'war_type' => 'RAID', 'turns_left' => 0,
                 'attacks' => [(object) ['id' => 123, 'att_id' => 800, 'def_id' => 900, 'date' => now()->subDay()->toIso8601String(), 'type' => 'VICTORY', 'money_looted' => 100000]],
@@ -97,8 +97,63 @@ class RaidIntelligenceTest extends TestCase
         $snapshot = RaidNationObservation::query()->where('nation_id', 900)->firstOrFail();
         $this->assertArrayNotHasKey('money', $snapshot->payload);
         $this->assertArrayNotHasKey('discord_id', $snapshot->payload);
+        $this->assertArrayNotHasKey('cities', $snapshot->payload);
+        $this->assertSame(1, $snapshot->current_key);
         $this->assertContains(55, $snapshot->provenance_war_ids);
         $this->assertTrue($snapshot->payload['history_complete']);
+    }
+
+    public function test_refresh_does_not_rewrite_unchanged_historical_attacks(): void
+    {
+        $this->travelTo(CarbonImmutable::parse('2026-09-18 12:00:00', 'UTC'));
+        config(['raids.history_pages' => 1, 'raids.history_page_size' => 10]);
+        $attackDate = now()->subDay()->toIso8601String();
+        $storedAt = now()->subHours(2);
+        $payload = [
+            'id' => 123,
+            'att_id' => 800,
+            'def_id' => 900,
+            'date' => $attackDate,
+            'type' => 'VICTORY',
+            'money_looted' => 100000,
+            'war_id' => 55,
+            'war_type' => 'RAID',
+            'original_attacker_id' => 800,
+            'original_defender_id' => 900,
+            'att_alliance_id' => 0,
+            'def_alliance_id' => 0,
+        ];
+        RaidAttackObservation::query()->create([
+            'id' => 123,
+            'war_id' => 55,
+            'att_id' => 800,
+            'def_id' => 900,
+            'occurred_at' => CarbonImmutable::parse($attackDate),
+            'observed_at' => $storedAt,
+            'payload' => $payload,
+            'created_at' => $storedAt,
+            'updated_at' => $storedAt,
+        ]);
+        $queries = $this->mock(QueryService::class);
+        $queries->shouldReceive('sendQuery')->once()->ordered()
+            ->withArgs(fn ($builder, ...$args): bool => $builder->getRootField() === 'wars')
+            ->andReturn((object) [(object) [
+                'id' => 55,
+                'att_id' => 800,
+                'def_id' => 900,
+                'war_type' => 'RAID',
+                'turns_left' => 0,
+                'attacks' => [(object) array_slice($payload, 0, 6, preserve_keys: true)],
+            ]]);
+        $queries->shouldReceive('sendQuery')->once()->ordered()
+            ->withArgs(fn ($builder, ...$args): bool => $builder->getRootField() === 'nations')
+            ->andReturn((object) [(object) ['id' => 900, 'score' => 1000, 'num_cities' => 0, 'cities' => []]]);
+
+        app(RaidIntelligenceRefreshService::class)->refresh([900]);
+
+        $attack = RaidAttackObservation::query()->findOrFail(123);
+        $this->assertTrue($storedAt->equalTo($attack->observed_at));
+        $this->assertTrue($storedAt->equalTo($attack->updated_at));
     }
 
     public function test_selected_target_recheck_fetches_current_nations_and_wars_without_history_or_public_writes(): void
