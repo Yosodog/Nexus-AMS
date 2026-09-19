@@ -2,6 +2,7 @@
 
 namespace App\Jobs;
 
+use App\Exceptions\PWEntityDoesNotExist;
 use App\Models\Alliance;
 use App\Services\AllianceQueryService;
 use App\Services\SubscriptionRecordQuarantine;
@@ -91,7 +92,16 @@ class UpdateAllianceJob implements ShouldQueue
         try {
             $allianceModel = Alliance::getById($allianceId);
         } catch (ModelNotFoundException) {
-            $alliance = AllianceQueryService::getAllianceById($allianceId);
+            try {
+                $alliance = AllianceQueryService::getAllianceById($allianceId);
+            } catch (PWEntityDoesNotExist) {
+                Log::info('Ignored stale alliance update for missing alliance.', [
+                    'alliance_id' => $allianceId,
+                ]);
+
+                return;
+            }
+
             Alliance::updateFromAPI($alliance);
 
             return;

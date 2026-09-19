@@ -106,6 +106,31 @@ class NationSubscriptionNullTransitionTest extends TestCase
         );
     }
 
+    public function test_update_from_api_restores_a_soft_deleted_nation_without_inserting_a_duplicate(): void
+    {
+        $nation = Nation::factory()->create([
+            'nation_name' => 'Former Name',
+        ]);
+        $nation->delete();
+
+        $payload = new GraphQLNation;
+        $payload->buildWithJSON((object) [
+            'id' => $nation->id,
+            'nation_name' => 'Returned Name',
+        ]);
+
+        $updatedNation = Nation::updateFromAPI($payload);
+
+        $this->assertTrue($updatedNation->is($nation));
+        $this->assertFalse($updatedNation->trashed());
+        $this->assertSame(1, Nation::withTrashed()->whereKey($nation->id)->count());
+        $this->assertDatabaseHas('nations', [
+            'id' => $nation->id,
+            'nation_name' => 'Returned Name',
+            'deleted_at' => null,
+        ]);
+    }
+
     public function test_partial_research_updates_preserve_omitted_research_fields(): void
     {
         $nation = Nation::factory()->create([

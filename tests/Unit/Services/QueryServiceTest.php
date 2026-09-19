@@ -7,7 +7,11 @@ use App\Exceptions\DefiniteMutationFailureException;
 use App\Exceptions\PWQueryFailedException;
 use App\Services\GraphQLQueryBuilder;
 use App\Services\QueryService;
+use GuzzleHttp\Exception\ConnectException;
+use GuzzleHttp\Promise\Create;
 use GuzzleHttp\Promise\PromiseInterface;
+use GuzzleHttp\Psr7\Request;
+use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Client\Response;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
@@ -77,6 +81,142 @@ class QueryServiceTest extends FeatureTestCase
 
         $this->assertSame(123, $response->{0}['id']);
         Http::assertSentCount(2);
+    }
+
+    public function test_send_query_retries_when_async_request_fulfills_with_connection_exception(): void
+    {
+        $attempts = 0;
+
+        Http::fake(function () use (&$attempts) {
+            $attempts++;
+
+            if ($attempts === 1) {
+                return Create::rejectionFor(new ConnectException(
+                    'Connection timed out',
+                    new Request('POST', 'https://example.test/graphql'),
+                ));
+            }
+
+            return Http::response([
+                'data' => [
+                    'wars' => [
+                        'data' => [
+                            ['id' => 321],
+                        ],
+                        'paginatorInfo' => [
+                            'perPage' => 1000,
+                            'count' => 1,
+                            'lastPage' => 1,
+                        ],
+                    ],
+                ],
+            ]);
+        });
+
+        $service = new class extends QueryService
+        {
+            public int $initialDelay = 0;
+
+            protected function retryRejectedRequest(
+                mixed $reason,
+                string $query,
+                array $variables,
+                int &$retryCount,
+                int &$delay,
+                array $headers = []
+            ): PromiseInterface {
+                $delay = 0;
+
+                return parent::retryRejectedRequest($reason, $query, $variables, $retryCount, $delay, $headers);
+            }
+        };
+
+        $builder = (new GraphQLQueryBuilder)
+            ->setRootField('wars')
+            ->addArgument('first', 1)
+            ->addNestedField('data', fn ($query) => $query->addFields(['id']))
+            ->withPaginationInfo();
+
+        $response = $service->sendQuery($builder);
+
+        $this->assertSame(321, $response->{0}['id']);
+        $this->assertSame(2, $attempts);
+    }
+
+    public function test_send_query_throws_after_retries_for_fulfilled_connection_exception(): void
+    {
+        $attempts = 0;
+
+        Http::fake(function () use (&$attempts) {
+            $attempts++;
+
+            return Create::rejectionFor(new ConnectException(
+                'Connection timed out',
+                new Request('POST', 'https://example.test/graphql'),
+            ));
+        });
+
+        $service = new class extends QueryService
+        {
+            public int $initialDelay = 0;
+
+            public int $maxRetries = 1;
+
+            protected function retryRejectedRequest(
+                mixed $reason,
+                string $query,
+                array $variables,
+                int &$retryCount,
+                int &$delay,
+                array $headers = []
+            ): PromiseInterface {
+                $delay = 0;
+
+                return parent::retryRejectedRequest($reason, $query, $variables, $retryCount, $delay, $headers);
+            }
+        };
+
+        $builder = (new GraphQLQueryBuilder)
+            ->setRootField('wars')
+            ->addFields(['id']);
+
+        $this->expectException(ConnectionException::class);
+        $this->expectExceptionMessage('after retries');
+
+        try {
+            $service->sendQuery($builder);
+        } finally {
+            $this->assertSame(2, $attempts);
+        }
+    }
+
+    public function test_send_query_does_not_retry_mutations_after_fulfilled_connection_exception(): void
+    {
+        $attempts = 0;
+
+        Http::fake(function () use (&$attempts) {
+            $attempts++;
+
+            return Create::rejectionFor(new ConnectException(
+                'Connection timed out',
+                new Request('POST', 'https://example.test/graphql'),
+            ));
+        });
+
+        $service = new QueryService;
+        $builder = (new GraphQLQueryBuilder)
+            ->setRootField('bankWithdraw')
+            ->setMutation()
+            ->addFields(['id']);
+
+        $this->expectException(AmbiguousMutationOutcomeException::class);
+        $this->expectExceptionMessage('side effect may have succeeded');
+
+        try {
+            $service->sendQuery($builder);
+        } finally {
+            $this->assertSame(1, $attempts);
+        }
     }
 
     public function test_send_query_throws_after_retry_limit_for_server_errors(): void

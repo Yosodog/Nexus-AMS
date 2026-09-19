@@ -2,9 +2,7 @@
 
 namespace App\Exceptions;
 
-use Exception;
-
-class PWEntityDoesNotExist extends Exception
+class PWEntityDoesNotExist extends PWQueryFailedException
 {
     //
 }

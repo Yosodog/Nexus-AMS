@@ -179,7 +179,11 @@ class Nation extends Model
         $nationId = $nationPayload['id'] ?? $graphQLNationModel->id;
         unset($nationPayload['id']);
 
-        $nation = $nationId ? self::find($nationId) : null;
+        $nation = $nationId ? self::withTrashed()->find($nationId) : null;
+
+        if ($nation?->trashed()) {
+            $nation->restore();
+        }
 
         if ($nation) {
             $nation->fill($nationPayload);

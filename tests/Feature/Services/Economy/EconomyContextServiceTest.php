@@ -123,6 +123,60 @@ class EconomyContextServiceTest extends TestCase
     }
 
     #[Test]
+    public function it_keeps_the_active_nation_set_consistent_when_a_nation_is_added_during_refresh(): void
+    {
+        CarbonImmutable::setTestNow('2026-08-01 18:00:00 UTC');
+        config(['services.pw.api_key' => 'test-key']);
+        Nation::factory()->create([
+            'id' => 501,
+            'alliance_id' => 77,
+            'alliance_position' => 'MEMBER',
+            'color' => 'blue',
+        ]);
+        $this->fakeEconomyContextResponses(
+            treasures: [
+                [
+                    'name' => 'Unrelated',
+                    'bonus' => 1,
+                    'nation_id' => 999999,
+                    'nation' => ['alliance_id' => 999],
+                ],
+            ],
+            colors: [
+                ['color' => 'blue', 'turn_bonus' => 125],
+            ],
+        );
+
+        $inserted = false;
+        DB::listen(function (QueryExecuted $query) use (&$inserted): void {
+            $sql = strtolower($query->sql);
+            $hasNationCount = preg_match('/select count\(\*\) as [`"]?aggregate[`"]? from [`"]?nations[`"]?/', $sql) === 1;
+            $hasNationIdSnapshot = preg_match('/select [`"]?id[`"]? from [`"]?nations[`"]?/', $sql) === 1;
+
+            if (
+                $inserted
+                || (! $hasNationCount && ! $hasNationIdSnapshot)
+            ) {
+                return;
+            }
+
+            $inserted = true;
+            Nation::factory()->create([
+                'alliance_id' => 77,
+                'alliance_position' => 'MEMBER',
+                'color' => 'blue',
+            ]);
+        });
+
+        $count = app(EconomyContextService::class)->refresh();
+
+        $this->assertTrue($inserted);
+        $this->assertSame(1, $count);
+        $this->assertSame(2, Nation::query()->count());
+        $this->assertSame(1, Nation::query()->whereNotNull('economy_context_synced_at')->count());
+    }
+
+    #[Test]
     public function it_persists_zero_treasure_modifier_and_zero_color_bonus_as_valid_context(): void
     {
         CarbonImmutable::setTestNow('2026-08-01 18:00:00 UTC');

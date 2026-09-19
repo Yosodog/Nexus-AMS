@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Exceptions\PWEntityDoesNotExist;
 use App\Exceptions\PWQueryFailedException;
 use App\GraphQL\Models\Alliance;
 use App\GraphQL\Models\Alliances;
@@ -119,6 +120,12 @@ class AllianceQueryService
             ? ($response->{0} ?? null)
             : (is_array($response) ? ($response[0] ?? null) : null);
         $recordData = is_object($record) || is_array($record) ? (array) $record : [];
+
+        if ($record === null) {
+            throw new PWEntityDoesNotExist(
+                "Politics & War returned no usable data for alliance [{$allianceId}]."
+            );
+        }
 
         if (! isset($recordData['id'])
             || ! is_numeric($recordData['id'])

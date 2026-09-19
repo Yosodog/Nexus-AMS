@@ -83,46 +83,63 @@ final class EconomyContextService
 
         $treasureOwners = collect($treasures)
             ->groupBy(fn (object $treasure): int => (int) $treasure->nation_id);
-        $nationCount = Nation::query()->count();
-
-        if ($nationCount === 0) {
-            throw new RuntimeException('No active nations were available for economy context synchronization.');
-        }
-
-        if (Nation::query()->whereNull('color')->orWhere('color', '')->exists()) {
-            throw new RuntimeException('One or more active nations are missing a color.');
-        }
-
-        $missingColors = Nation::query()->distinct()->pluck('color')
-            ->filter()
-            ->map(fn (mixed $color): string => strtolower((string) $color))
-            ->unique()
-            ->diff($colorBonuses->keys());
-
-        if ($missingColors->isNotEmpty()) {
-            throw new RuntimeException('Economy context response omitted active nation colors.');
-        }
         $allianceTreasureCounts = collect($treasures)
             ->filter(fn (object $treasure): bool => (int) data_get($treasure, 'nation.alliance_id', 0) > 0)
             ->countBy(fn (object $treasure): int => (int) data_get($treasure, 'nation.alliance_id'));
         $timestamp = now()->toDateTimeString();
 
-        DB::transaction(function () use (
+        $nationCount = DB::transaction(function () use (
             $treasureOwners,
             $allianceTreasureCounts,
             $colorBonuses,
             $timestamp,
-            $nationCount
-        ): void {
+        ): int {
+            // Capture and lock the active nation set before validating or processing it. New nations
+            // committed while this refresh runs will be picked up by the next refresh instead of
+            // changing the expected count midway through this transaction.
+            $nationIds = Nation::query()->lockForUpdate()->pluck('id');
+            $nationCount = $nationIds->count();
+
+            if ($nationCount === 0) {
+                throw new RuntimeException('No active nations were available for economy context synchronization.');
+            }
+
+            if (
+                Nation::query()
+                    ->whereKey($nationIds->all())
+                    ->where(function ($query): void {
+                        $query->whereNull('color')->orWhere('color', '');
+                    })
+                    ->exists()
+            ) {
+                throw new RuntimeException('One or more active nations are missing a color.');
+            }
+
+            $missingColors = Nation::query()->whereKey($nationIds->all())->distinct()->pluck('color')
+                ->filter()
+                ->map(fn (mixed $color): string => strtolower((string) $color))
+                ->unique()
+                ->diff($colorBonuses->keys());
+
+            if ($missingColors->isNotEmpty()) {
+                throw new RuntimeException('Economy context response omitted active nation colors.');
+            }
+
             $processedCount = 0;
 
-            Nation::query()->lockForUpdate()->chunkById(self::READ_CHUNK_SIZE, function ($nations) use (
+            $nationIds->chunk(self::READ_CHUNK_SIZE)->each(function ($nationIds) use (
                 $treasureOwners,
                 $allianceTreasureCounts,
                 $colorBonuses,
                 $timestamp,
                 &$processedCount
             ): void {
+                $nations = Nation::query()
+                    ->whereKey($nationIds->all())
+                    ->lockForUpdate()
+                    ->orderBy('id')
+                    ->get();
+
                 $rows = $nations->map(function (Nation $nation) use (
                     $treasureOwners,
                     $allianceTreasureCounts,
@@ -169,6 +186,7 @@ final class EconomyContextService
             }
 
             $verifiedCount = Nation::query()
+                ->whereKey($nationIds->all())
                 ->where('economy_context_synced_at', $timestamp)
                 ->count();
 
@@ -177,6 +195,8 @@ final class EconomyContextService
                     "Economy context verification expected {$nationCount} nations and found {$verifiedCount}."
                 );
             }
+
+            return $nationCount;
         }, 3);
 
         return $nationCount;

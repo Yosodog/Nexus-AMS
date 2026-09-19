@@ -3,6 +3,7 @@
 namespace Tests\Feature\API;
 
 use App\Events\WarDeclared;
+use App\Exceptions\PWQueryFailedException;
 use App\Jobs\CreateAllianceJob;
 use App\Jobs\CreateNationJob;
 use App\Jobs\CreateWarAttackJob;
@@ -204,6 +205,46 @@ class SubsIngestionTest extends FeatureTestCase
             'acronym' => 'EA',
             'accept_members' => true,
         ]);
+    }
+
+    public function test_alliance_update_ignores_a_stale_event_after_the_alliance_was_deleted(): void
+    {
+        Http::fake([
+            'https://pw.test/graphql*' => Http::response([
+                'data' => [
+                    'alliances' => [
+                        'data' => [],
+                    ],
+                ],
+            ]),
+        ]);
+
+        (new UpdateAllianceJob([[
+            'id' => 77,
+            'name' => 'Late Update',
+        ]]))->handle(app(WorldWriteGuard::class));
+
+        $this->assertDatabaseMissing('alliances', ['id' => 77]);
+    }
+
+    public function test_alliance_update_does_not_mask_an_unusable_upstream_record(): void
+    {
+        Http::fake([
+            'https://pw.test/graphql*' => Http::response([
+                'data' => [
+                    'alliances' => [
+                        'data' => [['id' => 78]],
+                    ],
+                ],
+            ]),
+        ]);
+
+        $this->expectException(PWQueryFailedException::class);
+
+        (new UpdateAllianceJob([[
+            'id' => 77,
+            'name' => 'Unexpected Update',
+        ]]))->handle(app(WorldWriteGuard::class));
     }
 
     public function test_alliance_delete_removes_the_record(): void

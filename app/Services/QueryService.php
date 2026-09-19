@@ -298,6 +298,21 @@ class QueryService
             ['query' => $query, 'variables' => $variables]
         )->then(
             function ($response) use (&$retryCount, &$delay, $query, $variables, $headers, $allowTransientRetries) {
+                if ($response instanceof Throwable) {
+                    if (! $allowTransientRetries) {
+                        $this->throwAmbiguousMutationRejection($response);
+                    }
+
+                    return $this->retryRejectedRequest(
+                        $response,
+                        $query,
+                        $variables,
+                        $retryCount,
+                        $delay,
+                        $headers
+                    );
+                }
+
                 try {
                     if ($response instanceof Response) {
                         if ($response->status() === 429) {

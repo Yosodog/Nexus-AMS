@@ -2,7 +2,7 @@
 
 namespace Tests\Feature\Services;
 
-use App\Exceptions\PWQueryFailedException;
+use App\Exceptions\PWEntityDoesNotExist;
 use App\Services\AllianceQueryService;
 use Illuminate\Support\Facades\Http;
 use Tests\TestCase;
@@ -21,7 +21,7 @@ class AllianceQueryServiceTest extends TestCase
             ]),
         ]);
 
-        $this->expectException(PWQueryFailedException::class);
+        $this->expectException(PWEntityDoesNotExist::class);
         $this->expectExceptionMessage('returned no usable data for alliance [9988]');
 
         AllianceQueryService::getAllianceById(9988);

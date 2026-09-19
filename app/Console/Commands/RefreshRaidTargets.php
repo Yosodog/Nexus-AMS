@@ -27,10 +27,11 @@ class RefreshRaidTargets extends Command
         $cursor = (int) Cache::get('raid-intelligence:cursor', 0);
         $ids = Nation::query()->where('id', '>', $cursor)->orderBy('id')->limit($limit - count($priority))->pluck('id')->all();
         Cache::put('raid-intelligence:cursor', $ids === [] ? 0 : max($ids), 86400);
-        foreach (array_chunk(array_values(array_unique([...$priority, ...$ids])), max(1, (int) config('raids.batch_size', 25))) as $batch) {
-            RefreshRaidIntelligence::dispatch(array_map('intval', $batch));
+        $nationIds = array_values(array_unique([...$priority, ...$ids]));
+        if ($nationIds !== []) {
+            RefreshRaidIntelligence::dispatch(array_map('intval', $nationIds));
         }
-        $this->components->info('Queued '.count(array_unique([...$priority, ...$ids])).' nations.');
+        $this->components->info('Queued '.count($nationIds).' nations.');
 
         return self::SUCCESS;
     }
