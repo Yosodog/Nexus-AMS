@@ -5,12 +5,15 @@ namespace Tests\Unit\Services;
 use App\Events\AllianceExpenseOccurred;
 use App\GraphQL\Models\BankRecord;
 use App\Models\Account;
+use App\Models\Alliance;
+use App\Models\DirectDepositEnrollment;
 use App\Models\DirectDepositLog;
 use App\Models\DirectDepositTaxBracket;
 use App\Models\MMRAssistantPurchase;
 use App\Models\MMRConfig;
 use App\Models\MMRSetting;
 use App\Models\Nation;
+use App\Models\Offshore;
 use App\Services\DirectDepositService;
 use App\Services\PWHelperService;
 use App\Services\SettingService;
@@ -68,6 +71,51 @@ class DirectDepositIdempotencyTest extends TestCase
         $this->assertSame('900.00', number_format((float) $account->fresh()->money, 2, '.', ''));
         $this->assertSame('90.00', number_format((float) $account->fresh()->coal, 2, '.', ''));
         $this->assertSame(1, DirectDepositLog::query()->where('bank_record_id', 12345)->count());
+    }
+
+    public function test_current_offshore_configuration_processes_deposit_with_stale_enrollment_snapshot(): void
+    {
+        $this->createTenPercentBracket();
+
+        $alliance = Alliance::factory()->create(['id' => 888]);
+        $offshore = Offshore::query()->create([
+            'name' => 'Test Offshore',
+            'alliance_id' => $alliance->id,
+            'enabled' => true,
+            'direct_deposit_enabled' => true,
+            'direct_deposit_tax_id' => 555,
+            'direct_deposit_fallback_tax_id' => 556,
+            'priority' => 1,
+            'api_key' => str_repeat('a', 20),
+            'mutation_key' => 'mutation-secret',
+        ]);
+        $nation = Nation::factory()->create(['alliance_id' => $alliance->id, 'num_cities' => 5]);
+        $account = new Account;
+        $account->nation_id = $nation->id;
+        $account->name = 'Direct Deposit';
+        $account->save();
+        DirectDepositEnrollment::query()->create([
+            'nation_id' => $nation->id,
+            'offshore_id' => $offshore->id,
+            'alliance_id' => $alliance->id,
+            'account_id' => $account->id,
+            'direct_deposit_tax_id' => 444,
+            'fallback_tax_id' => 445,
+            'previous_tax_id' => 445,
+            'enrolled_at' => now()->subDay(),
+        ]);
+
+        $result = app(DirectDepositService::class)->process(
+            $this->bankRecord($nation, 54321, receiverId: $alliance->id)
+        );
+
+        $this->assertSame(100.0, (float) $result->money);
+        $this->assertSame('900.00', number_format((float) $account->fresh()->money, 2, '.', ''));
+        $this->assertDatabaseHas('direct_deposit_logs', [
+            'bank_record_id' => 54321,
+            'nation_id' => $nation->id,
+            'account_id' => $account->id,
+        ]);
     }
 
     public function test_mmr_failure_rolls_back_and_retry_applies_purchase_exactly_once(): void
@@ -170,19 +218,24 @@ class DirectDepositIdempotencyTest extends TestCase
         ]);
     }
 
-    private function bankRecord(Nation $nation, int $id, ?string $date = null): BankRecord
-    {
+    private function bankRecord(
+        Nation $nation,
+        int $id,
+        ?string $date = null,
+        int $receiverId = 777,
+        int $taxId = 555,
+    ): BankRecord {
         $record = new BankRecord;
         $record->buildWithJSON((object) [
             'id' => $id,
             'date' => $date ?? now()->toISOString(),
             'sender_id' => $nation->id,
             'sender_type' => 1,
-            'receiver_id' => 777,
+            'receiver_id' => $receiverId,
             'receiver_type' => 2,
             'banker_id' => 1,
             'note' => 'Direct deposit test',
-            'tax_id' => 555,
+            'tax_id' => $taxId,
             ...$this->resourcePayload([
                 'money' => 1000,
                 'coal' => 100,

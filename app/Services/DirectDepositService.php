@@ -55,8 +55,7 @@ class DirectDepositService
         $matchesEnrollment = $enrollment !== null
             && (int) $enrollment->alliance_id === (int) $record->receiver_id
             && (int) $enrollment->direct_deposit_tax_id === (int) $record->tax_id;
-        $matchesCurrentConfiguration = $enrollment === null
-            && $configuration->enabled
+        $matchesCurrentConfiguration = $configuration->enabled
             && $configuration->taxId !== null
             && $configuration->taxId === (int) $record->tax_id;
 
