@@ -10,11 +10,13 @@ use App\Models\Alliance;
 use App\Models\DirectDepositEnrollment;
 use App\Models\Nation;
 use App\Models\Offshore;
+use App\Models\User;
 use App\Services\AllianceMembershipService;
 use App\Services\DirectDepositService;
 use App\Services\OffshoreService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Queue;
 use Illuminate\Validation\ValidationException;
@@ -201,6 +203,35 @@ class OffshoreDirectDepositTest extends TestCase
         } catch (AmbiguousMutationOutcomeException) {
             $this->assertDatabaseHas('direct_deposit_enrollments', ['id' => $enrollment->id]);
             $this->assertNotNull($enrollment->fresh()->disenrollment_requested_at);
+        }
+    }
+
+    public function test_offshore_forms_render_after_direct_deposit_validation_with_no_guardrails(): void
+    {
+        $admin = User::factory()->admin()->create();
+        Gate::define('view-offshores', fn (): bool => true);
+        Gate::define('manage-offshores', fn (): bool => true);
+
+        $offshore = $this->createEnabledOffshore(Alliance::factory()->create());
+
+        foreach (['create', 'edit-'.$offshore->id] as $modalContext) {
+            $response = $this->actingAs($admin)
+                ->withSession([
+                    '_old_input' => [
+                        'modal_context' => $modalContext,
+                        'direct_deposit_enabled' => '1',
+                        'direct_deposit_tax_id' => null,
+                        'direct_deposit_fallback_tax_id' => null,
+                        'guardrails' => null,
+                    ],
+                ])
+                ->get(route('admin.offshores.index'));
+
+            $response->assertOk();
+            $response->assertSee(
+                $modalContext === 'create' ? 'createOffshoreModal' : 'editOffshoreModal-'.$offshore->id,
+                false
+            );
         }
     }
 

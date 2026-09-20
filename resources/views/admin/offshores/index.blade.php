@@ -456,7 +456,10 @@
                                 Add Guardrail
                             </button>
                         </div>
-                        @php $createGuardrails = $modalContext === 'create' ? old('guardrails', []) : []; @endphp
+                        @php
+                            $createGuardrails = $modalContext === 'create' ? old('guardrails') : [];
+                            $createGuardrails = is_array($createGuardrails) ? $createGuardrails : [];
+                        @endphp
                         <input type="hidden" name="guardrails" value="">
                         <div id="create-guardrail-container" class="guardrail-container space-y-3" data-next-index="{{ count($createGuardrails) }}" data-control-prefix="offshore-create-new">
                             @foreach($createGuardrails as $index => $guardrail)
@@ -622,11 +625,12 @@
                             </div>
                             @php
                                 $editGuardrails = $editContext
-                                    ? old('guardrails', [])
+                                    ? old('guardrails')
                                     : $offshore->guardrails->map(fn ($guardrail) => [
                                         'resource' => $guardrail->resource,
                                         'minimum_amount' => $guardrail->minimum_amount,
                                     ])->all();
+                                $editGuardrails = is_array($editGuardrails) ? $editGuardrails : [];
                             @endphp
                             <input type="hidden" name="guardrails" value="">
                             <div id="edit-guardrail-container-{{ $offshore->id }}" class="guardrail-container space-y-3" data-next-index="{{ count($editGuardrails) }}" data-control-prefix="offshore-edit-{{ $offshore->id }}">
