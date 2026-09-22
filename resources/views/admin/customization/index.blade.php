@@ -6,17 +6,10 @@
     <x-header title="Custom Page Management" separator use-h1>
         <x-slot:subtitle>Review existing custom pages and open them in the editor to update content.</x-slot:subtitle>
         <x-slot:actions>
-            @if($pages->isNotEmpty())
-                <a href="{{ route('admin.customization.edit', $pages->first()) }}" class="btn btn-primary btn-sm">
-                    <x-icon name="o-pencil-square" class="size-4" />
-                    Open Editor
-                </a>
-            @else
-                <button class="btn btn-primary btn-sm" type="button" disabled>
-                    <x-icon name="o-pencil-square" class="size-4" />
-                    No pages yet
-                </button>
-            @endif
+            <a href="{{ route('admin.customization.create') }}" class="btn btn-primary btn-sm">
+                <x-icon name="o-plus" class="size-4" />
+                Create page
+            </a>
         </x-slot:actions>
     </x-header>
 
@@ -25,7 +18,9 @@
             <table class="table table-zebra" data-sortable="true">
                 <thead>
                 <tr>
+                    <th>Title</th>
                     <th>Slug</th>
+                    <th>Audience</th>
                     <th>Status</th>
                     <th data-sortable="false">Last Updated</th>
                     <th class="text-right" data-sortable="false">Actions</th>
@@ -35,12 +30,29 @@
                 @forelse($pages as $page)
                     @php
                         $publishedAt = optional($page->latestPublishedVersion)->published_at;
+                        $state = $pageStates[$page->id] ?? [];
+                        $metadata = $state['page_metadata'] ?? [];
+                        $statusLabel = $state['status_label'] ?? 'Never published';
+                        $isSpecial = $state['is_special'] ?? false;
                     @endphp
                     <tr>
+                        <td>
+                            <div class="font-semibold">{{ $isSpecial ? 'Apply' : ($metadata['title'] ?? 'Untitled page') }}</div>
+                            @if($isSpecial)
+                                <span class="badge badge-neutral badge-sm mt-1">Special page</span>
+                            @endif
+                        </td>
                         <td class="font-semibold">/{{ $page->slug }}</td>
                         <td>
-                            <span class="badge {{ $page->status === \App\Models\Page::STATUS_PUBLISHED ? 'badge-success' : 'badge-warning' }}">
-                                {{ $page->status === \App\Models\Page::STATUS_PUBLISHED ? 'Published' : 'Draft' }}
+                            @if($isSpecial)
+                                <span class="nexus-text-muted">Recruitment</span>
+                            @else
+                                {{ ($metadata['audience'] ?? 'public') === 'member' ? 'Alliance members' : 'Public' }}
+                            @endif
+                        </td>
+                        <td>
+                            <span class="badge {{ $statusLabel === 'Live' ? 'badge-success' : ($statusLabel === 'Live with unpublished changes' ? 'badge-warning' : ($statusLabel === 'Unpublished' ? 'badge-error' : 'badge-ghost')) }}">
+                                {{ $statusLabel }}
                             </span>
                         </td>
                         <td data-order="{{ $page->updated_at?->timestamp ?? 0 }}">
@@ -60,7 +72,7 @@
                     </tr>
                 @empty
                     <tr>
-                        <td colspan="4" class="py-6 text-center text-sm nexus-text-muted">No custom pages have been configured yet.</td>
+                        <td colspan="6" class="py-6 text-center text-sm nexus-text-muted">No custom pages have been configured yet.</td>
                     </tr>
                 @endforelse
                 </tbody>

@@ -19,6 +19,8 @@ use InvalidArgumentException;
  * @property string|null $draft
  * @property string|null $published
  * @property string|null $cached_html
+ * @property array<string, string>|null $draft_metadata
+ * @property array<string, string>|null $published_metadata
  */
 class Page extends Model
 {
@@ -34,10 +36,14 @@ class Page extends Model
         'draft',
         'published',
         'cached_html',
+        'draft_metadata',
+        'published_metadata',
     ];
 
     protected $casts = [
         'cached_html' => 'string',
+        'draft_metadata' => 'array',
+        'published_metadata' => 'array',
     ];
 
     protected function draft(): Attribute
@@ -74,9 +80,12 @@ class Page extends Model
         return $this->hasMany(PageActivityLog::class);
     }
 
-    public function saveDraft(string $content, ?User $user = null, array $metadata = []): PageVersion
+    public function saveDraft(string $content, ?User $user = null, array $metadata = [], ?array $pageMetadata = null): PageVersion
     {
         $this->draft = $content;
+        if ($pageMetadata !== null) {
+            $this->draft_metadata = $pageMetadata;
+        }
         $this->status = self::STATUS_DRAFT;
         $this->save();
 
@@ -84,6 +93,7 @@ class Page extends Model
             'editor_state' => $content,
             'status' => PageVersion::STATUS_DRAFT,
             'user_id' => $user?->id,
+            'page_metadata' => $this->draft_metadata,
         ]);
 
         $this->recordActivity(PageActivityLog::ACTION_DRAFT_SAVED, $user, array_merge($metadata, [
@@ -95,15 +105,20 @@ class Page extends Model
         return $version;
     }
 
-    public function publish(string $content, string $renderedHtml, ?User $user = null, ?CarbonInterface $publishedAt = null): PageVersion
+    public function publish(string $content, string $renderedHtml, ?User $user = null, ?CarbonInterface $publishedAt = null, ?array $pageMetadata = null): PageVersion
     {
         $publishedAt ??= now();
+
+        if ($pageMetadata !== null) {
+            $this->draft_metadata = $pageMetadata;
+        }
 
         $this->fill([
             'published' => $content,
             'draft' => $content,
             'status' => self::STATUS_PUBLISHED,
             'cached_html' => $renderedHtml,
+            'published_metadata' => $this->draft_metadata,
         ])->save();
 
         $version = $this->versions()->create([
@@ -111,6 +126,7 @@ class Page extends Model
             'status' => PageVersion::STATUS_PUBLISHED,
             'user_id' => $user?->id,
             'published_at' => $publishedAt,
+            'page_metadata' => $this->published_metadata,
         ]);
 
         $this->recordActivity(PageActivityLog::ACTION_PUBLISHED, $user, [
@@ -120,6 +136,24 @@ class Page extends Model
         $this->cachePublishedHtml($renderedHtml);
 
         return $version;
+    }
+
+    public function unpublish(?User $user = null): void
+    {
+        $this->forceFill([
+            'published' => null,
+            'published_metadata' => null,
+            'cached_html' => null,
+            'status' => self::STATUS_DRAFT,
+        ])->save();
+
+        $this->recordActivity(PageActivityLog::ACTION_UNPUBLISHED, $user);
+        $this->forgetCachedHtml();
+    }
+
+    public function hasPublishedContent(): bool
+    {
+        return is_string($this->published) && trim($this->published) !== '';
     }
 
     public function restoreFromVersion(PageVersion $version, ?User $user = null, bool $restoreAsDraft = true, ?string $content = null): void
@@ -132,8 +166,13 @@ class Page extends Model
 
         $this->draft = $normalized;
 
+        if ($version->page_metadata !== null) {
+            $this->draft_metadata = $version->page_metadata;
+        }
+
         if (! $restoreAsDraft) {
             $this->published = $normalized;
+            $this->published_metadata = $this->draft_metadata;
             $this->status = self::STATUS_PUBLISHED;
             $this->cached_html = null;
         } else {

@@ -1946,6 +1946,21 @@
     {
         "domain": null,
         "method": "GET|HEAD",
+        "uri": "api/v1/defense/raid-finder/availability",
+        "name": "api.raid-finder.availability",
+        "action": "App\\Http\\Controllers\\API\\RaidFinderController@availability",
+        "middleware": [
+            "api",
+            "Illuminate\\Auth\\Middleware\\Authenticate:sanctum",
+            "App\\Http\\Middleware\\EnsureUserIsVerified",
+            "App\\Http\\Middleware\\DiscordVerifiedMiddleware",
+            "App\\Http\\Middleware\\EnsureMfaConfigured",
+            "Illuminate\\Routing\\Middleware\\ThrottleRequests:6,1"
+        ]
+    },
+    {
+        "domain": null,
+        "method": "GET|HEAD",
         "uri": "api/v1/defense/raid-finder/{nation_id?}",
         "name": "api.raid-finder.show",
         "action": "App\\Http\\Controllers\\API\\RaidFinderController@show",
@@ -3747,6 +3762,28 @@
     {
         "domain": null,
         "method": "GET|HEAD",
+        "uri": "pages/{slug}",
+        "name": "pages.show",
+        "action": "App\\Http\\Controllers\\PageController@show",
+        "middleware": [
+            "web",
+            "App\\Http\\Middleware\\EnsureCustomPageAccess"
+        ]
+    },
+    {
+        "domain": null,
+        "method": "GET|HEAD",
+        "uri": "r/{tracking_key}",
+        "name": "recruitment.click",
+        "action": "App\\Http\\Controllers\\RecruitmentTrackingController@click",
+        "middleware": [
+            "web",
+            "Illuminate\\Routing\\Middleware\\ThrottleRequests:10,1"
+        ]
+    },
+    {
+        "domain": null,
+        "method": "GET|HEAD",
         "uri": "apply/start",
         "name": "apply.start",
         "action": "App\\Http\\Controllers\\ApplyPageController@start",
@@ -4684,6 +4721,20 @@
             "App\\Http\\Middleware\\DiscordVerifiedMiddleware",
             "App\\Http\\Middleware\\EnsureMfaConfigured",
             "App\\Http\\Middleware\\BlockWhenPWDown"
+        ]
+    },
+    {
+        "domain": null,
+        "method": "GET|HEAD",
+        "uri": "defense/raid-results",
+        "name": "defense.raid-results",
+        "action": "App\\Http\\Controllers\\RaidResultsController@index",
+        "middleware": [
+            "web",
+            "Illuminate\\Auth\\Middleware\\Authenticate",
+            "App\\Http\\Middleware\\EnsureUserIsVerified",
+            "App\\Http\\Middleware\\DiscordVerifiedMiddleware",
+            "App\\Http\\Middleware\\EnsureMfaConfigured"
         ]
     },
     {
@@ -7861,6 +7912,22 @@
     {
         "domain": null,
         "method": "GET|HEAD",
+        "uri": "admin/defense/raid-assessment",
+        "name": "admin.raid-assessment",
+        "action": "App\\Http\\Controllers\\RaidResultsController@admin",
+        "middleware": [
+            "web",
+            "Illuminate\\Auth\\Middleware\\Authenticate",
+            "App\\Http\\Middleware\\EnsureUserIsVerified",
+            "App\\Http\\Middleware\\DiscordVerifiedMiddleware",
+            "App\\Http\\Middleware\\EnsureMfaConfigured",
+            "App\\Http\\Middleware\\AdminMiddleware",
+            "Illuminate\\Auth\\Middleware\\Authorize:view-diagnostic-info"
+        ]
+    },
+    {
+        "domain": null,
+        "method": "GET|HEAD",
         "uri": "admin/applications",
         "name": "admin.applications.index",
         "action": "App\\Http\\Controllers\\Admin\\ApplicationController@index",
@@ -7939,6 +8006,81 @@
         "uri": "admin/recruitment",
         "name": "admin.recruitment.update",
         "action": "App\\Http\\Controllers\\Admin\\RecruitmentController@update",
+        "middleware": [
+            "web",
+            "Illuminate\\Auth\\Middleware\\Authenticate",
+            "App\\Http\\Middleware\\EnsureUserIsVerified",
+            "App\\Http\\Middleware\\DiscordVerifiedMiddleware",
+            "App\\Http\\Middleware\\EnsureMfaConfigured",
+            "App\\Http\\Middleware\\AdminMiddleware"
+        ]
+    },
+    {
+        "domain": null,
+        "method": "POST",
+        "uri": "admin/recruitment/messages",
+        "name": "admin.recruitment.messages.store",
+        "action": "App\\Http\\Controllers\\Admin\\RecruitmentController@storeMessage",
+        "middleware": [
+            "web",
+            "Illuminate\\Auth\\Middleware\\Authenticate",
+            "App\\Http\\Middleware\\EnsureUserIsVerified",
+            "App\\Http\\Middleware\\DiscordVerifiedMiddleware",
+            "App\\Http\\Middleware\\EnsureMfaConfigured",
+            "App\\Http\\Middleware\\AdminMiddleware"
+        ]
+    },
+    {
+        "domain": null,
+        "method": "PUT",
+        "uri": "admin/recruitment/messages/{message}",
+        "name": "admin.recruitment.messages.update",
+        "action": "App\\Http\\Controllers\\Admin\\RecruitmentController@updateMessage",
+        "middleware": [
+            "web",
+            "Illuminate\\Auth\\Middleware\\Authenticate",
+            "App\\Http\\Middleware\\EnsureUserIsVerified",
+            "App\\Http\\Middleware\\DiscordVerifiedMiddleware",
+            "App\\Http\\Middleware\\EnsureMfaConfigured",
+            "App\\Http\\Middleware\\AdminMiddleware"
+        ]
+    },
+    {
+        "domain": null,
+        "method": "DELETE",
+        "uri": "admin/recruitment/messages/{message}",
+        "name": "admin.recruitment.messages.destroy",
+        "action": "App\\Http\\Controllers\\Admin\\RecruitmentController@deleteMessage",
+        "middleware": [
+            "web",
+            "Illuminate\\Auth\\Middleware\\Authenticate",
+            "App\\Http\\Middleware\\EnsureUserIsVerified",
+            "App\\Http\\Middleware\\DiscordVerifiedMiddleware",
+            "App\\Http\\Middleware\\EnsureMfaConfigured",
+            "App\\Http\\Middleware\\AdminMiddleware"
+        ]
+    },
+    {
+        "domain": null,
+        "method": "POST",
+        "uri": "admin/recruitment/messages/{message}/toggle",
+        "name": "admin.recruitment.messages.toggle",
+        "action": "App\\Http\\Controllers\\Admin\\RecruitmentController@toggleActive",
+        "middleware": [
+            "web",
+            "Illuminate\\Auth\\Middleware\\Authenticate",
+            "App\\Http\\Middleware\\EnsureUserIsVerified",
+            "App\\Http\\Middleware\\DiscordVerifiedMiddleware",
+            "App\\Http\\Middleware\\EnsureMfaConfigured",
+            "App\\Http\\Middleware\\AdminMiddleware"
+        ]
+    },
+    {
+        "domain": null,
+        "method": "POST",
+        "uri": "admin/recruitment/reset-cohort",
+        "name": "admin.recruitment.reset-cohort",
+        "action": "App\\Http\\Controllers\\Admin\\RecruitmentController@resetCohort",
         "middleware": [
             "web",
             "Illuminate\\Auth\\Middleware\\Authenticate",
@@ -9081,6 +9223,38 @@
     {
         "domain": null,
         "method": "GET|HEAD",
+        "uri": "admin/customization/pages/create",
+        "name": "admin.customization.create",
+        "action": "App\\Http\\Controllers\\Admin\\CustomizationController@create",
+        "middleware": [
+            "web",
+            "Illuminate\\Auth\\Middleware\\Authenticate",
+            "App\\Http\\Middleware\\EnsureUserIsVerified",
+            "App\\Http\\Middleware\\DiscordVerifiedMiddleware",
+            "App\\Http\\Middleware\\EnsureMfaConfigured",
+            "App\\Http\\Middleware\\AdminMiddleware",
+            "Illuminate\\Auth\\Middleware\\Authorize:manage-custom-pages"
+        ]
+    },
+    {
+        "domain": null,
+        "method": "POST",
+        "uri": "admin/customization/pages",
+        "name": "admin.customization.store",
+        "action": "App\\Http\\Controllers\\Admin\\CustomizationController@store",
+        "middleware": [
+            "web",
+            "Illuminate\\Auth\\Middleware\\Authenticate",
+            "App\\Http\\Middleware\\EnsureUserIsVerified",
+            "App\\Http\\Middleware\\DiscordVerifiedMiddleware",
+            "App\\Http\\Middleware\\EnsureMfaConfigured",
+            "App\\Http\\Middleware\\AdminMiddleware",
+            "Illuminate\\Auth\\Middleware\\Authorize:manage-custom-pages"
+        ]
+    },
+    {
+        "domain": null,
+        "method": "GET|HEAD",
         "uri": "admin/customization/pages/{page}",
         "name": "admin.customization.edit",
         "action": "App\\Http\\Controllers\\Admin\\CustomizationController@edit",
@@ -9133,6 +9307,22 @@
         "uri": "admin/customization/pages/{page}/publish",
         "name": "admin.customization.publish",
         "action": "App\\Http\\Controllers\\Admin\\CustomizationController@publish",
+        "middleware": [
+            "web",
+            "Illuminate\\Auth\\Middleware\\Authenticate",
+            "App\\Http\\Middleware\\EnsureUserIsVerified",
+            "App\\Http\\Middleware\\DiscordVerifiedMiddleware",
+            "App\\Http\\Middleware\\EnsureMfaConfigured",
+            "App\\Http\\Middleware\\AdminMiddleware",
+            "Illuminate\\Auth\\Middleware\\Authorize:manage-custom-pages"
+        ]
+    },
+    {
+        "domain": null,
+        "method": "POST",
+        "uri": "admin/customization/pages/{page}/unpublish",
+        "name": "admin.customization.unpublish",
+        "action": "App\\Http\\Controllers\\Admin\\CustomizationController@unpublish",
         "middleware": [
             "web",
             "Illuminate\\Auth\\Middleware\\Authenticate",

@@ -27,7 +27,7 @@ class CustomizationPreviewSecurityTest extends TestCase
         $page = $this->createPage();
         $page->cachePublishedHtml('existing cached HTML');
 
-        $this->actingAs($this->createAdmin())
+        $response = $this->actingAs($this->createAdmin())
             ->postJson(route('admin.customization.preview', $page), [
                 'content' => '<p onclick="alert(1)">Safe preview</p><script>alert(1)</script>',
                 'metadata' => ['origin' => 'security-test'],
@@ -36,10 +36,57 @@ class CustomizationPreviewSecurityTest extends TestCase
             ->assertJsonPath('html', '<p>Safe preview</p>')
             ->assertJsonMissingPath('version');
 
+        $document = $response->json('document');
+        $this->assertIsString($document);
+        $this->assertStringContainsString('data-surface="public"', $document);
+        $this->assertStringContainsString('<p>Safe preview</p>', $document);
+        $this->assertStringNotContainsString('onclick="alert(1)"', $document);
+
         $this->assertDatabaseCount('page_versions', 0);
         $this->assertDatabaseCount('page_activity_logs', 0);
         $this->assertSame('existing cached HTML', Cache::get($page->cacheKey()));
         $this->assertNull($page->fresh()->draft);
+    }
+
+    public function test_preview_uses_the_selected_member_layout_without_publishing(): void
+    {
+        $page = $this->createPage();
+
+        $response = $this->actingAs($this->createAdmin())
+            ->postJson(route('admin.customization.preview', $page), [
+                'content' => '<p>Member draft</p>',
+                'page_metadata' => [
+                    'title' => 'Member handbook',
+                    'description' => null,
+                    'audience' => 'member',
+                ],
+            ])
+            ->assertOk();
+
+        $document = $response->json('document');
+        $this->assertIsString($document);
+        $this->assertStringContainsString('data-surface="member"', $document);
+        $this->assertStringContainsString('Member handbook', $document);
+        $this->assertStringContainsString('<p>Member draft</p>', $document);
+        $this->assertNull($page->fresh()->published);
+    }
+
+    public function test_apply_preview_uses_the_recruitment_page_layout_without_tracking_a_click(): void
+    {
+        $page = Page::query()->create(['slug' => 'apply', 'status' => Page::STATUS_DRAFT]);
+
+        $response = $this->actingAs($this->createAdmin())
+            ->postJson(route('admin.customization.preview', $page), [
+                'content' => '<p>Draft recruitment requirements</p>',
+            ])
+            ->assertOk();
+
+        $document = $response->json('document');
+        $this->assertIsString($document);
+        $this->assertStringContainsString('data-surface="public"', $document);
+        $this->assertStringContainsString('How to submit your application', $document);
+        $this->assertStringContainsString('<p>Draft recruitment requirements</p>', $document);
+        $this->assertNull($page->fresh()->published);
     }
 
     /**

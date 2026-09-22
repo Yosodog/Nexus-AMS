@@ -2,10 +2,12 @@
 
 use App\Http\Controllers\ApplyPageController;
 use App\Http\Controllers\HomeController;
+use App\Http\Controllers\PageController;
 use App\Http\Controllers\RecruitmentTrackingController;
 use App\Http\Controllers\SeoController;
 use App\Http\Controllers\Testing\BrowserTestController;
 use App\Http\Controllers\WellKnownFederationController;
+use App\Http\Middleware\EnsureCustomPageAccess;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/robots.txt', [SeoController::class, 'robots'])->name('seo.robots');
@@ -16,6 +18,9 @@ Route::get('/.well-known/nexus-federation', WellKnownFederationController::class
 Route::get('/', HomeController::class)->name('home');
 
 Route::get('/apply', [ApplyPageController::class, 'show'])->name('apply.show');
+Route::get('/pages/{slug}', [PageController::class, 'show'])
+    ->middleware(EnsureCustomPageAccess::class)
+    ->name('pages.show');
 Route::get('/r/{tracking_key}', [RecruitmentTrackingController::class, 'click'])
     ->middleware('throttle:10,1')
     ->name('recruitment.click');

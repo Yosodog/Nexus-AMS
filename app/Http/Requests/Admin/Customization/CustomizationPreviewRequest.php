@@ -29,6 +29,10 @@ class CustomizationPreviewRequest extends CustomizationContentRequest
         return [
             'content' => ['required', 'string', 'max:'.self::MAX_CONTENT_CHARACTERS],
             'metadata' => ['sometimes', 'array', 'max:25'],
+            'page_metadata' => ['sometimes', 'nullable', 'array', 'max:10'],
+            'page_metadata.title' => ['required_with:page_metadata', 'string', 'max:255'],
+            'page_metadata.description' => ['sometimes', 'nullable', 'string', 'max:320'],
+            'page_metadata.audience' => ['required_with:page_metadata', 'string', 'in:public,member'],
         ];
     }
 
@@ -36,7 +40,7 @@ class CustomizationPreviewRequest extends CustomizationContentRequest
     {
         $validator->after(function (Validator $validator): void {
             $payload = json_encode(
-                $this->only(['content', 'metadata']),
+                $this->only(['content', 'metadata', 'page_metadata']),
                 JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE
             );
 
@@ -48,11 +52,19 @@ class CustomizationPreviewRequest extends CustomizationContentRequest
             }
 
             $itemCount = 0;
-            $violation = $this->nestedPayloadViolation(
-                $this->input('metadata', []),
-                1,
-                $itemCount
-            );
+            $violation = null;
+
+            foreach (['metadata', 'page_metadata'] as $field) {
+                $violation = $this->nestedPayloadViolation(
+                    $this->input($field, []),
+                    1,
+                    $itemCount
+                );
+
+                if ($violation !== null) {
+                    break;
+                }
+            }
 
             if ($violation !== null) {
                 $validator->errors()->add('metadata', $violation);

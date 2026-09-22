@@ -18,26 +18,26 @@ class PagePublisher
     /**
      * Save a draft revision for the provided page.
      */
-    public function saveDraft(Page $page, string $content, User $user, array $metadata = []): PageVersion
+    public function saveDraft(Page $page, string $content, User $user, array $metadata = [], ?array $pageMetadata = null): PageVersion
     {
         $this->authorize($user);
 
         $normalized = $this->normalizeContent($content);
 
-        return $page->saveDraft($normalized, $user, $metadata);
+        return $page->saveDraft($normalized, $user, $metadata, $pageMetadata);
     }
 
     /**
      * Publish content and store the rendered HTML snapshot.
      */
-    public function publish(Page $page, string $content, string $renderedHtml, User $user, ?CarbonInterface $publishedAt = null): PageVersion
+    public function publish(Page $page, string $content, string $renderedHtml, User $user, ?CarbonInterface $publishedAt = null, ?array $pageMetadata = null): PageVersion
     {
         $this->authorize($user);
 
         $normalized = $this->normalizeContent($content);
         $renderedHtml = $this->renderer->render($normalized);
 
-        return $page->publish($normalized, $renderedHtml, $user, $publishedAt);
+        return $page->publish($normalized, $renderedHtml, $user, $publishedAt, $pageMetadata);
     }
 
     /**

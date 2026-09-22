@@ -70,12 +70,6 @@ class ApplyPageController extends Controller
             return $html;
         });
 
-        $alliance = $this->seoService->primaryAlliance();
-        $identity = $this->seoService->resolvedIdentity($alliance);
-        $applicationsOpen = SettingService::isApplicationsEnabled();
-        $primaryAllianceId = $this->membershipService->getPrimaryAllianceId();
-        $campaignContext = $this->campaignContext($request);
-
         $trackingKey = $request->query('rm');
         if (is_string($trackingKey) && $trackingKey !== '') {
             $recruitmentMessage = RecruitmentMessage::withTrashed()->where('tracking_key', $trackingKey)->first();
@@ -88,6 +82,22 @@ class ApplyPageController extends Controller
                 );
             }
         }
+
+        return $this->renderPage($request, $content);
+    }
+
+    public function preview(Request $request, string $content): View
+    {
+        return $this->renderPage($request, $content);
+    }
+
+    private function renderPage(Request $request, ?string $content): View
+    {
+        $alliance = $this->seoService->primaryAlliance();
+        $identity = $this->seoService->resolvedIdentity($alliance);
+        $applicationsOpen = SettingService::isApplicationsEnabled();
+        $primaryAllianceId = $this->membershipService->getPrimaryAllianceId();
+        $campaignContext = $this->campaignContext($request);
 
         return view('pages.apply', [
             'title' => 'Apply',

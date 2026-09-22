@@ -19,12 +19,14 @@ final readonly class ApplySeoRobotsHeaders
     public function handle(Request $request, Closure $next): Response
     {
         $response = $next($request);
-        $routeName = $request->route()?->getName();
+        $route = $request->route();
+        $routeName = $route?->getName();
+        $routeSlug = $routeName === 'pages.show' ? $route?->parameter('slug') : null;
 
         $isSuccessfulDiscoveryResponse = $routeName === 'seo.robots'
             || ($routeName === 'seo.sitemap' && $response->isSuccessful());
 
-        if (! $isSuccessfulDiscoveryResponse && ! $this->seoService->isRouteIndexable($routeName)) {
+        if (! $isSuccessfulDiscoveryResponse && ! $this->seoService->isRouteIndexable($routeName, $routeSlug)) {
             $response->headers->set('X-Robots-Tag', 'noindex, nofollow');
         }
 

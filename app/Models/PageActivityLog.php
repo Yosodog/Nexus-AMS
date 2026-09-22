@@ -18,6 +18,8 @@ class PageActivityLog extends Model
 
     public const ACTION_PUBLISHED = 'published';
 
+    public const ACTION_UNPUBLISHED = 'unpublished';
+
     public const ACTION_RESTORED = 'restored';
 
     public const ACTION_PREVIEWED = 'previewed';

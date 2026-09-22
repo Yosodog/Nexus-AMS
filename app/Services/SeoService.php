@@ -179,6 +179,32 @@ class SeoService
         );
     }
 
+    public function pageMetadata(Page $page): SeoMetadata
+    {
+        $configuration = $this->configuration();
+        $identity = $this->resolvedIdentity();
+        $metadata = $this->publishedPageMetadata($page);
+        $audience = is_string($metadata['audience'] ?? null)
+            ? Str::lower(trim($metadata['audience']))
+            : 'member';
+        $title = $this->normalizeMetadataString($metadata['title'] ?? null) ?? $page->slug;
+        $description = $this->normalizeDescription((string) ($metadata['description'] ?? ''));
+        $canonical = route('pages.show', ['slug' => $page->slug]);
+        $indexable = $audience === 'public' && $this->isGlobalIndexingEnabled();
+        $imageUrl = $this->resolvedSocialImage($configuration, $identity['alliance']);
+
+        return new SeoMetadata(
+            title: $title,
+            description: $description,
+            canonical: $canonical,
+            robots: $indexable ? 'index, follow' : 'noindex, nofollow',
+            siteName: $identity['site_name'],
+            indexable: $indexable,
+            imageUrl: $imageUrl,
+            imageAlt: $imageUrl === null ? null : $identity['alliance_name'].' alliance preview',
+        );
+    }
+
     public function isGlobalIndexingEnabled(): bool
     {
         return (bool) config('seo.indexing_enabled')
@@ -186,7 +212,7 @@ class SeoService
             && $this->hasPublicCanonicalUrl();
     }
 
-    public function isRouteIndexable(?string $routeName): bool
+    public function isRouteIndexable(?string $routeName, ?string $slug = null): bool
     {
         if ($routeName === 'home') {
             return $this->isGlobalIndexingEnabled();
@@ -194,6 +220,12 @@ class SeoService
 
         if ($routeName === 'apply.show') {
             return $this->isGlobalIndexingEnabled() && $this->hasPublishedApplyContent();
+        }
+
+        if ($routeName === 'pages.show') {
+            return $slug !== null
+                && $this->isGlobalIndexingEnabled()
+                && $this->hasPublishedPublicPage($slug);
         }
 
         return false;
@@ -264,6 +296,13 @@ class SeoService
         return array_values(array_filter([
             route('home'),
             $this->hasPublishedApplyContent() ? route('apply.show') : null,
+            ...Page::query()
+                ->where('slug', '!=', self::APPLY_PAGE_SLUG)
+                ->whereNotNull('published')
+                ->get()
+                ->filter(fn (Page $page): bool => $this->isPublishedPublicPage($page))
+                ->map(fn (Page $page): string => route('pages.show', ['slug' => $page->slug]))
+                ->all(),
         ]));
     }
 
@@ -357,6 +396,58 @@ class SeoService
         $value = trim($value);
 
         return $value === '' ? null : $value;
+    }
+
+    private function normalizeMetadataString(mixed $value): ?string
+    {
+        if (! is_string($value)) {
+            return null;
+        }
+
+        $normalized = trim((string) preg_replace('/\s+/u', ' ', strip_tags($value)));
+
+        return $normalized === '' ? null : $normalized;
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function publishedPageMetadata(Page $page): array
+    {
+        $metadata = $page->getAttribute('published_metadata');
+
+        if (is_string($metadata)) {
+            $decoded = json_decode($metadata, true);
+
+            return is_array($decoded) ? $decoded : [];
+        }
+
+        return is_array($metadata) ? $metadata : [];
+    }
+
+    private function hasPublishedPublicPage(string $slug): bool
+    {
+        $page = Page::query()->where('slug', $slug)->first();
+
+        return $page instanceof Page && $this->isPublishedPublicPage($page);
+    }
+
+    private function isPublishedPublicPage(Page $page): bool
+    {
+        if ($page->slug === self::APPLY_PAGE_SLUG) {
+            return false;
+        }
+
+        $published = $page->getAttribute('published');
+
+        if (! is_string($published) || trim($published) === '') {
+            return false;
+        }
+
+        $metadata = $this->publishedPageMetadata($page);
+
+        return is_string($metadata['audience'] ?? null)
+            && Str::lower(trim($metadata['audience'])) === 'public';
     }
 
     private function allianceLabel(string $allianceName, ?string $allianceAcronym): string

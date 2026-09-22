@@ -15,6 +15,7 @@ use Illuminate\Support\Carbon;
  * @property string|null $editor_state
  * @property string $status
  * @property Carbon|null $published_at
+ * @property array<string, string>|null $page_metadata
  */
 class PageVersion extends Model
 {
@@ -30,10 +31,12 @@ class PageVersion extends Model
         'editor_state',
         'status',
         'published_at',
+        'page_metadata',
     ];
 
     protected $casts = [
         'published_at' => 'datetime',
+        'page_metadata' => 'array',
     ];
 
     protected function editorState(): Attribute

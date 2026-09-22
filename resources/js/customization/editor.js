@@ -131,6 +131,78 @@ function updateStatus(statusContainer, status) {
 }
 
 /**
+ * Return the current page details from the editor fields.
+ *
+ * @param {object} page
+ * @returns {object|null}
+ */
+function readPageMetadata(page) {
+    if ((page?.slug ?? '') === 'apply') {
+        return null;
+    }
+
+    const title = document.getElementById('customization-page-title');
+    const description = document.getElementById('customization-page-description');
+    const audience = document.getElementById('customization-page-audience');
+
+    return {
+        title: title instanceof HTMLInputElement ? title.value.trim() : (page?.page_metadata?.title ?? ''),
+        description: description instanceof HTMLTextAreaElement ? (description.value.trim() || null) : (page?.page_metadata?.description ?? null),
+        audience: audience instanceof HTMLSelectElement ? audience.value : (page?.page_metadata?.audience ?? 'public'),
+    };
+}
+
+/**
+ * Apply page details returned by a draft, publish, or restore response.
+ *
+ * @param {object|null|undefined} metadata
+ */
+function applyPageMetadata(metadata) {
+    if (!metadata) {
+        return;
+    }
+
+    const title = document.getElementById('customization-page-title');
+    const description = document.getElementById('customization-page-description');
+    const audience = document.getElementById('customization-page-audience');
+
+    if (title instanceof HTMLInputElement && typeof metadata.title === 'string') {
+        title.value = metadata.title;
+    }
+
+    if (description instanceof HTMLTextAreaElement) {
+        description.value = typeof metadata.description === 'string' ? metadata.description : '';
+    }
+
+    if (audience instanceof HTMLSelectElement && typeof metadata.audience === 'string') {
+        audience.value = metadata.audience;
+    }
+}
+
+/**
+ * Update the audit state using the server's live/draft distinction.
+ *
+ * @param {HTMLElement|null} statusContainer
+ * @param {object} state
+ */
+function updatePageState(statusContainer, state) {
+    if (!state) {
+        return;
+    }
+
+    const label = state.status_label ?? state.status;
+
+    if (label) {
+        updateStatus(statusContainer, label);
+    }
+
+    applyPageMetadata(state.page_metadata ?? state.draft_metadata ?? null);
+
+    document.getElementById('customization-view-live')?.classList.toggle('hidden', !state.is_special && !state.is_live);
+    document.getElementById('customization-unpublish')?.classList.toggle('hidden', !state.is_live);
+}
+
+/**
  * Render recent activity logs in the sidebar list.
  *
  * @param {HTMLElement|null} listElement
@@ -194,7 +266,7 @@ function renderVersionsTable(table, versions) {
     if (!Array.isArray(versions) || versions.length === 0) {
         const emptyRow = document.createElement('tr');
         const cell = document.createElement('td');
-        cell.colSpan = 5;
+        cell.colSpan = 6;
         cell.className = 'py-3 text-center text-base-content/60';
         cell.textContent = 'No versions recorded yet.';
         emptyRow.appendChild(cell);
@@ -221,6 +293,12 @@ function renderVersionsTable(table, versions) {
         const userCell = document.createElement('td');
         userCell.textContent = version?.user?.name ?? 'System';
 
+        const metadataCell = document.createElement('td');
+        const metadata = version?.page_metadata;
+        metadataCell.textContent = metadata?.title
+            ? `${metadata.title} (${metadata.audience === 'member' ? 'Members' : 'Public'})`
+            : '—';
+
         const actionsCell = document.createElement('td');
         actionsCell.className = 'whitespace-nowrap text-right';
 
@@ -245,6 +323,7 @@ function renderVersionsTable(table, versions) {
         row.appendChild(statusCell);
         row.appendChild(timestampCell);
         row.appendChild(userCell);
+        row.appendChild(metadataCell);
         row.appendChild(actionsCell);
 
         table.appendChild(row);
@@ -354,35 +433,6 @@ function disableWhileRunning(button, callback) {
     });
 }
 
-/**
- * Render server-generated preview HTML with the same wrapper used on the public page when needed.
- *
- * @param {HTMLElement|null} previewPane
- * @param {object} page
- * @param {string} html
- */
-function renderPreviewHtml(previewPane, page, html) {
-    if (!previewPane) {
-        return;
-    }
-
-    const normalized = typeof html === 'string' ? html : '';
-
-    if ((page?.slug ?? '') === 'apply') {
-        previewPane.innerHTML = `
-            <section class="apply-page-shell">
-                <article class="apply-page-content">
-                    <div class="apply-page-richtext">${normalized}</div>
-                </article>
-            </section>
-        `;
-
-        return;
-    }
-
-    previewPane.innerHTML = normalized;
-}
-
 document.addEventListener('DOMContentLoaded', () => {
     const holder = document.getElementById('customization-editor');
 
@@ -401,7 +451,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const endpoints = parseJson(holder.dataset.endpoints, {});
     const csrfToken = holder.dataset.csrf ?? '';
     const page = parseJson(holder.dataset.page, {});
-    const previewPane = document.getElementById('customization-preview-pane');
+    const previewModal = document.getElementById('customization-preview-modal');
+    const previewFrame = document.getElementById('customization-preview-frame');
+    const previewClose = document.getElementById('customization-preview-close');
     const previewStatus = document.getElementById('customization-preview-status');
     const statusContainer = document.getElementById('customization-status');
     const draftContainer = document.getElementById('customization-last-draft');
@@ -413,6 +465,39 @@ document.addEventListener('DOMContentLoaded', () => {
     const versionModal = document.getElementById('customization-version-modal');
     const versionsButton = document.getElementById('customization-versions');
     const pagePicker = document.getElementById('customization-page-picker');
+    const unpublishButton = document.getElementById('customization-unpublish');
+
+    previewFrame?.addEventListener('load', () => {
+        const theme = document.documentElement.dataset.theme ?? 'light';
+        const frameDocument = previewFrame.contentDocument;
+        const frameRoot = frameDocument?.documentElement;
+
+        if (frameRoot) {
+            frameRoot.dataset.theme = theme;
+            frameRoot.style.colorScheme = theme === 'night' ? 'dark' : 'light';
+
+            frameDocument.addEventListener('click', (event) => {
+                if (event.target?.closest?.('a, button, input[type="submit"]')) {
+                    event.preventDefault();
+                }
+            });
+            frameDocument.addEventListener('submit', (event) => event.preventDefault());
+        }
+    });
+
+    previewClose?.addEventListener('click', () => previewModal?.close());
+    document.querySelectorAll('[data-preview-width]').forEach((button) => {
+        button.addEventListener('click', () => {
+            if (!previewFrame) {
+                return;
+            }
+
+            previewFrame.style.width = button.dataset.previewWidth === 'mobile' ? '390px' : '100%';
+            document.querySelectorAll('[data-preview-width]').forEach((candidate) => {
+                candidate.classList.toggle('btn-active', candidate === button);
+            });
+        });
+    });
 
     renderActivity(activityList, initialActivity);
 
@@ -482,6 +567,11 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
+        if (version.page_metadata) {
+            page.page_metadata = version.page_metadata;
+            applyPageMetadata(version.page_metadata);
+        }
+
         if (publish && version.published_at) {
             updateAuditSection(publishContainer, version.published_at, version?.user?.name, 'Never published');
         } else if (version.created_at) {
@@ -500,21 +590,18 @@ document.addEventListener('DOMContentLoaded', () => {
                 metadata: {
                     origin: 'admin-ui',
                 },
+                page_metadata: readPageMetadata(page),
             };
 
             try {
                 const response = await postJson(endpoints.preview, csrfToken, payload);
 
-                if (previewPane && typeof response.html === 'string') {
-                    renderPreviewHtml(previewPane, page, response.html);
-                }
-
-                if (response.version?.created_at) {
-                    updateAuditSection(draftContainer, response.version.created_at, response.version?.user?.name, 'No drafts yet');
+                if (previewFrame && previewModal instanceof HTMLDialogElement && typeof response.document === 'string') {
+                    previewFrame.srcdoc = response.document;
+                    previewModal.showModal();
                 }
 
                 setStatusBadge(previewStatus, 'Preview generated', 'info');
-                await refreshActivity();
             } catch (error) {
                 console.error(error);
                 setStatusBadge(previewStatus, error.message ?? 'Preview failed', 'danger');
@@ -534,12 +621,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 metadata: {
                     origin: 'admin-ui',
                 },
+                page_metadata: readPageMetadata(page),
             };
 
             try {
                 const response = await postJson(endpoints.draft, csrfToken, payload);
                 updateFromVersion(response.version, false);
-                updateStatus(statusContainer, response?.page?.status ?? page.status);
+                Object.assign(page, response.page ?? {});
+                updatePageState(statusContainer, response.page);
                 setStatusBadge(previewStatus, 'Draft saved', 'success');
                 await refreshActivity();
             } catch (error) {
@@ -560,20 +649,51 @@ document.addEventListener('DOMContentLoaded', () => {
                 metadata: {
                     origin: 'admin-ui',
                 },
+                page_metadata: readPageMetadata(page),
             };
 
             try {
                 const response = await postJson(endpoints.publish, csrfToken, payload);
-                updateStatus(statusContainer, response?.page?.status ?? 'published');
+                Object.assign(page, response.page ?? {});
+                updatePageState(statusContainer, response.page);
                 updateFromVersion(response.version, true);
-                if (previewPane && typeof response.html === 'string') {
-                    renderPreviewHtml(previewPane, page, response.html);
-                }
                 setStatusBadge(previewStatus, 'Published successfully', 'success');
                 await refreshActivity();
             } catch (error) {
                 console.error(error);
                 showTransientAlert(holder, error.message ?? 'Publish failed.', 'danger');
+            }
+        });
+    }
+
+    async function handleUnpublish(button) {
+        if (!endpoints.unpublish) {
+            return;
+        }
+
+        const confirmed = typeof window.NexusConfirm === 'function'
+            ? await window.NexusConfirm('Unpublish this page? Visitors will receive a not found response until it is published again.', {
+                title: 'Unpublish page?',
+                label: 'Unpublish',
+                tone: 'error',
+            })
+            : window.confirm('Unpublish this page? Visitors will receive a not found response until it is published again.');
+
+        if (!confirmed) {
+            return;
+        }
+
+        await disableWhileRunning(button, async () => {
+            try {
+                const response = await postJson(endpoints.unpublish, csrfToken);
+                Object.assign(page, response.page ?? {});
+                updatePageState(statusContainer, response.page);
+                setStatusBadge(previewStatus, 'Unpublished successfully', 'success');
+                button.classList.add('hidden');
+                await refreshActivity();
+            } catch (error) {
+                console.error(error);
+                showTransientAlert(holder, error.message ?? 'Unpublish failed.', 'danger');
             }
         });
     }
@@ -634,15 +754,14 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             if (publish) {
-                updateStatus(statusContainer, response?.page?.status ?? 'published');
+                Object.assign(page, response.page ?? {});
+                updatePageState(statusContainer, response.page);
                 updateFromVersion(response.version, true);
-                if (previewPane && typeof response.html === 'string') {
-                    renderPreviewHtml(previewPane, page, response.html);
-                }
                 setStatusBadge(previewStatus, 'Restored and published', 'success');
             } else {
                 updateFromVersion(response.version, false);
-                updateStatus(statusContainer, response?.page?.status ?? page.status);
+                Object.assign(page, response.page ?? {});
+                updatePageState(statusContainer, response.page);
                 setStatusBadge(previewStatus, 'Draft restored', 'info');
             }
 
@@ -661,6 +780,7 @@ document.addEventListener('DOMContentLoaded', () => {
     previewButton?.addEventListener('click', () => handlePreview(previewButton));
     draftButton?.addEventListener('click', () => handleDraft(draftButton));
     publishButton?.addEventListener('click', () => handlePublish(publishButton));
+    unpublishButton?.addEventListener('click', () => handleUnpublish(unpublishButton));
 
     versionsButton?.addEventListener('click', () => {
         loadVersions();
