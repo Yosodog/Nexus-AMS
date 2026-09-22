@@ -137,7 +137,7 @@ See [Federation operations](docs/federation-operations.md) and the [federation p
 
 ## Companion services
 
-Nexus uses separate repositories for the web application, Discord process, subscription listener, and installer. Pin each component to a compatible beta tag or exact commit because the repositories have separate release histories.
+Nexus uses separate repositories for the web application, Discord process, subscription listener, and installer. A managed installation uses the same stable release tag in all four repositories. Nexus Setup publishes its canonical release last, after the matching Core, Subs, and Discord assets are available.
 
 ### Nexus AMS Discord
 
@@ -155,9 +155,9 @@ Subs supports protected HTTP delivery or signed Redis Streams delivery. It inclu
 
 ### Nexus Setup
 
-[Nexus Setup](https://github.com/Yosodog/Nexus-Setup) installs a standalone deployment on Ubuntu. It can place the application, web server, database, and subscription listener on one host or use split profiles for remote databases and separate web or Subs hosts.
+[Nexus Setup](https://github.com/Yosodog/Nexus-Setup) installs a managed deployment on supported Ubuntu and Debian amd64 hosts. It can place Core, Subs, and the database on one server or use profiles for an existing remote database, web-only, database-only, and Subs-only hosts.
 
-The installer configures the required system packages, Nginx, MySQL or MariaDB, optional Redis, Supervisor, Laravel scheduling, TLS, migrations, seed data, frontend assets, and an optional first administrator. Production installs use exact AMS and Subs commit SHAs so rerunning the installer does not silently move to newer code.
+The guided installer provisions packages, Nginx, MySQL or MariaDB where local, systemd services, TLS, migrations, and the first administrator from published release artifacts. It generates internal credentials and preserves existing secrets on updates. Routine updates do not run the broad `DatabaseSeeder` or create automatic database backups.
 
 ## Stack
 
@@ -213,16 +213,35 @@ See [AGENTS.md](AGENTS.md) for repository conventions, testing guidance, and sec
 
 ## Production and self-hosting
 
-Use [Nexus Setup](https://github.com/Yosodog/Nexus-Setup) for a standalone production installation. Pin `NEXUS_AMS_COMMIT` and `NEXUS_SUBS_COMMIT` to the beta revisions you intend to deploy. The installer supports single-host and split-host profiles.
+Use [Nexus Setup](https://github.com/Yosodog/Nexus-Setup) for a standalone production installation. Have the domain and inbound ports 80/443 ready before installation; the setup process requests a TLS certificate. The default profile asks only for the domain, administrator email/password/nation ID, alliance ID, and Politics & War API key.
+
+Split profiles need an existing remote database connection, or, on a new
+database-only server, that server's private IPv4 address and the application
+server's private IPv4 address. Restrict database port 3306 to the application
+host in your firewall; database-only hosts do not run the Admin GUI.
 
 ```bash
 git clone https://github.com/Yosodog/Nexus-Setup.git
 cd Nexus-Setup
-chmod 600 install.env
-nano install.env
-./install_nexus.sh --check-config
-sudo ./install_nexus.sh --non-interactive
+sudo ./bootstrap.sh
+sudo nexus install
 ```
+
+After installation, use `nexus update --check`, `nexus update`, `nexus status`,
+`nexus doctor`, `nexus rollback`, and `nexus cleanup` on the host. Administrators
+with `manage-system` can view release notes and initiate the same supported
+local operations at **Admin → Settings → Software**. The CLI and GUI use the
+same root-owned updater. Optional Subs and Discord components can be installed
+locally; remote hosts remain CLI-managed.
+
+Updates apply every intermediate stable release, run forward-only migrations,
+and preserve the previous code release for rollback. They do **not** back up or
+restore the database. Take a manual snapshot first if you need one. Database
+migrations in stable releases must remain compatible with the immediately
+previous Core version. Cleanup removes older managed code only; it keeps the
+current and previous releases, credentials, uploads, writable storage, and
+legacy checkouts. Read the [Nexus Setup operator guide](https://github.com/Yosodog/Nexus-Setup#operate-nexus)
+before an update or cleanup.
 
 The repository also contains a hardened container build for managed deployments. Its runtime roles, release metadata, health contracts, and deployment restrictions are intended for an orchestrated environment rather than a basic standalone install.
 

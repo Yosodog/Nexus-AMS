@@ -268,6 +268,24 @@ class AppServiceProvider extends ServiceProvider
             ];
         });
 
+        RateLimiter::for('system-updates-status', function (Request $request) {
+            $actor = $request->user()?->getAuthIdentifier() ?? $request->ip();
+
+            return Limit::perMinute(60)->by('system-updates-status:'.$actor);
+        });
+
+        RateLimiter::for('system-updates-mutate', function (Request $request) {
+            $actor = $request->user()?->getAuthIdentifier() ?? $request->ip();
+
+            return Limit::perHour(3)->by('system-updates-mutate:'.$actor);
+        });
+
+        RateLimiter::for('system-components-mutate', function (Request $request) {
+            $actor = $request->user()?->getAuthIdentifier() ?? $request->ip();
+
+            return Limit::perMinutes(15, 3)->by('system-components-mutate:'.$actor);
+        });
+
         Notification::extend('pnw', function ($app) {
             return new PWMessageChannel($app->make(PWMessageService::class));
         });

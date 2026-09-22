@@ -7,6 +7,7 @@ use App\Http\Controllers\Admin\PendingRequestRecoveryController;
 use App\Http\Controllers\Admin\PublicSiteSettingsController;
 use App\Http\Controllers\Admin\SecurityRetentionSettingsController;
 use App\Http\Controllers\Admin\SettingsController;
+use App\Http\Controllers\Admin\SoftwareUpdatesController;
 use App\Http\Controllers\Admin\SystemHealthController;
 use App\Http\Middleware\BlockWhenPWDown;
 use Illuminate\Support\Facades\Route;
@@ -33,6 +34,30 @@ Route::get('/settings/recovery', [PendingRequestRecoveryController::class, 'inde
 Route::get('/settings/system-health', SystemHealthController::class)->name(
     'admin.settings.system-health'
 );
+Route::get('/settings/software', [SoftwareUpdatesController::class, 'index'])->name(
+    'admin.settings.software'
+);
+Route::get('/settings/software/status', [SoftwareUpdatesController::class, 'status'])
+    ->middleware('throttle:system-updates-status')
+    ->name('admin.settings.software.status');
+Route::get('/settings/software/operations/{operation}', [SoftwareUpdatesController::class, 'operation'])
+    ->whereUuid('operation')
+    ->middleware('throttle:system-updates-status')
+    ->name('admin.settings.software.operations.show');
+Route::post('/settings/software/updates', [SoftwareUpdatesController::class, 'update'])
+    ->middleware('throttle:system-updates-mutate')
+    ->name('admin.settings.software.updates.start');
+Route::post('/settings/software/rollback', [SoftwareUpdatesController::class, 'rollback'])
+    ->middleware('throttle:system-updates-mutate')
+    ->name('admin.settings.software.rollback');
+Route::post('/settings/software/cleanup', [SoftwareUpdatesController::class, 'cleanup'])
+    ->middleware('throttle:system-updates-mutate')
+    ->name('admin.settings.software.cleanup');
+Route::post('/settings/software/components/{component}/{action}', [SoftwareUpdatesController::class, 'componentOperation'])
+    ->whereIn('component', ['nexus-core', 'nexus-subs', 'nexus-discord'])
+    ->whereIn('action', ['install', 'enable', 'disable', 'restart'])
+    ->middleware('throttle:system-components-mutate')
+    ->name('admin.settings.software.components.action');
 Route::post('/settings/sync/nations', [DataSyncSettingsController::class, 'runNation'])->name(
     'admin.settings.sync.run'
 )->middleware(BlockWhenPWDown::class);

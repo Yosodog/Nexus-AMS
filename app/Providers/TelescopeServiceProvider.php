@@ -51,9 +51,18 @@ class TelescopeServiceProvider extends TelescopeApplicationServiceProvider
     protected function hideSensitiveRequestDetails(): void
     {
         Telescope::hideRequestParameters([
+            'ams_shared_token',
+            'bot_token',
             'bootstrap_token',
+            'configuration',
+            'core_token',
+            'guild_id',
+            'hmac_secret',
             'password',
             'password_confirmation',
+            'politics_war_api_token',
+            'relay_private_key',
+            'redis_url',
         ]);
 
         if ($this->app->environment('local')) {

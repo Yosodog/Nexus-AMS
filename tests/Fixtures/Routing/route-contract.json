@@ -8228,6 +8228,117 @@
     },
     {
         "domain": null,
+        "method": "GET|HEAD",
+        "uri": "admin/settings/software",
+        "name": "admin.settings.software",
+        "action": "App\\Http\\Controllers\\Admin\\SoftwareUpdatesController@index",
+        "middleware": [
+            "web",
+            "Illuminate\\Auth\\Middleware\\Authenticate",
+            "App\\Http\\Middleware\\EnsureUserIsVerified",
+            "App\\Http\\Middleware\\DiscordVerifiedMiddleware",
+            "App\\Http\\Middleware\\EnsureMfaConfigured",
+            "App\\Http\\Middleware\\AdminMiddleware"
+        ]
+    },
+    {
+        "domain": null,
+        "method": "GET|HEAD",
+        "uri": "admin/settings/software/status",
+        "name": "admin.settings.software.status",
+        "action": "App\\Http\\Controllers\\Admin\\SoftwareUpdatesController@status",
+        "middleware": [
+            "web",
+            "Illuminate\\Auth\\Middleware\\Authenticate",
+            "App\\Http\\Middleware\\EnsureUserIsVerified",
+            "App\\Http\\Middleware\\DiscordVerifiedMiddleware",
+            "App\\Http\\Middleware\\EnsureMfaConfigured",
+            "App\\Http\\Middleware\\AdminMiddleware",
+            "Illuminate\\Routing\\Middleware\\ThrottleRequests:system-updates-status"
+        ]
+    },
+    {
+        "domain": null,
+        "method": "GET|HEAD",
+        "uri": "admin/settings/software/operations/{operation}",
+        "name": "admin.settings.software.operations.show",
+        "action": "App\\Http\\Controllers\\Admin\\SoftwareUpdatesController@operation",
+        "middleware": [
+            "web",
+            "Illuminate\\Auth\\Middleware\\Authenticate",
+            "App\\Http\\Middleware\\EnsureUserIsVerified",
+            "App\\Http\\Middleware\\DiscordVerifiedMiddleware",
+            "App\\Http\\Middleware\\EnsureMfaConfigured",
+            "App\\Http\\Middleware\\AdminMiddleware",
+            "Illuminate\\Routing\\Middleware\\ThrottleRequests:system-updates-status"
+        ]
+    },
+    {
+        "domain": null,
+        "method": "POST",
+        "uri": "admin/settings/software/updates",
+        "name": "admin.settings.software.updates.start",
+        "action": "App\\Http\\Controllers\\Admin\\SoftwareUpdatesController@update",
+        "middleware": [
+            "web",
+            "Illuminate\\Auth\\Middleware\\Authenticate",
+            "App\\Http\\Middleware\\EnsureUserIsVerified",
+            "App\\Http\\Middleware\\DiscordVerifiedMiddleware",
+            "App\\Http\\Middleware\\EnsureMfaConfigured",
+            "App\\Http\\Middleware\\AdminMiddleware",
+            "Illuminate\\Routing\\Middleware\\ThrottleRequests:system-updates-mutate"
+        ]
+    },
+    {
+        "domain": null,
+        "method": "POST",
+        "uri": "admin/settings/software/rollback",
+        "name": "admin.settings.software.rollback",
+        "action": "App\\Http\\Controllers\\Admin\\SoftwareUpdatesController@rollback",
+        "middleware": [
+            "web",
+            "Illuminate\\Auth\\Middleware\\Authenticate",
+            "App\\Http\\Middleware\\EnsureUserIsVerified",
+            "App\\Http\\Middleware\\DiscordVerifiedMiddleware",
+            "App\\Http\\Middleware\\EnsureMfaConfigured",
+            "App\\Http\\Middleware\\AdminMiddleware",
+            "Illuminate\\Routing\\Middleware\\ThrottleRequests:system-updates-mutate"
+        ]
+    },
+    {
+        "domain": null,
+        "method": "POST",
+        "uri": "admin/settings/software/cleanup",
+        "name": "admin.settings.software.cleanup",
+        "action": "App\\Http\\Controllers\\Admin\\SoftwareUpdatesController@cleanup",
+        "middleware": [
+            "web",
+            "Illuminate\\Auth\\Middleware\\Authenticate",
+            "App\\Http\\Middleware\\EnsureUserIsVerified",
+            "App\\Http\\Middleware\\DiscordVerifiedMiddleware",
+            "App\\Http\\Middleware\\EnsureMfaConfigured",
+            "App\\Http\\Middleware\\AdminMiddleware",
+            "Illuminate\\Routing\\Middleware\\ThrottleRequests:system-updates-mutate"
+        ]
+    },
+    {
+        "domain": null,
+        "method": "POST",
+        "uri": "admin/settings/software/components/{component}/{action}",
+        "name": "admin.settings.software.components.action",
+        "action": "App\\Http\\Controllers\\Admin\\SoftwareUpdatesController@componentOperation",
+        "middleware": [
+            "web",
+            "Illuminate\\Auth\\Middleware\\Authenticate",
+            "App\\Http\\Middleware\\EnsureUserIsVerified",
+            "App\\Http\\Middleware\\DiscordVerifiedMiddleware",
+            "App\\Http\\Middleware\\EnsureMfaConfigured",
+            "App\\Http\\Middleware\\AdminMiddleware",
+            "Illuminate\\Routing\\Middleware\\ThrottleRequests:system-components-mutate"
+        ]
+    },
+    {
+        "domain": null,
         "method": "POST",
         "uri": "admin/settings/sync/nations",
         "name": "admin.settings.sync.run",

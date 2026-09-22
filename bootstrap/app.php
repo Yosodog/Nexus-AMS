@@ -62,6 +62,10 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {
+        $exceptions->dontFlash([
+            'configuration',
+        ]);
+
         $exceptions->render(function (QueryException $exception, Request $request) {
             if ($request->expectsJson()) {
                 return response()->json([

@@ -1,0 +1,37 @@
+name: Publish Nexus Core release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v5
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Install test dependencies
+        run: |
+          composer install --no-interaction --prefer-dist --no-progress
+          npm ci --ignore-scripts
+          cp .env.testing.example .env.testing
+      - name: Test
+        run: composer test:fast
+      - name: Build production artifact
+        run: bash scripts/build-release.sh "${GITHUB_REF_NAME}"
+      - name: Publish fixed release asset
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: gh release create "${RELEASE_TAG}" dist/nexus-core.tar.gz --verify-tag --generate-notes --title "Nexus ${RELEASE_TAG}"

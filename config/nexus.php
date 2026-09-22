@@ -31,6 +31,14 @@ return [
         'response_future_tolerance_seconds' => (int) env('NEXUS_CONTROL_RESPONSE_FUTURE_TOLERANCE', 30),
         'callback_lease_seconds' => (int) env('NEXUS_CONTROL_CALLBACK_LEASE', 90),
     ],
+    'updater' => [
+        'socket' => env('NEXUS_UPDATER_SOCKET', '/run/nexus-updater/control.sock'),
+        'connect_timeout_seconds' => (int) env('NEXUS_UPDATER_CONNECT_TIMEOUT', 3),
+        'request_timeout_seconds' => (int) env('NEXUS_UPDATER_REQUEST_TIMEOUT', 10),
+        'max_message_bytes' => (int) env('NEXUS_UPDATER_MAX_MESSAGE_BYTES', 65536),
+        'max_response_bytes' => (int) env('NEXUS_UPDATER_MAX_RESPONSE_BYTES', 1048576),
+        'protocol_version' => (int) env('NEXUS_UPDATER_PROTOCOL_VERSION', 1),
+    ],
     'tenant_events' => [
         'enabled' => env('NEXUS_TENANT_EVENTS_ENABLED', false),
         'key_file' => env('NEXUS_TENANT_EVENTS_KEY_FILE'),
