@@ -66,6 +66,31 @@ class CityGrantWorkflowTest extends TestCase
         ]);
     }
 
+    public function test_request_form_is_only_shown_when_an_enabled_grant_exists_for_the_next_city(): void
+    {
+        [$user, $nation] = $this->createMemberWithAccount();
+        $this->createCityGrant($nation->num_cities + 2);
+
+        $this->actingAs($user)
+            ->get(route('grants.city'))
+            ->assertOk()
+            ->assertSee('No city grant is currently available for City #'.($nation->num_cities + 1).'.')
+            ->assertDontSee('id="city-grant-request-form"', false);
+
+        $grant = $this->createCityGrant($nation->num_cities + 1);
+        $grant->update(['enabled' => false]);
+
+        $this->get(route('grants.city'))
+            ->assertOk()
+            ->assertDontSee('id="city-grant-request-form"', false);
+
+        $grant->update(['enabled' => true]);
+
+        $this->get(route('grants.city'))
+            ->assertOk()
+            ->assertSee('id="city-grant-request-form"', false);
+    }
+
     public function test_member_cannot_request_a_duplicate_pending_city_grant(): void
     {
         [$user, $nation, $account] = $this->createMemberWithAccount();

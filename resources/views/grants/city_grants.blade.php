@@ -93,9 +93,9 @@
                     <div class="card-body space-y-5">
                         <div class="flex flex-wrap items-start justify-between gap-3">
                             <div>
-                                <h2 class="text-xl font-bold text-base-content">Request City #{{ $nextCity }} grant</h2>
+                                <h2 class="text-xl font-bold text-base-content">{{ $nextGrant ? "Request City #{$nextCity} grant" : "No City #{$nextCity} grant available" }}</h2>
                                 <p class="text-sm text-base-content/70">
-                                    Select a destination account and submit for economics review.
+                                    {{ $nextGrant ? 'Select a destination account and submit for economics review.' : 'Check the grant roadmap for other configured city grants.' }}
                                 </p>
                             </div>
                             <div class="flex flex-wrap gap-2">
@@ -182,53 +182,56 @@
                                     </div>
                                 @endif
                             </section>
-                        @endif
+                            <form method="POST" action="{{ route('grants.city.request') }}" id="city-grant-request-form" class="grid grid-cols-1 gap-4 sm:grid-cols-4 sm:items-end">
+                                @csrf
+                                <input type="hidden" name="city_number" value="{{ $nextCity }}">
 
-                        <form method="POST" action="{{ route('grants.city.request') }}" id="city-grant-request-form" class="grid grid-cols-1 gap-4 sm:grid-cols-4 sm:items-end">
-                            @csrf
-                            <input type="hidden" name="city_number" value="{{ $nextCity }}">
+                                <x-form.error-summary
+                                    id="city-grant-request-errors"
+                                    class="sm:col-span-4"
+                                    title="We could not submit this city grant request."
+                                    :field-ids="[
+                                        'account_id' => 'city-grant-account',
+                                        'city_grant' => 'city-grant-account',
+                                    ]"
+                                    :only="['account_id', 'city_grant']"
+                                />
 
-                            <x-form.error-summary
-                                id="city-grant-request-errors"
-                                class="sm:col-span-4"
-                                title="We could not submit this city grant request."
-                                :field-ids="[
-                                    'account_id' => 'city-grant-account',
-                                    'city_grant' => 'city-grant-account',
-                                ]"
-                                :only="['account_id', 'city_grant']"
-                            />
+                                <div class="sm:col-span-3">
+                                    <x-form.select
+                                        id="city-grant-account"
+                                        name="account_id"
+                                        label="Bank account"
+                                        :error-keys="['account_id', 'city_grant']"
+                                        required
+                                    >
+                                        <x-slot:help>City-grant funds will be deposited into this account after approval.</x-slot:help>
+                                        @foreach ($accounts as $account)
+                                            <option value="{{ $account->id }}" @selected((string) old('account_id') === (string) $account->id)>
+                                                {{ $account->name }}
+                                            </option>
+                                        @endforeach
+                                    </x-form.select>
+                                </div>
 
-                            <div class="sm:col-span-3">
-                                <x-form.select
-                                    id="city-grant-account"
-                                    name="account_id"
-                                    label="Bank account"
-                                    :error-keys="['account_id', 'city_grant']"
-                                    required
+                                <button
+                                    type="submit"
+                                    class="btn btn-primary w-full"
+                                    @disabled($nextGrantAmount === null || $hasPendingRequest || $requirementsNotMet)
                                 >
-                                    <x-slot:help>City-grant funds will be deposited into this account after approval.</x-slot:help>
-                                    @foreach ($accounts as $account)
-                                        <option value="{{ $account->id }}" @selected((string) old('account_id') === (string) $account->id)>
-                                            {{ $account->name }}
-                                        </option>
-                                    @endforeach
-                                </x-form.select>
-                            </div>
+                                    {{ $hasPendingRequest ? 'Request pending' : ($requirementsNotMet ? 'Requirements not met' : 'Request grant') }}
+                                </button>
+                            </form>
 
-                            <button
-                                type="submit"
-                                class="btn btn-primary w-full"
-                                @disabled($nextGrantAmount === null || $hasPendingRequest || $requirementsNotMet)
-                            >
-                                {{ $hasPendingRequest ? 'Request pending' : ($requirementsNotMet ? 'Requirements not met' : 'Request grant') }}
-                            </button>
-                        </form>
-
-                        @if ($nextGrantAmount === null)
-                            <div class="rounded-lg border border-warning/40 bg-warning/10 px-3 py-2 text-xs text-warning-content/80">
-                                Grant requests are paused until city-cost data refreshes.
-                            </div>
+                            @if ($nextGrantAmount === null)
+                                <div class="rounded-lg border border-warning/40 bg-warning/10 px-3 py-2 text-xs text-warning-content/80">
+                                    Grant requests are paused until city-cost data refreshes.
+                                </div>
+                            @endif
+                        @else
+                            <p class="rounded-lg border border-base-300 bg-base-200/50 px-3 py-2 text-sm text-base-content/70">
+                                No city grant is currently available for City #{{ $nextCity }}.
+                            </p>
                         @endif
 
                         @if ($hasPendingRequest)
