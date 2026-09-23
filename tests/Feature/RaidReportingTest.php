@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Http\Middleware\AdminMiddleware;
 use App\Http\Middleware\DiscordVerifiedMiddleware;
 use App\Http\Middleware\EnsureMfaConfigured;
 use App\Http\Middleware\EnsureUserIsVerified;
@@ -38,5 +39,29 @@ class RaidReportingTest extends TestCase
         $user = User::factory()->verified()->create(['nation_id' => Nation::factory()->create()->id]);
         Gate::define('view-diagnostic-info', fn (): bool => false);
         $this->actingAs($user)->get(route('admin.raid-assessment'))->assertForbidden();
+    }
+
+    public function test_admin_assessment_lists_recent_predictions(): void
+    {
+        $member = Nation::factory()->create();
+        $target = Nation::factory()->create();
+        $user = User::factory()->verified()->create(['nation_id' => $member->id]);
+        RaidPrediction::query()->create([
+            'war_id' => 123,
+            'attacker_nation_id' => $member->id,
+            'target_nation_id' => $target->id,
+            'declared_at' => now(),
+            'captured_at' => now(),
+            'expected_net' => 12345,
+            'actual_net' => 15000,
+        ]);
+        Gate::define('view-diagnostic-info', fn (): bool => true);
+
+        $this->withoutMiddleware([AdminMiddleware::class, DiscordVerifiedMiddleware::class, EnsureUserIsVerified::class, EnsureMfaConfigured::class])
+            ->actingAs($user)
+            ->get(route('admin.raid-assessment'))
+            ->assertOk()
+            ->assertSee('War #123')
+            ->assertSee('$12,345');
     }
 }
