@@ -11,7 +11,6 @@ use App\Models\RaidPrediction;
 use App\Models\War;
 use App\Services\Economy\EconomyRules;
 use App\Services\RaidFinderService;
-use App\Services\RaidIntelligenceRefreshService;
 use App\Services\RaidPredictionService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Cache;
@@ -61,9 +60,6 @@ class RaidWorkflowTest extends TestCase
                 'victor' => 900, 'type' => 'VICTORY', 'date' => now()->subDay()->toIso8601String(), 'loot_fraction' => 0.1],
         ]);
         $target->update(['score' => 99999, 'beige_turns' => 12, 'vacation_mode_turns' => 3, 'color' => 'beige', 'alliance_id' => 777, 'updated_at' => now()->subHour()]);
-        $this->mock(RaidIntelligenceRefreshService::class)
-            ->shouldReceive('refresh')
-            ->once();
         $results = app(RaidFinderService::class)->findTargets($own->id);
         $this->assertCount(1, $results);
         $calculation = $results->first()->get('calculation');

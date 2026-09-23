@@ -52,14 +52,14 @@ class RaidFinderCacheTest extends TestCase
         $this->assertSame($snapshot, $cache->snapshot(4242));
     }
 
-    public function test_changed_intelligence_preserves_a_stale_fallback_but_never_marks_it_fresh(): void
+    public function test_unrelated_intelligence_keeps_a_recent_snapshot_fresh(): void
     {
         $cache = app(RaidFinderCache::class);
         $cache->store(4242, [['value' => 123]]);
         RaidNationObservation::factory()->create(['nation_id' => 10]);
         $snapshot = $cache->snapshot(4242);
         $this->assertSame(123, $snapshot['targets'][0]['value']);
-        $this->assertFalse($cache->isFresh($snapshot));
+        $this->assertTrue($cache->isFresh($snapshot));
     }
 
     public function test_changed_attacker_supplies_invalidates_a_budgeted_approach(): void
@@ -89,12 +89,12 @@ class RaidFinderCacheTest extends TestCase
         $this->assertSame([], $demand->take(100));
     }
 
-    public function test_public_revision_invalidates_even_when_database_timestamps_have_not_changed(): void
+    public function test_public_revision_uses_the_five_minute_snapshot_freshness_window(): void
     {
         $cache = app(RaidFinderCache::class);
         $before = $cache->key(4242);
         Cache::store(config('raids.intelligence_cache_store'))->forever('raid-intelligence:revision', 'corrected-public-attack');
 
-        $this->assertNotSame($before, $cache->key(4242));
+        $this->assertSame($before, $cache->key(4242));
     }
 }

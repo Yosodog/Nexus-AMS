@@ -4,8 +4,6 @@ namespace App\Services;
 
 use App\Models\MarketPriceSnapshot;
 use App\Models\Nation;
-use App\Models\RaidAttackObservation;
-use App\Models\RaidNationObservation;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\Cache;
 use Throwable;
@@ -24,9 +22,6 @@ class RaidFinderCache
         $fingerprint = hash('sha256', json_encode([
             $nation?->score, $nation?->war_policy, $nation?->military?->getAttributes(),
             $nation?->resources?->getAttributes(),
-            RaidNationObservation::query()->max('id'),
-            RaidAttackObservation::query()->max('updated_at'),
-            Cache::store(config('raids.intelligence_cache_store'))->get('raid-intelligence:revision'),
             MarketPriceSnapshot::query()->max('id'),
             (int) config('raids.model_version', 1),
             'calculation-evidence-v1',

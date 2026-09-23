@@ -56,6 +56,10 @@ class RaidFinderController extends Controller
                 if (Cache::get($this->raidFinderCache->failureKey($nationId))) {
                     return $this->errorResponse('Raid predictions could not be completed. Please retry shortly.', 503, 'temporary_failure', 30);
                 }
+                if ($snapshot !== null && ($snapshot['complete'] ?? true) === false
+                    && ! Cache::lock($this->raidFinderCache->lockKey($nationId), 1)->isLocked()) {
+                    return $this->snapshotResponse($snapshot, stale: true, refreshState: 'temporary_failure', retryAfter: 30);
+                }
 
                 return $snapshot !== null
                     ? $this->snapshotResponse($snapshot, stale: true, refreshState: 'refreshing', retryAfter: 2)

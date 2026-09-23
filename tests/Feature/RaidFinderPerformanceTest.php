@@ -2,16 +2,17 @@
 
 namespace Tests\Feature;
 
+use App\Jobs\RefreshRaidIntelligence;
 use App\Models\Nation;
 use App\Models\RaidAttackObservation;
 use App\Models\RaidNationObservation;
 use App\Services\RaidFinderService;
-use App\Services\RaidIntelligenceRefreshService;
 use App\Services\RaidIntelligenceService;
 use Carbon\CarbonImmutable;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Queue;
 use Mockery;
 use Tests\TestCase;
 
@@ -172,13 +173,14 @@ class RaidFinderPerformanceTest extends TestCase
     public function test_finder_freezes_at_most_candidate_limit_and_keeps_an_unseen_target_in_the_pool(): void
     {
         config(['raids.candidate_limit' => 2]);
+        config(['queue.default' => 'database']);
         Cache::forever('alliances:membership:ids', [777]);
         $own = Nation::factory()->create(['alliance_id' => 777, 'score' => 1000]);
         $historical = Nation::factory()->create(['alliance_id' => null, 'score' => 1000, 'color' => 'blue']);
         $unseen = Nation::factory()->create(['alliance_id' => null, 'score' => 1000, 'color' => 'blue']);
         $otherUnseen = Nation::factory()->create(['alliance_id' => null, 'score' => 1000, 'color' => 'blue']);
         Nation::factory()->count(100)->create(['alliance_id' => null, 'score' => 1000, 'color' => 'blue']);
-        $observedAt = CarbonImmutable::now()->subMinute()->toIso8601String();
+        $observedAt = CarbonImmutable::now()->subMinutes(6)->toIso8601String();
         $attacker = [
             'id' => $own->id,
             'score' => 1000,
@@ -241,9 +243,7 @@ class RaidFinderPerformanceTest extends TestCase
             ];
         });
         $this->app->instance(RaidIntelligenceService::class, $intelligence);
-        $this->mock(RaidIntelligenceRefreshService::class)
-            ->shouldReceive('refresh')
-            ->once();
+        Queue::fake();
 
         $results = app(RaidFinderService::class)->findTargets($own->id);
 
@@ -251,5 +251,7 @@ class RaidFinderPerformanceTest extends TestCase
         $this->assertContains($historical->id, $freezeIds);
         $this->assertContains($unseen->id, $freezeIds);
         $this->assertCount(2, $results);
+        Queue::assertPushed(RefreshRaidIntelligence::class, fn (RefreshRaidIntelligence $job): bool => in_array($own->id, $job->nationIds, true)
+            && count(array_intersect($freezeIds, $job->nationIds)) === 2);
     }
 }

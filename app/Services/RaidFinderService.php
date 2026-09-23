@@ -10,8 +10,6 @@ use App\Models\War;
 use App\Services\Economy\EconomyRules;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Collection;
-use Illuminate\Support\Facades\Log;
-use Throwable;
 
 class RaidFinderService
 {
@@ -24,7 +22,6 @@ class RaidFinderService
         protected RaidSimulationService $simulation,
         protected RuntimeCapabilities $capabilities,
         protected RaidIntelligenceDemand $intelligenceDemand,
-        protected RaidIntelligenceRefreshService $intelligenceRefresh,
     ) {}
 
     /** @return Collection<int, mixed> */
@@ -66,37 +63,10 @@ class RaidFinderService
         $availability = $this->availabilityBatch($nationId, $candidateIds, $cheapSnapshots, checkLocalWars: true);
         $latestVictories = $this->latestVictories($candidateIds, $now);
         $selectedCandidates = $this->selectFreezeCandidates($candidates, $availability, $latestVictories, $limit);
-        $selectedIds = $selectedCandidates->pluck('id')->map(static fn (mixed $id): int => (int) $id)->all();
-        $refreshIds = array_values(array_unique([$nationId, ...$selectedIds]));
-        $refreshFailed = false;
-        if ($this->capabilities->writesPublicWorld()) {
-            try {
-                $this->intelligenceRefresh->refresh($refreshIds, true);
-                $now = CarbonImmutable::now();
-                $freshSnapshots = $this->intelligence->nationsAt($refreshIds, $now);
-                $attacker = $freshSnapshots[$nationId] ?? $attacker;
-                foreach ($selectedIds as $selectedId) {
-                    if (isset($freshSnapshots[$selectedId])) {
-                        $cheapSnapshots[$selectedId] = $freshSnapshots[$selectedId];
-                    }
-                }
-                $cheapSnapshots[$nationId] = $attacker;
-                $availability = array_replace(
-                    $availability,
-                    $this->availabilityBatch($nationId, $selectedIds, $freshSnapshots, checkLocalWars: true),
-                );
-            } catch (Throwable $exception) {
-                $refreshFailed = true;
-                Log::warning('Raid finder synchronous intelligence refresh failed', [
-                    'attacker_nation_id' => $nationId,
-                    'target_nation_ids' => $selectedIds,
-                    'exception' => $exception::class,
-                    'message' => $exception->getMessage(),
-                ]);
-            }
-        }
         $ranked = collect();
-        $refresh = $refreshFailed ? $refreshIds : [];
+        $attackerObservedAt = $attacker['observed_at'] ?? null;
+        $attackerStale = empty($attackerObservedAt) || CarbonImmutable::parse($attackerObservedAt)->addSeconds((int) config('raids.fresh_seconds', 300))->isPast();
+        $refresh = $attackerStale ? [$nationId] : [];
 
         foreach ($selectedCandidates as $candidate) {
             $targetId = (int) $candidate->id;
@@ -108,7 +78,7 @@ class RaidFinderService
                 continue;
             }
             $observedAt = $target['observed_at'] ?? $targetSnapshot['observed_at'] ?? null;
-            $stale = $refreshFailed || empty($observedAt) || CarbonImmutable::parse($observedAt)->addSeconds((int) config('raids.fresh_seconds', 300))->isPast();
+            $stale = $attackerStale || empty($observedAt) || CarbonImmutable::parse($observedAt)->addSeconds((int) config('raids.fresh_seconds', 300))->isPast();
             if ($stale) {
                 $refresh[] = $targetId;
             }

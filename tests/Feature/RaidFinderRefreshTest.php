@@ -25,6 +25,10 @@ class RaidFinderRefreshTest extends TestCase
     public function test_one_queued_refresh_publishes_partial_results_then_a_complete_snapshot(): void
     {
         $nation = $this->prepareMember();
+        $target = Nation::factory()->create([
+            'alliance_id' => null, 'score' => $nation->score, 'color' => 'blue',
+            'beige_turns' => 0, 'vacation_mode_turns' => 0,
+        ]);
         $url = route('api.raid-finder.show', ['nation_id' => $nation->id]);
         $this->getJson($url)->assertStatus(202)->assertHeader('X-Nexus-Async-State', 'refreshing');
         $this->getJson($url)->assertStatus(202)->assertHeader('Retry-After', '2');
@@ -32,13 +36,14 @@ class RaidFinderRefreshTest extends TestCase
         $job = Queue::pushed(RefreshRaidFinder::class)->first();
         $cache = app(RaidFinderCache::class);
         $finder = Mockery::mock(RaidFinderService::class);
-        $finder->shouldReceive('findTargets')->once()->andReturnUsing(function (int $nationId, callable $progress) use ($cache) {
+        $finder->shouldReceive('findTargets')->once()->andReturnUsing(function (int $nationId, callable $progress) use ($cache, $target) {
             $this->assertFalse(Telescope::isRecording());
-            $rows = collect([collect(['nation' => ['id' => 9876], 'value' => 100])]);
+            $rows = collect([collect(['nation' => ['id' => $target->id], 'value' => 100])]);
             $progress($rows);
             $partial = $cache->snapshot($nationId);
             $this->assertFalse($cache->isFresh($partial));
             $this->assertSame(100, $partial['targets'][0]['value']);
+            Nation::query()->findOrFail($nationId)->increment('score');
 
             return $rows;
         });
@@ -49,13 +54,14 @@ class RaidFinderRefreshTest extends TestCase
         Telescope::stopRecording();
 
         $this->assertTrue($cache->isFresh($cache->snapshot($nation->id)));
+        $this->assertNull($job->queue);
         $this->getJson($url)->assertOk()->assertHeader('X-Nexus-Async-State', 'success')->assertJsonPath('0.value', 100);
         Queue::assertPushed(RefreshRaidFinder::class, 1);
 
         Cache::store(config('raids.intelligence_cache_store'))->forever('raid-intelligence:revision', 'changed-during-scan');
-        $this->getJson($url)->assertOk()->assertHeader('X-Nexus-Async-State', 'success')->assertHeader('X-Nexus-Data-Stale', 'true');
+        $this->getJson($url)->assertOk()->assertHeader('X-Nexus-Data-Stale', 'false');
         Queue::assertPushed(RefreshRaidFinder::class, 1);
-        $this->travel(31)->seconds();
+        $this->travel(301)->seconds();
         $this->getJson($url)->assertOk()->assertHeader('X-Nexus-Async-State', 'refreshing');
         Queue::assertPushed(RefreshRaidFinder::class, 2);
     }
@@ -83,10 +89,22 @@ class RaidFinderRefreshTest extends TestCase
         Queue::assertNotPushed(RefreshRaidFinder::class);
         $cache = app(RaidFinderCache::class);
         $cache->store($nation->id, []);
-        $this->travel(31)->seconds();
+        $this->travel(301)->seconds();
         Cache::store(config('raids.intelligence_cache_store'))->forever('raid-intelligence:revision', 'newer-world-state');
         $this->getJson($url.'?poll=1&after=older-snapshot')->assertOk()
             ->assertHeader('X-Nexus-Async-State', 'success');
+        Queue::assertNotPushed(RefreshRaidFinder::class);
+    }
+
+    public function test_polling_reports_an_orphaned_partial_snapshot_as_failed(): void
+    {
+        $nation = $this->prepareMember();
+        app(RaidFinderCache::class)->store($nation->id, [], complete: false);
+
+        $this->getJson(route('api.raid-finder.show', ['nation_id' => $nation->id]).'?poll=1')
+            ->assertOk()
+            ->assertHeader('X-Nexus-Async-State', 'temporary_failure')
+            ->assertHeader('Retry-After', '30');
         Queue::assertNotPushed(RefreshRaidFinder::class);
     }
 

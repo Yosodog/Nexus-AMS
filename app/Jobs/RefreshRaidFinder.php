@@ -19,12 +19,9 @@ class RefreshRaidFinder implements ShouldQueue
 
     public int $tries = 3;
 
-    public int $timeout = 180;
+    public int $timeout = 120;
 
-    public function __construct(public int $nationId, public string $lockOwner)
-    {
-        $this->onQueue((string) config('raids.queue', 'default'));
-    }
+    public function __construct(public int $nationId, public string $lockOwner) {}
 
     /** @return list<int> */
     public function backoff(): array
@@ -52,7 +49,7 @@ class RefreshRaidFinder implements ShouldQueue
         $targets = $finder->findTargets($this->nationId, function (Collection $partial) use ($cache, $revision): void {
             $cache->store($this->nationId, $partial->toArray(), $revision, complete: false);
         });
-        $cache->store($this->nationId, $targets->toArray(), $revision);
+        $cache->store($this->nationId, $targets->toArray());
         Cache::forget($cache->failureKey($this->nationId));
         $lock->release();
     }
