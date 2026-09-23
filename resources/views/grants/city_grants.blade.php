@@ -302,10 +302,7 @@
                 @if ($grantRequests->isEmpty())
                     <div class="flex items-center justify-center py-8 text-center text-base-content/70 text-sm">
                         <div>
-                            <svg class="mx-auto mb-3 h-8 w-8 nexus-text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                      d="M13 16h-1v-4h-1m0-4h.01M12 6.25v.008m-.293 12.77a9 9 0 1112.586-12.586 9 9 0 01-12.586 12.586z" />
-                            </svg>
+                            <x-icon name="o-information-circle" class="mx-auto mb-3 h-8 w-8 nexus-text-muted" aria-hidden="true" />
                             You have not submitted any city grant requests yet.
                         </div>
                     </div>
