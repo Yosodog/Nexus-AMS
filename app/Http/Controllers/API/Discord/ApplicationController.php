@@ -10,6 +10,7 @@ use App\Http\Middleware\VerifyDiscordInteraction;
 use App\Http\Requests\Discord\DiscordApplicationApproveRequest;
 use App\Http\Requests\Discord\DiscordApplicationConfirmRequest;
 use App\Http\Requests\Discord\DiscordApplicationDenyRequest;
+use App\Http\Requests\Discord\DiscordApplicationMemberDepartedRequest;
 use App\Http\Requests\Discord\DiscordApplicationMessageRequest;
 use App\Http\Requests\Discord\DiscordApplicationPreviewRequest;
 use App\Http\Requests\Discord\DiscordApplicationStoreRequest;
@@ -23,6 +24,7 @@ use App\Services\Discord\ApplicationDiscordStatusProjection;
 use App\Services\Discord\DiscordConnectionContext;
 use App\Services\Discord\DiscordWorkflowIntentService;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 
 class ApplicationController extends Controller
 {
@@ -227,6 +229,30 @@ class ApplicationController extends Controller
         ]);
     }
 
+    public function memberDeparted(DiscordApplicationMemberDepartedRequest $request): JsonResponse
+    {
+        $connection = $this->requiredConnection($request);
+
+        try {
+            $application = $this->applicationService->denyAfterDiscordDeparture(
+                $request->string('discord_user_id')->toString(),
+                $connection,
+            );
+        } catch (ApplicationException $exception) {
+            return $this->discordError(
+                $exception->error,
+                $exception->getMessage(),
+                $exception->status,
+                $exception->context,
+            );
+        }
+
+        return $this->discordData([
+            'denied' => $application !== null,
+            'application_id' => $application?->id,
+        ]);
+    }
+
     public function approve(DiscordApplicationApproveRequest $request): JsonResponse
     {
         $moderatorDiscordId = $this->authenticatedModeratorDiscordId($request);
@@ -311,7 +337,7 @@ class ApplicationController extends Controller
     }
 
     private function requiredConnection(
-        DiscordApplicationPreviewRequest|DiscordApplicationConfirmRequest $request,
+        Request $request,
     ): DiscordConnectionContext {
         $connection = $request->attributes->get(VerifyDiscordInteraction::CONNECTION_ATTRIBUTE);
         abort_unless($connection instanceof DiscordConnectionContext, 503, 'Discord connection context is unavailable.');

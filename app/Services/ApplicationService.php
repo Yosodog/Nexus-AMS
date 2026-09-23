@@ -146,6 +146,52 @@ class ApplicationService
         return $this->reconcileDiscordApplication($application, $connection);
     }
 
+    public function denyAfterDiscordDeparture(
+        string $discordUserId,
+        DiscordConnectionContext $connection,
+    ): ?Application {
+        try {
+            $application = Cache::lock($this->applicationDecisionLockKey($discordUserId), 30)
+                ->block(25, function () use ($discordUserId, $connection): ?Application {
+                    return DB::transaction(function () use ($discordUserId, $connection): ?Application {
+                        $application = Application::query()
+                            ->where('discord_user_id', $discordUserId)
+                            ->where('status', ApplicationStatus::Pending->value)
+                            ->lockForUpdate()
+                            ->first();
+
+                        if ($application === null) {
+                            return null;
+                        }
+
+                        $this->assertApplicationConnection($application, $connection);
+                        $this->syncAllianceDecisionOrFail($application, ApplicationStatus::Denied, null, null);
+
+                        $application->forceFill([
+                            'status' => ApplicationStatus::Denied,
+                            'pending_key' => null,
+                            'denied_at' => now(),
+                            'denial_reason' => 'Applicant left the Discord server.',
+                        ])->save();
+
+                        app(AuditLogger::class)->recordAfterCommit(
+                            category: 'applications', action: 'application_denied', outcome: 'denied', severity: 'warning', subject: $application,
+                            context: ['data' => ['nation_id' => $application->nation_id, 'reason' => 'discord_member_departed']],
+                            message: 'Application automatically denied after Discord departure.',
+                            actorOverride: ['type' => 'system', 'name' => 'Discord member departure'],
+                        );
+                        DB::afterCommit(fn () => $this->queueApplicationNotification($application, 'denied'));
+
+                        return $application->fresh();
+                    }, attempts: 3);
+                });
+        } catch (LockTimeoutException) {
+            throw new ApplicationException('denial_in_progress', 'Application denial is already in progress.', 409);
+        }
+
+        return $application ? $this->reconcileDiscordApplication($application, $connection) : null;
+    }
+
     private function queueApplicationNotification(Application $application, string $status): void
     {
         $nation = NationRecord::query()->with('user.discordAccounts')->find($application->nation_id);
@@ -170,8 +216,8 @@ class ApplicationService
     private function syncAllianceDecisionOrFail(
         Application $application,
         ApplicationStatus $targetStatus,
-        User $moderator,
-        string $moderatorDiscordId,
+        ?User $moderator,
+        ?string $moderatorDiscordId,
     ): void {
         try {
             if ($targetStatus === ApplicationStatus::Approved) {
@@ -216,11 +262,11 @@ class ApplicationService
                 message: $targetStatus === ApplicationStatus::Approved
                     ? 'Application approval could not sync to the alliance service.'
                     : 'Application denial could not sync to the alliance service.',
-                actorOverride: [
+                actorOverride: $moderator ? [
                     'type' => 'user',
                     'id' => $moderator->id,
                     'name' => $moderator->name,
-                ],
+                ] : ['type' => 'system', 'name' => 'Discord member departure'],
             );
 
             throw new ApplicationException(

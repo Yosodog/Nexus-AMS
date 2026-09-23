@@ -94,6 +94,8 @@ Route::prefix('v1/discord')->middleware(ValidateDiscordBotAPI::class)->group(fun
     Route::post('/applications/attach-channel', [DiscordApplicationController::class, 'attachChannel']);
     Route::post('/applications/messages', [DiscordApplicationController::class, 'storeMessage'])
         ->middleware(VerifyDiscordInteraction::class.':applications.message');
+    Route::post('/applications/member-departed', [DiscordApplicationController::class, 'memberDeparted'])
+        ->middleware(VerifyDiscordInteraction::class.':applications.member-departed');
     Route::post('/applications/approve', [DiscordApplicationController::class, 'approve'])
         ->middleware([
             VerifyDiscordInteraction::class,

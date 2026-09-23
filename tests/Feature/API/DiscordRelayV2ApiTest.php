@@ -703,6 +703,77 @@ class DiscordRelayV2ApiTest extends TestCase
             ->assertNotFound();
     }
 
+    public function test_signed_member_departure_denies_only_a_pending_application_in_its_connection(): void
+    {
+        $target = '/api/v1/discord/applications/member-departed';
+        $payload = ['discord_user_id' => self::DISCORD_USER_ID];
+        $body = json_encode($payload, JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES);
+        $application = $this->application([
+            'nation_id' => 9001,
+            'discord_user_id' => self::DISCORD_USER_ID,
+            'discord_connection_id' => self::CONNECTION_ID,
+            'discord_connection_generation' => 7,
+            'discord_application_id' => self::APP_ID,
+            'discord_guild_id' => self::GUILD_ID,
+        ]);
+        $this->app->instance(ApplicationService::class, $this->applicationService([
+            9001 => $this->applicantNation(9001),
+        ]));
+
+        $this->postJson($target, $payload)
+            ->assertUnauthorized();
+        $this->withHeaders($this->serviceHeaders('POST', $target, $body, 'applications.message', (string) Str::uuid()))
+            ->postJson($target, $payload)
+            ->assertForbidden();
+        $this->assertSame(ApplicationStatus::Pending, $application->fresh()->status);
+
+        $this->withHeaders($this->serviceHeaders('POST', $target, $body, 'applications.member-departed', (string) Str::uuid()))
+            ->postJson($target, $payload)
+            ->assertOk()
+            ->assertJsonPath('data.denied', true)
+            ->assertJsonPath('data.application_id', $application->id);
+
+        $this->assertDatabaseHas('applications', [
+            'id' => $application->id,
+            'status' => ApplicationStatus::Denied->value,
+            'pending_key' => null,
+            'denial_reason' => 'Applicant left the Discord server.',
+        ]);
+        $this->assertSame(1, DiscordQueue::query()
+            ->where('action', ApplicationDiscordReconciliationService::ACTION)
+            ->count());
+
+        $this->withHeaders($this->serviceHeaders('POST', $target, $body, 'applications.member-departed', (string) Str::uuid()))
+            ->postJson($target, $payload)
+            ->assertOk()
+            ->assertJsonPath('data.denied', false);
+    }
+
+    public function test_member_departure_cannot_deny_an_application_from_another_connection(): void
+    {
+        $target = '/api/v1/discord/applications/member-departed';
+        $payload = ['discord_user_id' => '523456789012345678'];
+        $body = json_encode($payload, JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES);
+        $foreign = $this->createConnection([
+            'id' => '21111111-2222-4333-8444-555555555555',
+            'application_id' => '133456789012345678',
+            'guild_id' => '233456789012345678',
+        ]);
+        $application = $this->application([
+            'nation_id' => 9002,
+            'discord_user_id' => $payload['discord_user_id'],
+            'discord_connection_id' => $foreign->id,
+            'discord_application_id' => $foreign->application_id,
+            'discord_guild_id' => $foreign->guild_id,
+        ]);
+
+        $this->withHeaders($this->serviceHeaders('POST', $target, $body, 'applications.member-departed', (string) Str::uuid()))
+            ->postJson($target, $payload)
+            ->assertNotFound();
+
+        $this->assertSame(ApplicationStatus::Pending, $application->fresh()->status);
+    }
+
     public function test_config_backed_dedicated_v2_connection_requires_no_cloud_state(): void
     {
         $this->actor = $this->grantPermissions($this->actor, ['view-diagnostic-info']);

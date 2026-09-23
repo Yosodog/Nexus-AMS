@@ -2467,6 +2467,18 @@
     {
         "domain": null,
         "method": "POST",
+        "uri": "api/v1/discord/applications/member-departed",
+        "name": null,
+        "action": "App\\Http\\Controllers\\API\\Discord\\ApplicationController@memberDeparted",
+        "middleware": [
+            "api",
+            "App\\Http\\Middleware\\ValidateDiscordBotAPI",
+            "App\\Http\\Middleware\\VerifyDiscordInteraction:applications.member-departed"
+        ]
+    },
+    {
+        "domain": null,
+        "method": "POST",
         "uri": "api/v1/discord/applications/approve",
         "name": null,
         "action": "App\\Http\\Controllers\\API\\Discord\\ApplicationController@approve",
