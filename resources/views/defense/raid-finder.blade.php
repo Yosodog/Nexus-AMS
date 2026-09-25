@@ -15,7 +15,7 @@
     <div
         class="mx-auto w-full min-w-0 space-y-6"
         data-raid-finder
-        data-raid-finder-endpoint="{{ \Illuminate\Support\Facades\Route::has('api.raid-finder.show') ? route('api.raid-finder.show') : '' }}"
+        data-raid-finder-endpoint="{{ $finderEndpoint }}"
         data-raid-availability-endpoint="{{ $raidAvailabilityEndpoint }}"
         aria-busy="true"
     >

@@ -1218,6 +1218,19 @@
     {
         "domain": null,
         "method": "GET|HEAD",
+        "uri": "api/v1/discord/me/raids",
+        "name": null,
+        "action": "App\\Http\\Controllers\\API\\Discord\\OperationsController@raids",
+        "middleware": [
+            "api",
+            "App\\Http\\Middleware\\ValidateDiscordBotAPI",
+            "App\\Http\\Middleware\\VerifyDiscordInteraction",
+            "App\\Http\\Middleware\\ResolveDiscordActor"
+        ]
+    },
+    {
+        "domain": null,
+        "method": "GET|HEAD",
         "uri": "api/v1/discord/me/wars",
         "name": null,
         "action": "App\\Http\\Controllers\\API\\Discord\\OperationsController@wars",
@@ -1928,6 +1941,36 @@
             "App\\Http\\Middleware\\EnsureUserIsVerified",
             "App\\Http\\Middleware\\DiscordVerifiedMiddleware",
             "App\\Http\\Middleware\\EnsureMfaConfigured"
+        ]
+    },
+    {
+        "domain": null,
+        "method": "GET|HEAD",
+        "uri": "api/v1/defense/raid-finder/availability",
+        "name": "api.raid-finder.availability",
+        "action": "App\\Http\\Controllers\\API\\RaidFinderController@availability",
+        "middleware": [
+            "api",
+            "Illuminate\\Auth\\Middleware\\Authenticate:sanctum",
+            "App\\Http\\Middleware\\EnsureUserIsVerified",
+            "App\\Http\\Middleware\\DiscordVerifiedMiddleware",
+            "App\\Http\\Middleware\\EnsureMfaConfigured",
+            "Illuminate\\Routing\\Middleware\\ThrottleRequests:6,1"
+        ]
+    },
+    {
+        "domain": null,
+        "method": "GET|HEAD",
+        "uri": "api/v1/defense/raid-finder/{nation_id?}",
+        "name": "api.raid-finder.show",
+        "action": "App\\Http\\Controllers\\API\\RaidFinderController@show",
+        "middleware": [
+            "api",
+            "Illuminate\\Auth\\Middleware\\Authenticate:sanctum",
+            "App\\Http\\Middleware\\EnsureUserIsVerified",
+            "App\\Http\\Middleware\\DiscordVerifiedMiddleware",
+            "App\\Http\\Middleware\\EnsureMfaConfigured",
+            "Illuminate\\Routing\\Middleware\\ThrottleRequests:raid-finder"
         ]
     },
     {

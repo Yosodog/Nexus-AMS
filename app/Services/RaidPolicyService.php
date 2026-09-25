@@ -13,6 +13,11 @@ class RaidPolicyService
 {
     private const VERSION_KEY = 'raid-policy:version';
 
+    private const PROTECTED_CACHE_MINUTES = 5;
+
+    /** @var list<int>|null */
+    private ?array $protectedAllianceIds = null;
+
     public function __construct(private readonly AllianceMembershipService $membershipService) {}
 
     /**
@@ -115,31 +120,57 @@ class RaidPolicyService
     }
 
     /**
+     * Every alliance whose members may not be raided: the top alliances by score,
+     * member alliances, the no-raid list, and treaty partners of a top alliance.
+     * Cached briefly per policy version; admin policy changes bump the version.
+     *
      * @return list<int>
      */
-    public function raidableAllianceIds(): array
+    public function protectedAllianceIds(): array
     {
-        $snapshot = $this->snapshot();
-        $eligibleAllianceIds = Alliance::query()
-            ->whereNotIn('id', $snapshot['top_alliance_ids'])
-            ->whereNotIn('id', $snapshot['member_alliance_ids'])
+        return $this->protectedAllianceIds ??= Cache::remember(
+            'raid-policy:protected:'.$this->version(),
+            now()->addMinutes(self::PROTECTED_CACHE_MINUTES),
+            fn (): array => $this->resolveProtectedAllianceIds(),
+        );
+    }
+
+    /**
+     * @return list<int>
+     */
+    private function resolveProtectedAllianceIds(): array
+    {
+        $topAllianceIds = $this->topAllianceIds(SettingService::getTopRaidable());
+        $noRaidAndTreatyPartners = NoRaidList::query()
+            ->toBase()
+            ->select('alliance_id')
+            ->union(Treaty::query()->toBase()->select('alliance2_id')->whereIn('alliance1_id', $topAllianceIds))
+            ->union(Treaty::query()->toBase()->select('alliance1_id')->whereIn('alliance2_id', $topAllianceIds))
+            ->pluck('alliance_id');
+
+        return collect([
+            ...$topAllianceIds,
+            ...$this->membershipService->getAllianceIds()->all(),
+            ...$noRaidAndTreatyPartners->all(),
+        ])
+            ->map(fn (mixed $id): int => (int) $id)
+            ->filter(fn (int $id): bool => $id > 0)
+            ->unique()
+            ->sort()
+            ->values()
+            ->all();
+    }
+
+    /**
+     * @return list<int>
+     */
+    private function topAllianceIds(int $topCap): array
+    {
+        return Alliance::query()
+            ->orderByDesc('score')
+            ->take($topCap)
             ->pluck('id')
             ->map(fn ($id): int => (int) $id)
-            ->all();
-
-        return collect($eligibleAllianceIds)
-            ->reject(fn (int $allianceId): bool => in_array(
-                $allianceId,
-                $snapshot['no_raid_alliance_ids'],
-                true,
-            ))
-            ->reject(fn (int $allianceId): bool => $this->protectedTreatyPartnerIds(
-                $allianceId,
-                $snapshot['top_alliance_ids'],
-                $snapshot['treaties'],
-            ) !== [])
-            ->unique()
-            ->values()
             ->all();
     }
 
@@ -158,12 +189,7 @@ class RaidPolicyService
 
         return [
             'top_cap' => $topCap,
-            'top_alliance_ids' => Alliance::query()
-                ->orderByDesc('score')
-                ->take($topCap)
-                ->pluck('id')
-                ->map(fn ($id): int => (int) $id)
-                ->all(),
+            'top_alliance_ids' => $this->topAllianceIds($topCap),
             'member_alliance_ids' => $this->membershipService
                 ->getAllianceIds()
                 ->map(fn ($id): int => (int) $id)

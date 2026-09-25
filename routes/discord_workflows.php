@@ -19,6 +19,7 @@ Route::middleware([ValidateDiscordBotAPI::class, VerifyDiscordInteraction::class
         Route::get('/loans', [WorkflowController::class, 'loans']);
         Route::get('/war-aid', [WorkflowController::class, 'warAid']);
         Route::get('/rebuilding/preview', [WorkflowController::class, 'rebuildingPreview']);
+        Route::get('/raids', [OperationsController::class, 'raids']);
         Route::get('/wars', [OperationsController::class, 'wars']);
         Route::get('/wars/counter', [OperationsController::class, 'warCounter']);
         Route::get('/wars/{war}/simulation', [OperationsController::class, 'warSimulation']);
