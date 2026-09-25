@@ -17,10 +17,13 @@ class RaidResultsController extends Controller
         'target_nation_id',
         'declared_at',
         'expected_net',
+        'expected_net_low',
+        'expected_net_high',
         'actual_net',
         'outcome_status',
         'capture_status',
-        'evaluation_status',
+        'confidence',
+        'finder_rank',
         'model_version',
     ];
 

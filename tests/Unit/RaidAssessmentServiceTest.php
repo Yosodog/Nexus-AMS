@@ -32,7 +32,6 @@ class RaidAssessmentServiceTest extends TestCase
             'declared_at' => now()->subDay(),
             'captured_at' => now()->subDay(),
             'capture_status' => RaidPrediction::CAPTURE_READY,
-            'evaluation_status' => RaidPrediction::EVALUATION_COMPLETE,
             'expected_net' => 100,
             'actual_net' => null,
             'outcome_status' => RaidPrediction::OUTCOME_WON,
@@ -49,7 +48,7 @@ class RaidAssessmentServiceTest extends TestCase
         $this->assertNull($report['capture_coverage']['percent']);
     }
 
-    public function test_scenario_range_uses_only_expected_net_values(): void
+    public function test_prediction_range_uses_the_low_and_high_expected_net(): void
     {
         RaidPrediction::query()->create([
             'war_id' => 2002,
@@ -58,13 +57,9 @@ class RaidAssessmentServiceTest extends TestCase
             'declared_at' => now()->subDay(),
             'captured_at' => now()->subDay(),
             'capture_status' => RaidPrediction::CAPTURE_READY,
-            'evaluation_status' => RaidPrediction::EVALUATION_COMPLETE,
             'expected_net' => 100,
-            'conservative_net' => 50,
-            'scenarios' => [
-                ['expected_net' => 50, 'gross_loot' => 1_000_000, 'weight' => 1, 'win_probability' => 0.99],
-                ['expected_net' => 200, 'gross_loot' => 2_000_000, 'weight' => 1, 'win_probability' => 0.99],
-            ],
+            'expected_net_low' => 50,
+            'expected_net_high' => 200,
             'actual_net' => 300,
             'outcome_status' => RaidPrediction::OUTCOME_WON,
             'outcome_metadata' => ['evidence_status' => 'complete'],

@@ -185,7 +185,7 @@
                                 $predicted = data_get($prediction, 'expected_net');
                                 $actual = data_get($prediction, 'actual_net');
                                 $difference = is_numeric($actual) && is_numeric($predicted) ? (float) $actual - (float) $predicted : null;
-                                $status = (string) data_get($prediction, 'outcome_status', data_get($prediction, 'capture_status', data_get($prediction, 'evaluation_status', 'open')));
+                                $status = (string) data_get($prediction, 'outcome_status', data_get($prediction, 'capture_status', 'open'));
                                 $statusIntent = in_array(strtolower($status), ['completed', 'complete', 'reconciled', 'won'], true) ? 'badge-success' : (in_array(strtolower($status), ['failed', 'lost', 'incomplete'], true) ? 'badge-error' : 'badge-ghost');
                                 $memberId = data_get($prediction, 'attacker.id', data_get($prediction, 'attacker_nation_id'));
                                 $memberLabel = data_get($prediction, 'attacker.leader_name', 'Unknown member');

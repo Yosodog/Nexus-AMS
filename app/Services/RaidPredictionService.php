@@ -105,7 +105,6 @@ final class RaidPredictionService
                     'captured_at' => $capturedAt,
                     'capture_status' => RaidPrediction::CAPTURE_INCOMPLETE,
                     'capture_reason' => 'Target intelligence is unavailable.',
-                    'evaluation_status' => RaidPrediction::EVALUATION_FAILED,
                 ]);
 
                 $this->attachUnlinkedAttacks($prediction);

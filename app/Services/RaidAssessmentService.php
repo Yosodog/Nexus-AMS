@@ -64,8 +64,6 @@ final class RaidAssessmentService
         $captureReady = (clone $captureQuery)->where('capture_status', RaidPrediction::CAPTURE_READY)->count();
         $captureIncomplete = (clone $captureQuery)->where('capture_status', RaidPrediction::CAPTURE_INCOMPLETE)->count();
         $captureDegraded = (clone $captureQuery)->where('capture_status', RaidPrediction::CAPTURE_DEGRADED)->count();
-        $evaluationComplete = (clone $captureQuery)->where('evaluation_status', RaidPrediction::EVALUATION_COMPLETE)->count();
-        $evaluationFailed = (clone $captureQuery)->where('evaluation_status', RaidPrediction::EVALUATION_FAILED)->count();
         $readinessPercent = $captureTotal > 0 ? round(($captureReady / $captureTotal) * 100, 2) : null;
         $captureCoverage = $this->captureCoverage($from, $to, $attackerNationId);
 
@@ -82,8 +80,6 @@ final class RaidAssessmentService
                 'ready' => $captureReady,
                 'incomplete' => $captureIncomplete,
                 'degraded' => $captureDegraded,
-                'evaluation_complete' => $evaluationComplete,
-                'evaluation_failed' => $evaluationFailed,
                 'outcome_sample_count' => $observations->count(),
                 'readiness_percent' => $readinessPercent,
                 'coverage' => $captureCoverage,
@@ -239,8 +235,7 @@ final class RaidAssessmentService
         $expected = (float) $prediction->expected_net;
         $actual = (float) $prediction->actual_net;
         $signedError = $actual - $expected;
-        $scenarios = is_array($prediction->scenarios) ? $prediction->scenarios : [];
-        [$lower, $upper] = $this->predictionRange($prediction, $scenarios);
+        [$lower, $upper] = $this->predictionRange($prediction);
 
         return [
             'prediction_id' => (int) $prediction->id,
@@ -343,33 +338,17 @@ final class RaidAssessmentService
             ->all();
     }
 
-    /** @param array<string, mixed> $scenarios @return array{0: float|null, 1: float|null} */
-    private function predictionRange(RaidPrediction $prediction, array $scenarios): array
+    /** @return array{0: float|null, 1: float|null} */
+    private function predictionRange(RaidPrediction $prediction): array
     {
-        $expected = $this->numeric($prediction->expected_net);
-        $conservative = $this->numeric($prediction->conservative_net);
-        $values = [];
-        foreach ($scenarios as $scenario) {
-            if (is_array($scenario) && is_numeric($scenario['expected_net'] ?? null)) {
-                $values[] = (float) $scenario['expected_net'];
-            }
+        $lower = $this->numeric($prediction->expected_net_low);
+        $upper = $this->numeric($prediction->expected_net_high);
+
+        if ($lower === null || $upper === null) {
+            return [$lower, $upper];
         }
 
-        // Scenario rows contain many numeric fields (weights, probabilities,
-        // loot and costs). Only their expected_net values define the return
-        // range; recursively flattening the rows produces meaningless bounds.
-        if ($values === []) {
-            if ($conservative === null || $expected === null) {
-                return [$conservative, $expected];
-            }
-
-            return [min($conservative, $expected), max($conservative, $expected)];
-        }
-
-        $lower = $conservative ?? min($values);
-        $upper = max([...$values, ...($expected === null ? [] : [$expected])]);
-
-        return [$lower > $upper ? $upper : $lower, $upper];
+        return [min($lower, $upper), max($lower, $upper)];
     }
 
     /** @return array<string, float> */
@@ -537,16 +516,9 @@ final class RaidAssessmentService
 
     private function confidenceBucket(RaidPrediction $prediction): string
     {
-        $provenance = is_array($prediction->provenance) ? $prediction->provenance : [];
-        $confidence = $provenance['confidence'] ?? data_get($provenance, 'stockpile.confidence');
+        $confidence = $prediction->confidence;
 
-        if (is_string($confidence) && $confidence !== '') {
-            return strtolower($confidence);
-        }
-
-        return $prediction->capture_status === RaidPrediction::CAPTURE_READY
-            ? 'ready'
-            : (string) ($prediction->capture_status ?: 'unknown');
+        return is_string($confidence) && $confidence !== '' ? strtolower($confidence) : 'unknown';
     }
 
     private function competitionBucket(RaidPrediction $prediction): string

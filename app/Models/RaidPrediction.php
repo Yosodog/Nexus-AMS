@@ -27,14 +27,6 @@ final class RaidPrediction extends Model
 
     public const CAPTURE_INCOMPLETE = 'incomplete';
 
-    public const EVALUATION_QUEUED = 'queued';
-
-    public const EVALUATION_RUNNING = 'running';
-
-    public const EVALUATION_COMPLETE = 'complete';
-
-    public const EVALUATION_FAILED = 'failed';
-
     public const OUTCOME_OPEN = 'open';
 
     public const OUTCOME_WON = 'won';
@@ -60,11 +52,23 @@ final class RaidPrediction extends Model
         'model_version',
         'attacker_snapshot',
         'target_snapshot',
-        'stockpile_snapshot',
         'price_snapshot',
         'context_snapshot',
-        'provenance',
-        'frozen_payload',
+        'expected_net',
+        'expected_net_low',
+        'expected_net_high',
+        'gross_loot',
+        'duration_hours',
+        'win_probability',
+        'victory_probability',
+        'expected_attacks',
+        'confidence',
+        'components',
+        'loot_resources',
+        'cost_resources',
+        'finder_rank',
+        'finder_expected_net',
+        'finder_shown_at',
     ];
 
     protected $guarded = [];
@@ -82,21 +86,22 @@ final class RaidPrediction extends Model
             'observed_at' => 'immutable_datetime',
             'attacker_snapshot' => 'array',
             'target_snapshot' => 'array',
-            'stockpile_snapshot' => 'array',
             'price_snapshot' => 'array',
             'context_snapshot' => 'array',
-            'provenance' => 'array',
-            'frozen_payload' => 'array',
             'expected_net' => 'float',
+            'expected_net_low' => 'float',
+            'expected_net_high' => 'float',
             'gross_loot' => 'float',
-            'conservative_net' => 'float',
             'duration_hours' => 'float',
+            'win_probability' => 'float',
+            'victory_probability' => 'float',
+            'expected_attacks' => 'integer',
             'components' => 'array',
             'loot_resources' => 'array',
             'cost_resources' => 'array',
-            'scenarios' => 'array',
-            'simulation_payload' => 'array',
-            'evaluated_at' => 'immutable_datetime',
+            'finder_rank' => 'integer',
+            'finder_expected_net' => 'float',
+            'finder_shown_at' => 'immutable_datetime',
             'actual_attack_count' => 'integer',
             'actual_gross_loot' => 'float',
             'actual_net' => 'float',
@@ -139,11 +144,6 @@ final class RaidPrediction extends Model
             self::OUTCOME_PEACE,
             self::OUTCOME_EXPIRED,
         ], true);
-    }
-
-    public function isEvaluated(): bool
-    {
-        return (string) $this->evaluation_status === self::EVALUATION_COMPLETE;
     }
 
     protected static function booted(): void

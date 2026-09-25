@@ -42,9 +42,9 @@ class RaidPredictionIdentityTest extends MySqlIntegrationTestCase
         $this->assertSame($results[0], $results[1]);
         $this->assertDatabaseCount('raid_predictions', 1);
         $prediction = RaidPrediction::query()->firstOrFail();
-        $baseline = $prediction->frozen_payload;
+        $baseline = $prediction->target_snapshot;
         $this->assertSame('incomplete', $prediction->capture_status);
-        $this->assertSame($baseline, app(RaidPredictionService::class)->captureWar($war)->frozen_payload);
+        $this->assertSame($baseline, app(RaidPredictionService::class)->captureWar($war)->target_snapshot);
 
         $evidence = ['war_id' => $war->id, 'attack_id' => 80123, 'observed_at' => now()];
         RaidOutcomeAttack::query()->create($evidence);

@@ -1394,7 +1394,7 @@ final class RaidOutcomeService
     /** @param Collection<int, RaidOutcomeAttack> $attacks @return array<string, mixed> */
     private function planAdherence(RaidPrediction $prediction, Collection $attacks): array
     {
-        $actions = data_get($prediction->simulation_payload, 'approach.actions');
+        $actions = data_get($prediction->context_snapshot, 'plan');
         if (! is_array($actions) || $actions === []) {
             return [
                 'status' => 'unavailable',
@@ -1406,9 +1406,7 @@ final class RaidOutcomeService
         }
 
         $expected = array_values(array_filter(array_map(
-            fn (mixed $action): ?string => is_array($action)
-                ? $this->actionType($action['type'] ?? $action['attack_type'] ?? null)
-                : null,
+            fn (mixed $action): ?string => is_string($action) ? $this->actionType($action) : null,
             $actions,
         )));
         $observed = $attacks->map(fn (RaidOutcomeAttack $attack): ?string => $this->actionType($attack->attack_type))->filter()->values()->all();

@@ -16,9 +16,9 @@ class RaidPredictionIdentityTest extends TestCase
         $prediction = RaidPrediction::query()->create([
             'war_id' => 1, 'attacker_nation_id' => 10, 'target_nation_id' => 20,
             'declared_at' => now(), 'captured_at' => now(),
-            'frozen_payload' => ['resources' => ['money' => 100]],
+            'target_snapshot' => ['stockpile' => ['resources' => ['money' => 100]]],
         ]);
         $this->expectException(LogicException::class);
-        $prediction->update(['frozen_payload' => ['resources' => ['money' => 500]]]);
+        $prediction->update(['target_snapshot' => ['stockpile' => ['resources' => ['money' => 500]]]]);
     }
 }

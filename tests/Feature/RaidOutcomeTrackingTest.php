@@ -89,20 +89,15 @@ class RaidOutcomeTrackingTest extends TestCase
                     'lead' => 3, 'gasoline' => 2, 'munitions' => 3, 'steel' => 10, 'aluminum' => 10, 'food' => 5,
                 ],
             ],
-            'simulation_payload' => [
-                'approach' => ['key' => 'ground_focused', 'actions' => [
-                    ['type' => 'ground'], ['type' => 'ground'],
-                ]],
-            ],
+            'context_snapshot' => ['war_type' => 'RAID', 'plan' => ['ground', 'ground']],
             'expected_net' => 100,
             'gross_loot' => 200,
-            'conservative_net' => 50,
+            'expected_net_low' => 50,
+            'expected_net_high' => 200,
             'duration_hours' => 72,
             'components' => ['consumables' => 5, 'military_losses' => 40, 'infrastructure_losses' => 10],
             'loot_resources' => ['money' => 150, 'coal' => 2],
             'cost_resources' => ['gasoline' => 2],
-            'scenarios' => [['expected_net' => 50], ['expected_net' => 200]],
-            'evaluation_status' => RaidPrediction::EVALUATION_COMPLETE,
         ]);
         $attack = WarAttack::query()->create([
             'id' => 92001,
@@ -176,14 +171,14 @@ class RaidOutcomeTrackingTest extends TestCase
             'captured_at' => now()->subDays(2),
             'observed_at' => now()->subDays(2),
             'target_snapshot' => ['last_active' => now()->subDays(2)->addHours(4)->toIso8601String()],
-            'provenance' => ['confidence' => 'high'],
+            'confidence' => 'high',
             'context_snapshot' => ['competition' => 1],
             'expected_net' => 100,
             'actual_net' => 120,
             'gross_loot' => 200,
             'actual_gross_loot' => 220,
-            'conservative_net' => 50,
-            'scenarios' => [['expected_net' => 50], ['expected_net' => 200]],
+            'expected_net_low' => 50,
+            'expected_net_high' => 200,
             'components' => ['consumables' => 10],
             'actual_components' => ['consumables' => 12],
             'loot_resources' => ['coal' => 10],
@@ -193,14 +188,12 @@ class RaidOutcomeTrackingTest extends TestCase
                 'plan_adherence' => ['status' => 'observed', 'score' => 0.5, 'matched_actions' => 1, 'observed_actions' => ['ground']],
             ],
             'outcome_status' => RaidPrediction::OUTCOME_WON,
-            'evaluation_status' => RaidPrediction::EVALUATION_COMPLETE,
         ]);
         $this->createPrediction($secondWar, [
             'declared_at' => now()->subDays(1),
             'captured_at' => now()->subDays(1),
             'capture_status' => RaidPrediction::CAPTURE_INCOMPLETE,
             'capture_reason' => 'No clean baseline',
-            'evaluation_status' => RaidPrediction::EVALUATION_FAILED,
             'outcome_status' => RaidPrediction::OUTCOME_OPEN,
         ]);
 
@@ -236,7 +229,6 @@ class RaidOutcomeTrackingTest extends TestCase
         $prediction = $this->createPrediction($war, [
             'price_snapshot' => ['acquisition' => [], 'liquidation' => []],
             'expected_net' => 100,
-            'evaluation_status' => RaidPrediction::EVALUATION_COMPLETE,
         ]);
         $queries = Mockery::mock(QueryService::class);
         $queries->shouldReceive('sendQuery')->once()->andReturn((object) []);
@@ -679,14 +671,10 @@ class RaidOutcomeTrackingTest extends TestCase
             'declared_at' => $war->date,
             'captured_at' => $war->date,
             'capture_status' => RaidPrediction::CAPTURE_READY,
-            'evaluation_status' => RaidPrediction::EVALUATION_COMPLETE,
             'attacker_snapshot' => ['id' => $war->att_id],
-            'target_snapshot' => ['id' => $war->def_id],
-            'stockpile_snapshot' => ['resources' => ['money' => 1_000_000]],
+            'target_snapshot' => ['id' => $war->def_id, 'stockpile' => ['resources' => ['money' => 1_000_000]]],
             'price_snapshot' => ['acquisition' => [], 'liquidation' => []],
             'context_snapshot' => ['war_type' => 'RAID'],
-            'provenance' => [],
-            'frozen_payload' => [],
             ...$overrides,
         ]);
     }
