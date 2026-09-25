@@ -21,6 +21,7 @@ class RaidFinderController extends Controller
             'canQueryOthers' => $canQueryOthers,
             'finderEndpoint' => route('api.raid-finder.show', ['nation_id' => $nationId]),
             'availabilityEndpoint' => route('api.raid-finder.availability'),
+            'claimsEndpoint' => route('api.raid-finder.claims.store'),
         ]);
     }
 }

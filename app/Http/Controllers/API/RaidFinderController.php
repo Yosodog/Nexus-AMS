@@ -7,11 +7,16 @@ use App\Exceptions\PWQueryFailedException;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\RaidAvailabilityRequest;
 use App\Http\Requests\RaidFinderRequest;
+use App\Http\Requests\StoreRaidTargetClaimRequest;
 use App\Models\Nation;
+use App\Models\RaidTargetClaim;
 use App\Services\AllianceMembershipService;
 use App\Services\RaidFinderService;
 use App\Services\Raids\RaidAvailabilityService;
+use App\Services\Raids\RaidTargetClaimService;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
+use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
@@ -57,6 +62,31 @@ class RaidFinderController extends Controller
         } catch (Throwable $exception) {
             return $this->availabilityErrorResponse($exception);
         }
+    }
+
+    public function claim(StoreRaidTargetClaimRequest $request, RaidTargetClaimService $claims): JsonResponse
+    {
+        $user = $request->user();
+        $nation = Nation::query()->find((int) $user->nation_id);
+        abort_unless($nation !== null && $this->membership->contains($nation->alliance_id), 403, 'Only members can claim raid targets.');
+
+        $claim = $claims->claim((int) $request->validated('target_nation_id'), $user);
+
+        return response()->json(['data' => [
+            'id' => (int) $claim->id,
+            'target_nation_id' => (int) $claim->target_nation_id,
+            'nation_id' => (int) $claim->nation_id,
+            'leader_name' => (string) $nation->leader_name,
+            'expires_at' => $claim->expires_at?->toIso8601String(),
+            'mine' => true,
+        ]], 201);
+    }
+
+    public function releaseClaim(Request $request, RaidTargetClaim $claim, RaidTargetClaimService $claims): Response
+    {
+        $claims->release($claim, $request->user());
+
+        return response()->noContent();
     }
 
     private function availabilityErrorResponse(Throwable $exception): JsonResponse

@@ -27,6 +27,10 @@ Route::prefix('v1')->middleware(['auth:sanctum', EnsureUserIsVerified::class, Di
     Route::post('/accounts/{account}/deposit-request', [AccountController::class, 'createDepositRequest']);
     Route::get('/defense/raid-finder/availability', [RaidFinderController::class, 'availability'])
         ->middleware('throttle:6,1')->name('api.raid-finder.availability');
+    Route::post('/defense/raid-finder/claims', [RaidFinderController::class, 'claim'])
+        ->middleware('throttle:30,1')->name('api.raid-finder.claims.store');
+    Route::delete('/defense/raid-finder/claims/{claim}', [RaidFinderController::class, 'releaseClaim'])
+        ->middleware('throttle:30,1')->name('api.raid-finder.claims.destroy');
     Route::get('/defense/raid-finder/{nation_id?}', [RaidFinderController::class, 'show'])
         ->middleware('throttle:raid-finder')
         ->name('api.raid-finder.show');

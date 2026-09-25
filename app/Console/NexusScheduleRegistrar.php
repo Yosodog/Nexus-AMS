@@ -62,6 +62,8 @@ final readonly class NexusScheduleRegistrar
             $this->registerTenantFinancialSchedules($schedule, $whenPWUp);
             $this->registerTenantOperationalSchedules($schedule);
             $schedule->command('raid:reconcile-predictions --days=30')->everyTenMinutes()->withoutOverlapping(10)->onOneServer();
+            $schedule->command('raids:expire-claims')->everyMinute()->withoutOverlapping(2)->onOneServer();
+            $schedule->command('raids:prune-finder-impressions')->dailyAt('04:20')->withoutOverlapping(30)->onOneServer();
         }
 
         if ($this->capabilities->runsPlatformBackups()) {

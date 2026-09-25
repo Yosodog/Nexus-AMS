@@ -1960,6 +1960,36 @@
     },
     {
         "domain": null,
+        "method": "POST",
+        "uri": "api/v1/defense/raid-finder/claims",
+        "name": "api.raid-finder.claims.store",
+        "action": "App\\Http\\Controllers\\API\\RaidFinderController@claim",
+        "middleware": [
+            "api",
+            "Illuminate\\Auth\\Middleware\\Authenticate:sanctum",
+            "App\\Http\\Middleware\\EnsureUserIsVerified",
+            "App\\Http\\Middleware\\DiscordVerifiedMiddleware",
+            "App\\Http\\Middleware\\EnsureMfaConfigured",
+            "Illuminate\\Routing\\Middleware\\ThrottleRequests:30,1"
+        ]
+    },
+    {
+        "domain": null,
+        "method": "DELETE",
+        "uri": "api/v1/defense/raid-finder/claims/{claim}",
+        "name": "api.raid-finder.claims.destroy",
+        "action": "App\\Http\\Controllers\\API\\RaidFinderController@releaseClaim",
+        "middleware": [
+            "api",
+            "Illuminate\\Auth\\Middleware\\Authenticate:sanctum",
+            "App\\Http\\Middleware\\EnsureUserIsVerified",
+            "App\\Http\\Middleware\\DiscordVerifiedMiddleware",
+            "App\\Http\\Middleware\\EnsureMfaConfigured",
+            "Illuminate\\Routing\\Middleware\\ThrottleRequests:30,1"
+        ]
+    },
+    {
+        "domain": null,
         "method": "GET|HEAD",
         "uri": "api/v1/defense/raid-finder/{nation_id?}",
         "name": "api.raid-finder.show",
