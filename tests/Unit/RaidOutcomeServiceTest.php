@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Tests\Unit;
 
-use App\Jobs\EvaluateRaidPredictionJob;
 use App\Jobs\ReconcileRaidPredictionJob;
 use App\Jobs\RecordRaidOutcomeAttackJob;
 use App\Models\RaidPrediction;
@@ -39,14 +38,11 @@ class RaidOutcomeServiceTest extends TestCase
         config(['raids.queue' => 'raid-tracking']);
         Queue::fake();
 
-        $evaluation = new EvaluateRaidPredictionJob(1);
         $record = new RecordRaidOutcomeAttackJob(1, 2);
         $reconcile = new ReconcileRaidPredictionJob(2);
 
-        $this->assertSame('raid-tracking', $evaluation->queue);
         $this->assertSame('raid-tracking', $record->queue);
         $this->assertSame('raid-tracking', $reconcile->queue);
-        $this->assertSame([10, 60, 300], $evaluation->backoff());
         $this->assertSame([10, 60, 300], $record->backoff());
         $this->assertSame([30, 120, 600], $reconcile->backoff());
     }

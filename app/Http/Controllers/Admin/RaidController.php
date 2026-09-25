@@ -5,7 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\NoRaidList;
 use App\Services\AuditLogger;
-use App\Services\RaidFinderCache;
+use App\Services\RaidPolicyService;
 use App\Services\SettingService;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Contracts\View\Factory;
@@ -21,7 +21,7 @@ class RaidController extends Controller
 
     public function __construct(
         private readonly AuditLogger $auditLogger,
-        private readonly RaidFinderCache $raidFinderCache,
+        private readonly RaidPolicyService $raidPolicy,
     ) {}
 
     /**
@@ -62,7 +62,7 @@ class RaidController extends Controller
         NoRaidList::create([
             'alliance_id' => $request->alliance_id,
         ]);
-        $this->raidFinderCache->invalidatePolicy();
+        $this->raidPolicy->bumpVersion();
 
         $this->auditLogger->success(
             category: 'settings',
@@ -88,7 +88,7 @@ class RaidController extends Controller
         $this->authorize('manage-raids');
 
         NoRaidList::where('id', $id)->delete();
-        $this->raidFinderCache->invalidatePolicy();
+        $this->raidPolicy->bumpVersion();
 
         $this->auditLogger->success(
             category: 'settings',
@@ -117,7 +117,7 @@ class RaidController extends Controller
         $request->validate(['top_cap' => 'required|integer|min:1|max:1000']);
 
         SettingService::setTopRaidable($request->input('top_cap'));
-        $this->raidFinderCache->invalidatePolicy();
+        $this->raidPolicy->bumpVersion();
 
         $this->auditLogger->success(
             category: 'settings',

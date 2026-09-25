@@ -19,7 +19,6 @@ use App\Listeners\ReconcileMilcomWarState;
 use App\Listeners\ReconcileRaidPredictionOnWarStateChanged;
 use App\Listeners\RecordAllianceExpense;
 use App\Listeners\RecordAllianceIncome;
-use App\Listeners\RefreshRaidIntelligenceOnAttackRecorded;
 use App\Listeners\ScheduledTaskLifecycleSubscriber;
 use App\Listeners\SendAllianceDepartureDiscordNotification;
 use App\Listeners\SendWarDeclaredDiscordNotification;
@@ -70,7 +69,6 @@ class EventServiceProvider extends ServiceProvider
             ReconcileMilcomWarState::class,
         ],
         WarAttackRecorded::class => [
-            RefreshRaidIntelligenceOnAttackRecorded::class,
             CaptureRaidOutcomeOnAttackRecorded::class,
             ReconcileMilcomWarState::class,
         ],

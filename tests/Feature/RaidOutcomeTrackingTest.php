@@ -7,7 +7,6 @@ namespace Tests\Feature;
 use App\Events\WarAttackRecorded;
 use App\Events\WarDeclared;
 use App\Events\WarStateChanged;
-use App\Jobs\EvaluateRaidPredictionJob;
 use App\Jobs\ReconcileRaidPredictionJob;
 use App\Jobs\RecordRaidOutcomeAttackJob;
 use App\Listeners\CaptureRaidOutcomeOnAttackRecorded;
@@ -20,10 +19,7 @@ use App\Models\War;
 use App\Models\WarAttack;
 use App\Services\QueryService;
 use App\Services\RaidAssessmentService;
-use App\Services\RaidIntelligenceService;
 use App\Services\RaidOutcomeService;
-use App\Services\RaidPredictionService;
-use Carbon\CarbonImmutable;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Queue;
@@ -44,24 +40,6 @@ class RaidOutcomeTrackingTest extends TestCase
             'att_alliance_position' => 'MEMBER',
             'def_id' => 202,
         ]);
-        $cutoff = CarbonImmutable::parse('2026-09-13T12:00:00Z');
-        $intelligence = Mockery::mock(RaidIntelligenceService::class);
-        $intelligence->shouldReceive('freeze')
-            ->once()
-            ->with(101, 202, Mockery::type(CarbonImmutable::class), 91001)
-            ->andReturn([
-                'attacker' => ['id' => 101, 'soldiers' => 100_000],
-                'target' => ['id' => 202, 'soldiers' => 1_000, 'last_active' => $cutoff->subDays(2)->toIso8601String()],
-                'stockpile' => ['resources' => ['money' => 1_000_000, 'coal' => 100], 'confidence' => 'high'],
-                'prices' => ['acquisition' => ['coal' => 10], 'liquidation' => ['coal' => 9], 'snapshot_id' => 3],
-                'context' => ['war_type' => 'RAID', 'seed' => 91001],
-                'observed_at' => $cutoff->subMinute()->toIso8601String(),
-                'provenance' => ['war_ids' => [900]],
-                'status' => 'ready',
-                'reason' => null,
-            ]);
-        $this->app->instance(RaidIntelligenceService::class, $intelligence);
-
         $event = new WarDeclared(
             warId: $war->id,
             attackerNationId: 101,
@@ -76,13 +54,10 @@ class RaidOutcomeTrackingTest extends TestCase
         $listener->handle($event);
 
         $prediction = RaidPrediction::query()->where('war_id', $war->id)->firstOrFail();
-        $this->assertSame(RaidPrediction::CAPTURE_READY, $prediction->capture_status);
-        $this->assertSame(RaidPrediction::EVALUATION_QUEUED, $prediction->evaluation_status);
-        $this->assertSame(['war_ids' => [900]], $prediction->provenance);
+        $this->assertSame(1, RaidPrediction::query()->where('war_id', $war->id)->count());
+        $this->assertSame(RaidPrediction::CAPTURE_INCOMPLETE, $prediction->capture_status);
         $this->assertSame(101, $prediction->attacker_nation_id);
         $this->assertSame(202, $prediction->target_nation_id);
-        $this->assertSame(RaidPredictionService::MODEL_VERSION, $prediction->model_version);
-        Queue::assertPushed(EvaluateRaidPredictionJob::class, 1);
     }
 
     public function test_attack_events_are_idempotent_correctable_and_reconciled_after_terminal_state(): void

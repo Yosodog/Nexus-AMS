@@ -7,10 +7,33 @@ use App\Models\Alliance;
 use App\Models\NoRaidList;
 use App\Models\Treaty;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Cache;
 
 class RaidPolicyService
 {
+    private const VERSION_KEY = 'raid-policy:version';
+
     public function __construct(private readonly AllianceMembershipService $membershipService) {}
+
+    /**
+     * Current raid policy version; finder caches include it in their keys.
+     */
+    public function version(): int
+    {
+        return max((int) Cache::get(self::VERSION_KEY, 1), 1);
+    }
+
+    /**
+     * Invalidate every cached finder result built under the previous policy.
+     */
+    public function bumpVersion(): void
+    {
+        if (Cache::add(self::VERSION_KEY, 2, now()->addYears(10))) {
+            return;
+        }
+
+        Cache::increment(self::VERSION_KEY);
+    }
 
     public function evaluateAlliance(?int $allianceId): RaidPolicyEvaluation
     {
