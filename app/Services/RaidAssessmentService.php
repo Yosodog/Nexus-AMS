@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Services;
 
+use App\Models\RaidLootEvent;
+use App\Models\RaidModelParameter;
 use App\Models\RaidPrediction;
 use App\Models\War;
 use Carbon\CarbonImmutable;
@@ -15,7 +17,18 @@ use Illuminate\Support\Collection;
  */
 final class RaidAssessmentService
 {
-    public function __construct(private readonly AllianceMembershipService $membershipService) {}
+    /** @var array<string, array{0: int, 1: int|null}> */
+    private const RANK_BUCKETS = [
+        '1_5' => [1, 5],
+        '6_10' => [6, 10],
+        '11_25' => [11, 25],
+        '26_plus' => [26, null],
+    ];
+
+    public function __construct(
+        private readonly AllianceMembershipService $membershipService,
+        private readonly RaidStockpileEstimator $estimator,
+    ) {}
 
     /**
      * Build an assessment for completed prediction/outcome pairs.
@@ -93,7 +106,146 @@ final class RaidAssessmentService
                 'confidence' => $this->breakdown($observations, 'confidence'),
                 'competition' => $this->breakdown($observations, 'competition'),
             ],
+            'ranking' => $this->ranking($observations),
+            'estimator' => $this->estimatorAccuracy($from, $to),
         ];
+    }
+
+    /**
+     * World-wide stockpile estimator accuracy from victory backtests.
+     *
+     * Each victory stores the prediction the loser's profile held before the loot
+     * arrived beside the stockpile the loot revealed.
+     *
+     * @return array<string, mixed>
+     */
+    public function estimatorAccuracy(CarbonInterface $from, CarbonInterface $to): array
+    {
+        $samples = RaidLootEvent::query()
+            ->where('kind', RaidLootEvent::KIND_VICTORY)
+            ->where('predicted_value', '>', 0)
+            ->where('revealed_value', '>', 0)
+            ->whereBetween('occurred_at', [$from, $to])
+            ->get(['predicted_value', 'revealed_value', 'prediction_evidence_kind', 'prediction_age_hours', 'prediction_activity_bucket'])
+            ->map(function (RaidLootEvent $event): array {
+                $predicted = (float) $event->predicted_value;
+                $revealed = (float) $event->revealed_value;
+                $kind = (string) ($event->prediction_evidence_kind ?? 'unknown');
+                $ageHours = (float) ($event->prediction_age_hours ?? 0.0);
+                $factors = $this->estimator->intervalFactorsFor($kind, $ageHours);
+
+                return [
+                    'ratio' => $revealed / $predicted,
+                    'absolute_percent_error' => abs($revealed - $predicted) / $revealed * 100,
+                    'covered' => $revealed >= $predicted * $factors['low'] && $revealed <= $predicted * $factors['high'],
+                    'evidence_kind' => $kind,
+                    'age_bucket' => RaidStockpileEstimator::ageBucket($ageHours),
+                    'activity_bucket' => (string) ($event->prediction_activity_bucket ?? 'unknown'),
+                ];
+            });
+        $computedAt = RaidModelParameter::query()->max('computed_at');
+
+        return [
+            ...$this->estimatorMetrics($samples),
+            'breakdowns' => [
+                'evidence_kind' => $this->estimatorBreakdown($samples, 'evidence_kind'),
+                'age' => $this->estimatorBreakdown($samples, 'age_bucket'),
+                'activity' => $this->estimatorBreakdown($samples, 'activity_bucket'),
+            ],
+            'model_parameters_computed_at' => $computedAt === null ? null : CarbonImmutable::parse((string) $computedAt)->toIso8601String(),
+        ];
+    }
+
+    /**
+     * @param  Collection<int, array<string, mixed>>  $samples
+     * @return array{sample_count: int, median_ratio: float|null, median_absolute_percent_error: float|null, interval_coverage_percent: float|null}
+     */
+    private function estimatorMetrics(Collection $samples): array
+    {
+        $count = $samples->count();
+
+        return [
+            'sample_count' => $count,
+            'median_ratio' => $this->median($samples->pluck('ratio')->all(), 4),
+            'median_absolute_percent_error' => $this->median($samples->pluck('absolute_percent_error')->all(), 2),
+            'interval_coverage_percent' => $count > 0
+                ? round($samples->where('covered', true)->count() / $count * 100, 2)
+                : null,
+        ];
+    }
+
+    /**
+     * @param  Collection<int, array<string, mixed>>  $samples
+     * @return array<string, array<string, mixed>>
+     */
+    private function estimatorBreakdown(Collection $samples, string $field): array
+    {
+        return $samples
+            ->groupBy($field)
+            ->map(fn (Collection $group): array => $this->estimatorMetrics($group))
+            ->sortKeys()
+            ->all();
+    }
+
+    /**
+     * Finder ranking quality: outcomes grouped by the rank a target was shown at.
+     *
+     * @param  Collection<int, array<string, mixed>>  $observations
+     * @return array{buckets: array<string, array{count: int, mean_expected_net: float|null, mean_actual_net: float|null}>, top5_share: float|null}
+     */
+    private function ranking(Collection $observations): array
+    {
+        $buckets = [];
+
+        foreach ([...array_keys(self::RANK_BUCKETS), 'not_from_finder'] as $bucket) {
+            $group = $observations->where('rank_bucket', $bucket);
+            $buckets[$bucket] = [
+                'count' => $group->count(),
+                'mean_expected_net' => $this->average($group->pluck('expected_net')->all()),
+                'mean_actual_net' => $this->average($group->pluck('actual_net')->all()),
+            ];
+        }
+
+        $ranked = $observations->whereNotNull('finder_rank');
+
+        return [
+            'buckets' => $buckets,
+            'top5_share' => $ranked->isEmpty()
+                ? null
+                : round($ranked->filter(fn (array $observation): bool => $observation['finder_rank'] <= 5)->count() / $ranked->count() * 100, 2),
+        ];
+    }
+
+    private function rankBucket(?int $rank): string
+    {
+        if ($rank === null) {
+            return 'not_from_finder';
+        }
+
+        foreach (self::RANK_BUCKETS as $bucket => [$minimum, $maximum]) {
+            if ($rank >= $minimum && ($maximum === null || $rank <= $maximum)) {
+                return $bucket;
+            }
+        }
+
+        return 'not_from_finder';
+    }
+
+    /**
+     * @param  list<float|int>  $values
+     */
+    private function median(array $values, int $precision): ?float
+    {
+        if ($values === []) {
+            return null;
+        }
+
+        sort($values);
+        $count = count($values);
+        $middle = intdiv($count, 2);
+        $median = $count % 2 === 0 ? ($values[$middle - 1] + $values[$middle]) / 2 : $values[$middle];
+
+        return round((float) $median, $precision);
     }
 
     /**
@@ -264,6 +416,12 @@ final class RaidAssessmentService
             'competition' => $this->competitionBucket($prediction),
             'activity' => $this->activityBucket($prediction),
             'plan_adherence' => $this->planAdherence($prediction),
+            'stockpile_error' => (array) data_get($prediction->outcome_metadata, 'stockpile_estimation.stockpile_error', []),
+            'finder_rank' => $prediction->finder_rank,
+            'rank_bucket' => $this->rankBucket($prediction->finder_rank),
+            'win_probability' => $this->numeric($prediction->win_probability),
+            'victory_probability' => $this->numeric($prediction->victory_probability),
+            'won' => $prediction->outcome_status === RaidPrediction::OUTCOME_WON,
         ];
     }
 
@@ -313,7 +471,7 @@ final class RaidAssessmentService
                 ->all(),
             'resource_errors' => $resourceErrors,
             'resource_errors_basis' => 'realized_loot_vs_prediction; conditional on execution and competition',
-            'stockpile_errors' => null,
+            'stockpile_errors' => $this->errorMap($observations, 'stockpile_error'),
             'cost_resource_errors' => $costResourceErrors,
             'plan_adherence' => [
                 'known' => $planRows->count(),
@@ -321,7 +479,25 @@ final class RaidAssessmentService
                 'matched_actions' => (int) $planRows->sum(fn (array $plan): int => (int) ($plan['matched_actions'] ?? 0)),
                 'observed_actions' => (int) $planRows->sum(fn (array $plan): int => count((array) ($plan['observed_actions'] ?? []))),
             ],
+            'victory_calibration' => $this->victoryCalibration($observations),
             'sample_count' => $count,
+        ];
+    }
+
+    /**
+     * Mean predicted victory probability against the realised win share.
+     *
+     * @param  Collection<int, array<string, mixed>>  $observations
+     * @return array{sample_count: int, predicted_percent: float|null, actual_percent: float|null}
+     */
+    private function victoryCalibration(Collection $observations): array
+    {
+        $predicted = $observations->whereNotNull('victory_probability');
+
+        return [
+            'sample_count' => $predicted->count(),
+            'predicted_percent' => $predicted->isEmpty() ? null : round($predicted->avg('victory_probability') * 100, 2),
+            'actual_percent' => $predicted->isEmpty() ? null : round($predicted->where('won', true)->count() / $predicted->count() * 100, 2),
         ];
     }
 
@@ -453,6 +629,11 @@ final class RaidAssessmentService
     private function activityBucket(RaidPrediction $prediction): string
     {
         $target = is_array($prediction->target_snapshot) ? $prediction->target_snapshot : [];
+
+        if (is_string($target['activity_bucket'] ?? null) && $target['activity_bucket'] !== '') {
+            return $target['activity_bucket'];
+        }
+
         $activity = $target['activity'] ?? $target['activity_level'] ?? $target['last_active'] ?? $target['last_active_at'] ?? null;
 
         if (is_bool($activity)) {
@@ -524,6 +705,16 @@ final class RaidAssessmentService
     private function competitionBucket(RaidPrediction $prediction): string
     {
         $context = is_array($prediction->context_snapshot) ? $prediction->context_snapshot : [];
+
+        if (is_numeric($context['competing_attackers'] ?? null)) {
+            return match ((int) $context['competing_attackers']) {
+                0 => 'none',
+                1 => 'low',
+                2 => 'medium',
+                default => 'high',
+            };
+        }
+
         $competition = $context['competition'] ?? $context['competition_level'] ?? null;
 
         if (is_string($competition) && $competition !== '') {

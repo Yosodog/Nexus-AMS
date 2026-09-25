@@ -50,6 +50,7 @@ final readonly class NexusScheduleRegistrar
             $schedule->command('raids:process-profiles --limit=1000')->everyMinute()->withoutOverlapping(5)->onOneServer();
             $schedule->command('raids:project-profiles')->hourlyAt(7)->withoutOverlapping(55)->onOneServer();
             $schedule->command('raids:refresh-alliance-profiles')->dailyAt('03:10')->withoutOverlapping(60)->onOneServer();
+            $schedule->command('raids:calibrate')->weeklyOn(1, '03:40')->withoutOverlapping(60)->onOneServer();
             $schedule->command('raids:prune-loot-events')->dailyAt('04:05')->withoutOverlapping(60)->onOneServer();
             $this->registerPublicDependencySchedule($schedule);
         }

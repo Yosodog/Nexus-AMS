@@ -53,6 +53,9 @@ class RaidReportingTest extends TestCase
             'declared_at' => now(),
             'captured_at' => now(),
             'expected_net' => 12345,
+            'expected_net_low' => 9000,
+            'expected_net_high' => 20000,
+            'finder_rank' => 3,
             'actual_net' => 15000,
         ]);
         Gate::define('view-diagnostic-info', fn (): bool => true);
@@ -62,6 +65,32 @@ class RaidReportingTest extends TestCase
             ->get(route('admin.raid-assessment'))
             ->assertOk()
             ->assertSee('War #123')
-            ->assertSee('$12,345');
+            ->assertSee('$12,345')
+            ->assertSee('$9,000 – $20,000')
+            ->assertSee('#3')
+            ->assertSee('Ranking quality')
+            ->assertSee('Stockpile estimator (world)')
+            ->assertDontSee('Evaluation failures');
+    }
+
+    public function test_member_results_show_the_expected_range_confidence_and_finder_rank(): void
+    {
+        $own = Nation::factory()->create();
+        $user = User::factory()->verified()->create(['nation_id' => $own->id]);
+        RaidPrediction::query()->create([
+            'war_id' => 321, 'attacker_nation_id' => $own->id, 'target_nation_id' => Nation::factory()->create()->id,
+            'declared_at' => now(), 'captured_at' => now(), 'capture_status' => 'ready',
+            'expected_net' => 5000, 'expected_net_low' => 2500, 'expected_net_high' => 8000,
+            'confidence' => 'medium', 'finder_rank' => 2,
+        ]);
+
+        $this->withoutMiddleware([DiscordVerifiedMiddleware::class, EnsureUserIsVerified::class, EnsureMfaConfigured::class])
+            ->actingAs($user)->get(route('defense.raid-results'))
+            ->assertOk()
+            ->assertSee('$5,000')
+            ->assertSee('$2,500 – $8,000')
+            ->assertSee('Medium')
+            ->assertSee('#2')
+            ->assertSee('Victory calibration');
     }
 }

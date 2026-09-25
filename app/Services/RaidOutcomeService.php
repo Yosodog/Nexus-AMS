@@ -11,6 +11,7 @@ use App\Models\RaidPrediction;
 use App\Models\War;
 use App\Models\WarAttack;
 use App\Services\Calculators\MilitaryCostCalculator;
+use App\Services\Raids\RaidLootFraction;
 use Carbon\CarbonImmutable;
 use Carbon\CarbonInterface;
 use Illuminate\Database\UniqueConstraintViolationException;
@@ -28,6 +29,7 @@ final class RaidOutcomeService
         private readonly MilitaryCostCalculator $militaryCostCalculator,
         private readonly RuntimeCapabilities $runtimeCapabilities,
         private readonly QueryService $queries,
+        private readonly RaidLootFraction $lootFractions,
     ) {}
 
     /** @var list<string> */
@@ -460,12 +462,12 @@ final class RaidOutcomeService
                 'stockpile_estimation' => [
                     'status' => 'conditional',
                     'basis' => 'realized_loot_vs_prediction',
-                    'stockpile_error' => null,
                     'predicted_loot_resources' => $prediction->loot_resources,
                     'observed_loot_resources' => $loot,
                     'resource_error' => $outcomeComplete
                         ? $this->resourceError($prediction->loot_resources, $loot)
                         : null,
+                    ...$this->stockpileError($prediction, $lootEvidence, $lootPrices),
                 ],
                 'plan_adherence' => $this->planAdherence($prediction, $offensiveEvidence),
                 'evidence_status' => $evidenceCompleteness['status'],
@@ -490,6 +492,75 @@ final class RaidOutcomeService
         ])->saveQuietly();
 
         return $prediction->refresh();
+    }
+
+    /**
+     * Compare the predicted pre-war stockpile with the stockpile the victory loot revealed.
+     *
+     * @param  Collection<int, RaidOutcomeAttack>  $lootEvidence
+     * @param  array<string, float>  $lootPrices
+     * @return array{stockpile_error: array<string, float>|null, stockpile_value_error: float|null, victory_loot_fraction: float|null, revealed_stockpile: array<string, float>|null}
+     */
+    private function stockpileError(RaidPrediction $prediction, Collection $lootEvidence, array $lootPrices): array
+    {
+        $unavailable = [
+            'stockpile_error' => null,
+            'stockpile_value_error' => null,
+            'victory_loot_fraction' => null,
+            'revealed_stockpile' => null,
+        ];
+        $predicted = data_get($prediction->target_snapshot, 'stockpile.resources');
+        $victory = $lootEvidence->first(
+            fn (RaidOutcomeAttack $attack): bool => strtoupper((string) $attack->attack_type) === 'VICTORY',
+        );
+
+        if (! is_array($predicted) || $victory === null) {
+            return $unavailable;
+        }
+
+        $looted = ['money' => (float) $victory->money_looted];
+        foreach ((array) ($victory->loot_resources ?? []) as $resource => $amount) {
+            if (is_numeric($amount)) {
+                $looted[(string) $resource] = (float) $amount;
+            }
+        }
+
+        if (! $this->hasPositiveValue($looted)) {
+            return $unavailable;
+        }
+
+        $payload = is_array($victory->payload) ? $victory->payload : [];
+        $attacker = is_array($prediction->attacker_snapshot) ? $prediction->attacker_snapshot : [];
+        $fraction = $this->lootFractions->fromLootInfo(is_string($payload['loot_info'] ?? null) ? $payload['loot_info'] : null)
+            ?? $this->lootFractions->fromModifiers(
+                'RAID',
+                $this->stringOrNull($attacker['war_policy'] ?? null),
+                $this->stringOrNull(data_get($prediction->target_snapshot, 'war_policy')),
+                (bool) ($attacker['pirate_economy'] ?? false),
+                (bool) ($attacker['advanced_pirate_economy'] ?? false),
+            );
+
+        if ($fraction <= 0.0) {
+            return $unavailable;
+        }
+
+        $revealed = array_map(fn (float $amount): float => $amount / $fraction, $looted);
+        $errors = [];
+        foreach (array_unique([...array_keys($revealed), ...array_keys($predicted)]) as $resource) {
+            $errors[(string) $resource] = round((float) ($revealed[$resource] ?? 0.0) - (float) ($predicted[$resource] ?? 0.0), 2);
+        }
+
+        $valueError = 0.0;
+        foreach ($errors as $resource => $error) {
+            $valueError += $error * (float) ($lootPrices[$resource] ?? 0.0);
+        }
+
+        return [
+            'stockpile_error' => $errors,
+            'stockpile_value_error' => round($valueError, 2),
+            'victory_loot_fraction' => round($fraction, 6),
+            'revealed_stockpile' => $this->roundMap($revealed),
+        ];
     }
 
     /** Alias used by reconciliation callers. */

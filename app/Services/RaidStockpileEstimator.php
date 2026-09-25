@@ -116,7 +116,17 @@ class RaidStockpileEstimator
      */
     public function intervalFactors(RaidTargetProfile $profile, CarbonImmutable $at): array
     {
-        $key = $profile->baseline_kind.':'.self::ageBucket($this->ageHours($profile, $at));
+        return $this->intervalFactorsFor((string) $profile->baseline_kind, $this->ageHours($profile, $at));
+    }
+
+    /**
+     * Interval factors for an evidence kind and baseline age.
+     *
+     * @return array{low: float, high: float}
+     */
+    public function intervalFactorsFor(string $evidenceKind, float $ageHours): array
+    {
+        $key = $evidenceKind.':'.self::ageBucket($ageHours);
         $factors = $this->parameters->get(RaidModelParameter::INTERVAL_FACTORS)[$key]
             ?? config('raids.estimator.default_interval_factors')[$key]
             ?? ['low' => 1.0, 'high' => 1.0];

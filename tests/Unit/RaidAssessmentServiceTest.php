@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Unit;
 
+use App\Models\RaidLootEvent;
 use App\Models\RaidPrediction;
 use App\Models\War;
 use App\Services\RaidAssessmentService;
@@ -70,6 +71,73 @@ class RaidAssessmentServiceTest extends TestCase
         $this->assertSame(0, $report['metrics']['range_coverage']['covered']);
         $this->assertSame(1, $report['metrics']['range_coverage']['eligible']);
         $this->assertSame(0.0, $report['metrics']['range_coverage']['percent']);
+    }
+
+    public function test_ranking_buckets_victory_calibration_and_snapshot_breakdowns(): void
+    {
+        foreach ([[1, 500, 600, 0.9, 'won'], [3, 400, 100, 0.8, 'lost'], [8, 300, 350, 0.6, 'won'], [null, 200, 50, 0.5, 'lost']] as $index => [$rank, $expected, $actual, $victory, $status]) {
+            RaidPrediction::query()->create([
+                'war_id' => 4000 + $index,
+                'attacker_nation_id' => 101,
+                'target_nation_id' => 300 + $index,
+                'declared_at' => now()->subDay(),
+                'captured_at' => now()->subDay(),
+                'capture_status' => RaidPrediction::CAPTURE_READY,
+                'expected_net' => $expected,
+                'actual_net' => $actual,
+                'victory_probability' => $victory,
+                'finder_rank' => $rank,
+                'target_snapshot' => ['activity_bucket' => 'idle'],
+                'context_snapshot' => ['competing_attackers' => $index],
+                'outcome_status' => $status,
+                'outcome_metadata' => [
+                    'evidence_status' => 'complete',
+                    'stockpile_estimation' => ['stockpile_error' => ['money' => 100.0 * ($index + 1)]],
+                ],
+            ]);
+        }
+
+        $report = app(RaidAssessmentService::class)->assess(now()->subDays(30), now());
+
+        $this->assertSame(2, $report['ranking']['buckets']['1_5']['count']);
+        $this->assertSame(450.0, $report['ranking']['buckets']['1_5']['mean_expected_net']);
+        $this->assertSame(350.0, $report['ranking']['buckets']['1_5']['mean_actual_net']);
+        $this->assertSame(1, $report['ranking']['buckets']['6_10']['count']);
+        $this->assertSame(0, $report['ranking']['buckets']['11_25']['count']);
+        $this->assertSame(1, $report['ranking']['buckets']['not_from_finder']['count']);
+        $this->assertSame(66.67, $report['ranking']['top5_share']);
+        $this->assertSame(['sample_count' => 4, 'predicted_percent' => 70.0, 'actual_percent' => 50.0], $report['metrics']['victory_calibration']);
+        $this->assertSame(['money' => 250.0], $report['metrics']['stockpile_errors']);
+        $this->assertSame(['idle'], array_keys($report['breakdowns']['activity']));
+        $this->assertSame(['high', 'low', 'medium', 'none'], array_keys($report['breakdowns']['competition']));
+    }
+
+    public function test_estimator_accuracy_reports_world_backtests(): void
+    {
+        foreach ([[100, 100, 'loot', 24, 'idle'], [100, 150, 'loot', 24, 'idle'], [100, 20, 'loot', 400, 'active'], [100, 300, 'production_only', 24, 'inactive']] as $index => [$predicted, $revealed, $kind, $age, $activity]) {
+            RaidLootEvent::factory()->create([
+                'id' => 700 + $index,
+                'occurred_at' => now()->subDays(2),
+                'predicted_value' => $predicted,
+                'revealed_value' => $revealed,
+                'prediction_evidence_kind' => $kind,
+                'prediction_age_hours' => $age,
+                'prediction_activity_bucket' => $activity,
+            ]);
+        }
+        RaidLootEvent::factory()->create(['id' => 799, 'occurred_at' => now()->subDays(2), 'predicted_value' => null, 'revealed_value' => 100]);
+
+        $estimator = app(RaidAssessmentService::class)->assess(now()->subDays(30), now())['estimator'];
+
+        $this->assertSame(4, $estimator['sample_count']);
+        $this->assertSame(1.25, $estimator['median_ratio']);
+        $this->assertSame(50.0, $estimator['median_absolute_percent_error']);
+        $this->assertSame(25.0, $estimator['interval_coverage_percent']);
+        $this->assertSame(['loot', 'production_only'], array_keys($estimator['breakdowns']['evidence_kind']));
+        $this->assertSame(3, $estimator['breakdowns']['evidence_kind']['loot']['sample_count']);
+        $this->assertSame(['0_7d', '7_30d'], array_keys($estimator['breakdowns']['age']));
+        $this->assertSame(['active', 'idle', 'inactive'], array_keys($estimator['breakdowns']['activity']));
+        $this->assertNull($estimator['model_parameters_computed_at']);
     }
 
     public function test_capture_coverage_counts_known_qualifying_wars_and_excludes_other_wars(): void

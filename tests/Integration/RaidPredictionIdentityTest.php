@@ -4,8 +4,11 @@ declare(strict_types=1);
 
 namespace Tests\Integration;
 
+use App\Models\Nation;
+use App\Models\NationMilitary;
 use App\Models\RaidOutcomeAttack;
 use App\Models\RaidPrediction;
+use App\Models\RaidTargetProfile;
 use App\Models\War;
 use App\Services\RaidPredictionService;
 use Illuminate\Database\UniqueConstraintViolationException;
@@ -15,10 +18,13 @@ use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Str;
 use PHPUnit\Framework\Attributes\DataProvider;
 use RuntimeException;
+use Tests\Concerns\BuildsRaidFixtures;
 use Throwable;
 
 class RaidPredictionIdentityTest extends MySqlIntegrationTestCase
 {
+    use BuildsRaidFixtures;
+
     #[DataProvider('transactionIsolationLevels')]
     public function test_concurrent_declarations_keep_one_baseline_and_attack_ids_are_unique(string $isolation): void
     {
@@ -27,6 +33,10 @@ class RaidPredictionIdentityTest extends MySqlIntegrationTestCase
         }
         Cache::forever('alliances:membership:ids', [777]);
         Queue::fake();
+        $this->seedRaidMarketPrices(100);
+        Nation::factory()->create(['id' => 10, 'alliance_id' => null, 'score' => 1_000]);
+        NationMilitary::query()->create(['nation_id' => 10, 'soldiers' => 50_000, 'tanks' => 1_000]);
+        RaidTargetProfile::factory()->create(['nation_id' => 20, 'score' => 1_000]);
         $war = War::query()->create([
             'id' => 700123, 'date' => now(), 'reason' => 'Raid identity test',
             'war_type' => 'RAID', 'turns_left' => 60,
@@ -43,7 +53,8 @@ class RaidPredictionIdentityTest extends MySqlIntegrationTestCase
         $this->assertDatabaseCount('raid_predictions', 1);
         $prediction = RaidPrediction::query()->firstOrFail();
         $baseline = $prediction->target_snapshot;
-        $this->assertSame('incomplete', $prediction->capture_status);
+        $this->assertSame('ready', $prediction->capture_status);
+        $this->assertNotNull($prediction->expected_net);
         $this->assertSame($baseline, app(RaidPredictionService::class)->captureWar($war)->target_snapshot);
 
         $evidence = ['war_id' => $war->id, 'attack_id' => 80123, 'observed_at' => now()];
