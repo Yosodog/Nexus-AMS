@@ -18,6 +18,10 @@ class NexusRuntimeScheduleMatrixTest extends TestCase
 {
     private const STANDALONE_EVENTS = [
         'health:record-process-heartbeats@* * * * *',
+        'raids:process-profiles --limit=1000@* * * * *',
+        'raids:project-profiles@7 * * * *',
+        'raids:refresh-alliance-profiles@10 3 * * *',
+        'raids:prune-loot-events@5 4 * * *',
         'pw:health-check@* * * * *',
         'sync:nations:rolling --scope=highscore@15 0 * * *',
         'sync:nations:rolling --scope=all@30 0 * * 1',
@@ -127,6 +131,10 @@ class NexusRuntimeScheduleMatrixTest extends TestCase
     ];
 
     private const WORLD_WRITER_EVENTS = [
+        'raids:process-profiles --limit=1000@* * * * *',
+        'raids:project-profiles@7 * * * *',
+        'raids:refresh-alliance-profiles@10 3 * * *',
+        'raids:prune-loot-events@5 4 * * *',
         'pw:health-check@* * * * *',
         'sync:treaties@10 * * * *',
         'trades:update@10 * * * *',

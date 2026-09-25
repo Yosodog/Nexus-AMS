@@ -8,6 +8,7 @@ use App\Models\Nation;
 use App\Services\CityQueryService;
 use App\Services\NationProfitabilityService;
 use App\Services\NationQueryService;
+use App\Services\Raids\RaidProfileDirtyMarker;
 use App\Services\World\WorldWriteGuard;
 use Illuminate\Contracts\Cache\LockTimeoutException;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -62,6 +63,10 @@ class UpdateCityJob implements ShouldQueue
                 ): void {
                     $this->ensureNationExists($nationId);
                     $this->upsertCity($cityData, $cityFromApi);
+
+                    if ($nationId) {
+                        app(RaidProfileDirtyMarker::class)->mark([(int) $nationId]);
+                    }
 
                     if ($nationId && $this->shouldRefreshProfitabilitySnapshot($nationId, $profitabilityService)) {
                         RefreshNationProfitabilitySnapshotJob::dispatch((int) $nationId);

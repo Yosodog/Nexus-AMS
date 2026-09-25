@@ -31,6 +31,43 @@ final readonly class WarSimModifiers
         public float $attackerBankLootProjectFactor = 1.0,
     ) {}
 
+    /**
+     * Build the loot-only modifiers for a war; non-loot factors are neutral.
+     */
+    public static function forLoot(
+        string $warType,
+        string $attackerPolicy,
+        string $defenderPolicy,
+        bool $pirateEconomy,
+        bool $advancedPirateEconomy,
+    ): self {
+        return new self(
+            warTypeInfraFactor: 1.0,
+            warTypeLootFactor: match (strtoupper($warType)) {
+                'ATTRITION' => 0.25,
+                'RAID' => 1.0,
+                default => 0.5,
+            },
+            attackerLootPolicyFactor: strtoupper($attackerPolicy) === 'PIRATE' ? 1.4 : 1.0,
+            defenderLootPolicyFactor: match (strtoupper($defenderPolicy)) {
+                'MONEYBAGS' => 0.6,
+                'GUARDIAN' => 0.8,
+                default => 1.0,
+            },
+            attackerInfraPolicyFactor: 1.0,
+            defenderInfraPolicyFactor: 1.0,
+            attackerBlitzFactor: 1.0,
+            defenderBlitzFactor: 1.0,
+            attackerTankStrengthFactor: 1.0,
+            defenderTankStrengthFactor: 1.0,
+            attackerCasualtyFactor: 1.0,
+            defenderCasualtyFactor: 1.0,
+            attackerGroundLootProjectFactor: ($pirateEconomy ? 1.05 : 1.0) * ($advancedPirateEconomy ? 1.05 : 1.0),
+            attackerVictoryLootProjectFactor: $advancedPirateEconomy ? 1.10 : 1.0,
+            attackerBankLootProjectFactor: $advancedPirateEconomy ? 1.10 : 1.0,
+        );
+    }
+
     public function lootMultiplier(): float
     {
         return $this->warTypeLootFactor

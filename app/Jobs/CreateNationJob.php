@@ -5,6 +5,7 @@ namespace App\Jobs;
 use App\Models\Nation;
 use App\Services\NationProfitabilityService;
 use App\Services\NationQueryService;
+use App\Services\Raids\RaidProfileDirtyMarker;
 use App\Services\World\WorldWriteGuard;
 use Illuminate\Contracts\Cache\LockTimeoutException;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -51,6 +52,7 @@ class CreateNationJob implements ShouldQueue
 
                     // Use updateFromAPI() to create the nation
                     $nation = Nation::updateFromAPI($nationModel);
+                    app(RaidProfileDirtyMarker::class)->mark([(int) $nation->id]);
 
                     if ($profitabilityService->shouldStoreSnapshotForNation($nation)) {
                         RefreshNationProfitabilitySnapshotJob::dispatch((int) $nation->id);

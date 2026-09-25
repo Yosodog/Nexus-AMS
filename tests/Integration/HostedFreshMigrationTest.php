@@ -262,7 +262,7 @@ class HostedFreshMigrationTest extends TestCase
             'nexus.tenant_id' => '01JZ0000000000000000000000',
             'nexus.release_id' => 'hosted-test-release',
             'nexus.runtime_contract' => 1,
-            'nexus.world_view_contract' => 5,
+            'nexus.world_view_contract' => 6,
         ]);
 
         $snapshot = app(RuntimeReadinessService::class)->readiness();

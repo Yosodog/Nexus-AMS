@@ -7,6 +7,7 @@ use App\GraphQL\Models\Nation as GraphQLNationModel;
 use App\Models\Nation;
 use App\Services\BeigeAlertService;
 use App\Services\NationProfitabilityService;
+use App\Services\Raids\RaidProfileDirtyMarker;
 use App\Services\World\WorldWriteGuard;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -44,6 +45,8 @@ class UpdateNationJob implements ShouldQueue
         $worldWriteGuard->assertCanWrite(Nation::class);
 
         try {
+            $processedNationIds = [];
+
             foreach ($this->nationsData as $nationData) {
                 $nationModel = new GraphQLNationModel;
                 $nationModel->buildWithJSON((object) $nationData);
@@ -94,6 +97,8 @@ class UpdateNationJob implements ShouldQueue
                 }
 
                 if ($updatedNation) {
+                    $processedNationIds[] = (int) $updatedNation->id;
+
                     if ($profitabilityService->shouldStoreSnapshotForNation($updatedNation)) {
                         RefreshNationProfitabilitySnapshotJob::dispatch((int) $updatedNation->id);
                     } else {
@@ -101,6 +106,8 @@ class UpdateNationJob implements ShouldQueue
                     }
                 }
             }
+
+            app(RaidProfileDirtyMarker::class)->mark($processedNationIds);
         } catch (Throwable $e) {
             Log::error('Failed to update nations from subscription.', [
                 'nation_ids' => collect($this->nationsData)->pluck('id')->filter()->take(10)->values()->all(),

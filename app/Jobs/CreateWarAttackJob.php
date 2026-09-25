@@ -7,6 +7,7 @@ use App\Events\WarAttackRecorded;
 use App\Models\Nation;
 use App\Models\WarAttack;
 use App\Services\AllianceMembershipService;
+use App\Services\Raids\RaidLootEventRecorder;
 use App\Services\SubscriptionRecordQuarantine;
 use App\Services\World\WorldWriteGuard;
 use Illuminate\Bus\Batchable;
@@ -71,7 +72,18 @@ class CreateWarAttackJob implements ShouldQueue
                 ->whereIn('id', $nationIds)
                 ->pluck('alliance_id', 'id');
 
+            $lootEvents = app(RaidLootEventRecorder::class);
+
             foreach ($supportedAttacks as $warAttack) {
+                try {
+                    $lootEvents->record($warAttack);
+                } catch (Throwable $exception) {
+                    Log::warning('Raid loot event could not be recorded.', [
+                        'attack_id' => $warAttack['id'] ?? null,
+                        'exception_class' => $exception::class,
+                    ]);
+                }
+
                 $attAlliance = $alliancesByNation[$warAttack['att_id']] ?? null;
                 $defAlliance = $alliancesByNation[$warAttack['def_id']] ?? null;
 
