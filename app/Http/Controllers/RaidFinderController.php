@@ -19,7 +19,7 @@ class RaidFinderController extends Controller
         return view('defense.raid-finder', [
             'nationId' => $nationId,
             'canQueryOthers' => $canQueryOthers,
-            'finderEndpoint' => route('api.raid-finder.show', ['nation_id' => $nationId]),
+            'finderEndpoint' => route('api.raid-finder.show', ['nation_id' => '__NATION__']),
             'availabilityEndpoint' => route('api.raid-finder.availability'),
             'claimsEndpoint' => route('api.raid-finder.claims.store'),
         ]);

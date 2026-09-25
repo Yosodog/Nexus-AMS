@@ -99,7 +99,34 @@
                             <tr>
                                 <td><span class="badge badge-outline">GET</span></td>
                                 <td class="font-mono text-xs">/defense/raid-finder/{nation_id?}</td>
-                                <td class="text-sm">Fetch raid finder targets for a nation.</td>
+                                <td class="text-sm">
+                                    Rank raid targets for your nation by expected profit. Optional query parameters:
+                                    <code>limit</code> (1–100), <code>min_expected_net</code>, <code>min_inactive_days</code>,
+                                    <code>beige_within_turns</code> (0–24), <code>alliance_scope</code> (<code>any</code>, <code>unaligned</code>, <code>aligned</code>),
+                                    <code>beatable_only</code>, <code>hide_claimed</code>, and <code>fresh</code> (skip the one-minute cache).
+                                    Returns <code>data</code> rows with <code>rank</code>, <code>nation</code>, <code>valuation</code>
+                                    (expected profit with a low–high range, win and victory probability, component breakdown,
+                                    estimated stockpile, competition and counter risk) and <code>claim</code>, plus <code>meta</code>
+                                    with your score range and offensive slots. Other nations require the <code>view-raids</code> permission.
+                                </td>
+                                <td class="text-xs">Token</td>
+                            </tr>
+                            <tr>
+                                <td><span class="badge badge-outline">GET</span></td>
+                                <td class="font-mono text-xs">/defense/raid-finder/availability</td>
+                                <td class="text-sm">Live declaration check for <code>nation_id</code> against <code>target_id</code>: eligibility, reasons, and slot counts.</td>
+                                <td class="text-xs">Token</td>
+                            </tr>
+                            <tr>
+                                <td><span class="badge badge-outline">POST</span></td>
+                                <td class="font-mono text-xs">/defense/raid-finder/claims</td>
+                                <td class="text-sm">Claim a target (<code>target_nation_id</code>) for two hours so other members skip it. Returns 422 when another member holds the claim.</td>
+                                <td class="text-xs">Token</td>
+                            </tr>
+                            <tr>
+                                <td><span class="badge badge-outline">DELETE</span></td>
+                                <td class="font-mono text-xs">/defense/raid-finder/claims/{claim}</td>
+                                <td class="text-sm">Release your claim on a target.</td>
                                 <td class="text-xs">Token</td>
                             </tr>
                             <tr>
