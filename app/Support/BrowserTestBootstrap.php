@@ -155,6 +155,11 @@ class BrowserTestBootstrap
                 'slug' => 'browser-operations-guide',
                 'status' => Page::STATUS_DRAFT,
                 'draft' => '<h2>Browser operations guide</h2><p>Stable content for editor lifecycle checks.</p>',
+                'draft_metadata' => [
+                    'title' => 'Browser operations guide',
+                    'description' => null,
+                    'audience' => 'public',
+                ],
             ]);
 
             $adminRole = Role::query()->create([

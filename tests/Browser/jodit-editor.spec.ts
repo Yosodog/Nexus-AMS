@@ -6,6 +6,7 @@ test('Jodit preserves the custom-page preview and draft workflow', async ({ page
 
   const editor = page.locator('.jodit-wysiwyg');
 
+  await expect(page.getByRole('textbox', { name: 'Title', exact: true })).toHaveValue('Browser operations guide');
   await expect(page.locator('.jodit-container')).toBeVisible();
   await expect(editor).toBeVisible();
   await expect(page.locator('.jodit-toolbar-button_bold')).toHaveCount(1);
@@ -21,9 +22,12 @@ test('Jodit preserves the custom-page preview and draft workflow', async ({ page
   await editor.fill('Jodit preview smoke');
   await page.getByRole('button', { name: 'Preview', exact: true }).click();
 
-  await expect(page.locator('#customization-preview-pane')).toContainText('Jodit preview smoke');
+  await expect(page.locator('#customization-preview-modal')).toBeVisible();
+  await expect(page.frameLocator('#customization-preview-frame').locator('body')).toContainText('Jodit preview smoke');
   await expect(page.locator('#customization-preview-status')).toHaveText('Preview generated');
 
+  await page.getByRole('button', { name: 'Close', exact: true }).click();
+  await expect(page.locator('#customization-preview-modal')).not.toBeVisible();
   await page.getByRole('button', { name: 'Save Draft', exact: true }).click();
   await expect(page.locator('#customization-preview-status')).toHaveText('Draft saved');
 });
