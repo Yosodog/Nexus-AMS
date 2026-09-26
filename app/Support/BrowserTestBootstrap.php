@@ -75,6 +75,8 @@ class BrowserTestBootstrap
                 ['key' => 'applications_enabled', 'value' => '1'],
                 ['key' => 'loan_applications_enabled', 'value' => '1'],
                 ['key' => 'loan_payments_enabled', 'value' => '1'],
+                ['key' => 'pw_city_average', 'value' => '15'],
+                ['key' => 'pw_city_average_updated_at', 'value' => now()->toIso8601String()],
                 ['key' => 'discord_war_room_forum_id', 'value' => '444444444444444444'],
                 ['key' => 'discord_war_room_defense_role_id', 'value' => '555555555555555555'],
                 ['key' => 'milcom_counter_monitoring_enabled', 'value' => '1'],
