@@ -573,5 +573,12 @@ class AuditServiceTest extends TestCase
             $table->text('mutation_key')->nullable();
             $table->timestamps();
         });
+
+        Schema::create('direct_deposit_enrollments', function ($table): void {
+            $table->id();
+            $table->unsignedBigInteger('alliance_id')->nullable();
+            $table->unsignedBigInteger('offshore_id')->nullable();
+            $table->timestamp('disenrollment_requested_at')->nullable();
+        });
     }
 }

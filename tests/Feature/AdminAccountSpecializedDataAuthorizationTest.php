@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\User;
+use App\Services\AllianceMembershipService;
 use Illuminate\Database\Events\QueryExecuted;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Collection;
@@ -79,6 +80,7 @@ class AdminAccountSpecializedDataAuthorizationTest extends TestCase
     {
         $admin = $this->createVerifiedAdmin(['nation_id' => fake()->unique()->numberBetween(600_000, 699_999)]);
         $this->attachDiscordAccount($admin);
+        app(AllianceMembershipService::class)->refresh();
 
         return $this->grantPermissions($admin, $permissions);
     }

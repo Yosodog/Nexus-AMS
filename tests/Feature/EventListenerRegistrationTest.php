@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Events\AllianceExpenseOccurred;
 use App\Events\AllianceIncomeOccurred;
 use App\Events\WarDeclared;
+use App\Listeners\CaptureRaidPredictionOnWarDeclared;
 use App\Listeners\CreateCounterOnWarDeclared;
 use App\Listeners\IngestMilcomIncident;
 use App\Listeners\ReconcileMilcomWarState;
@@ -25,6 +26,7 @@ class EventListenerRegistrationTest extends FeatureTestCase
     public function test_war_declared_listeners_use_the_explicit_order_without_discovery_duplicates(): void
     {
         $this->assertSame([
+            CaptureRaidPredictionOnWarDeclared::class,
             IngestMilcomIncident::class,
             ReconcileMilcomWarState::class,
             CreateCounterOnWarDeclared::class,

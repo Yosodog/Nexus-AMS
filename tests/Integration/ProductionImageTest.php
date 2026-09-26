@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Integration;
 
+use App\Services\RuntimeBuildMetadata;
 use Illuminate\Support\Str;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\Process\Process;
@@ -127,7 +128,7 @@ PHP,
         $this->assertTrue($runtime['assets'] ?? false);
         $this->assertSame('2026.8.0-test', $runtime['build']['application_version'] ?? null);
         $this->assertSame($commit, $runtime['build']['commit'] ?? null);
-        $this->assertSame(42, $runtime['build']['tenant_schema'] ?? null);
+        $this->assertSame(RuntimeBuildMetadata::TENANT_SCHEMA, $runtime['build']['tenant_schema'] ?? null);
         $this->assertTrue($runtime['vendor'] ?? false);
         $this->assertSame('CycloneDX', $runtime['sbom'] ?? null);
         $this->assertTrue($runtime['base_image'] ?? false);
