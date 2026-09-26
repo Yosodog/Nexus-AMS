@@ -3,6 +3,7 @@
 namespace App\Jobs;
 
 use App\Models\NationAccount;
+use App\Services\Raids\RaidProfileDirtyMarker;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Queue\InteractsWithQueue;
@@ -32,6 +33,8 @@ class UpsertNationAccountJob implements ShouldQueue
 
                 NationAccount::upsertFromEvent($account);
             }
+
+            app(RaidProfileDirtyMarker::class)->mark(collect($this->accounts)->pluck('id')->filter()->map(fn (mixed $id): int => (int) $id)->values()->all());
         } catch (Throwable $exception) {
             Log::error('Failed to upsert nation accounts', [
                 'nation_ids' => collect($this->accounts)->pluck('id')->filter()->take(10)->values()->all(),

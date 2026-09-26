@@ -152,7 +152,7 @@ class DiscordBotGuideController extends Controller
                 'commands' => [
                     [
                         'command' => '/raid [nation] [sort] [limit]',
-                        'description' => 'Find recommended raid targets. Members query their own nation; authorized staff may query another nation ID.',
+                        'description' => 'Find raid targets ranked by expected profit, with a low–high range and confidence. Members query their own nation; authorized staff may query another nation ID.',
                         'note' => 'Sort options include value, cities, and activity. Results can be limited to 5 or 10 targets.',
                     ],
                     [

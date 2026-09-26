@@ -13,11 +13,11 @@ final readonly class RuntimeBuildMetadata
 
     public const RUNTIME_CONTRACT = 1;
 
-    public const TENANT_SCHEMA = 43;
+    public const TENANT_SCHEMA = 44;
 
-    public const WORLD_VIEW_MIN = 5;
+    public const WORLD_VIEW_MIN = 6;
 
-    public const WORLD_VIEW_MAX = 5;
+    public const WORLD_VIEW_MAX = 6;
 
     private const RELEASE_PATTERN = '/\A[a-zA-Z0-9][a-zA-Z0-9._:@-]{0,63}\z/D';
 

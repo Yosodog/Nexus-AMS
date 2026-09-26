@@ -47,6 +47,11 @@ final readonly class NexusScheduleRegistrar
         }
 
         if ($this->capabilities->runsPublicWorldSchedules()) {
+            $schedule->command('raids:process-profiles --limit=1000')->everyMinute()->withoutOverlapping(5)->onOneServer();
+            $schedule->command('raids:project-profiles')->hourlyAt(7)->withoutOverlapping(55)->onOneServer();
+            $schedule->command('raids:refresh-alliance-profiles')->dailyAt('03:10')->withoutOverlapping(60)->onOneServer();
+            $schedule->command('raids:calibrate')->weeklyOn(1, '03:40')->withoutOverlapping(60)->onOneServer();
+            $schedule->command('raids:prune-loot-events')->dailyAt('04:05')->withoutOverlapping(60)->onOneServer();
             $this->registerPublicDependencySchedule($schedule);
         }
 
@@ -58,6 +63,8 @@ final readonly class NexusScheduleRegistrar
             $this->registerTenantFinancialSchedules($schedule, $whenPWUp);
             $this->registerTenantOperationalSchedules($schedule);
             $schedule->command('raid:reconcile-predictions --days=30')->everyTenMinutes()->withoutOverlapping(10)->onOneServer();
+            $schedule->command('raids:expire-claims')->everyMinute()->withoutOverlapping(2)->onOneServer();
+            $schedule->command('raids:prune-finder-impressions')->dailyAt('04:20')->withoutOverlapping(30)->onOneServer();
         }
 
         if ($this->capabilities->runsPlatformBackups()) {

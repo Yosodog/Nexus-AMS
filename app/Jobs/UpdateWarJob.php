@@ -5,6 +5,7 @@ namespace App\Jobs;
 use App\Events\WarStateChanged;
 use App\Models\War;
 use App\Services\AllianceMembershipService;
+use App\Services\Raids\RaidProfileDirtyMarker;
 use App\Services\SubscriptionRecordQuarantine;
 use App\Services\World\WorldWriteGuard;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -41,6 +42,7 @@ class UpdateWarJob implements ShouldQueue
                 }
 
                 $war = War::updateFromAPI((object) $warData);
+                app(RaidProfileDirtyMarker::class)->mark([(int) $war->att_id, (int) $war->def_id]);
                 event(new WarStateChanged((int) $war->id));
             } catch (InvalidArgumentException|TypeError|ValueError $exception) {
                 $quarantine->quarantine(

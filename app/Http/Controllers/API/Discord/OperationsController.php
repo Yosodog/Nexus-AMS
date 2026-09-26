@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\API\Discord;
 
+use App\DataTransferObjects\Raids\RaidFinderFilters;
 use App\Enums\SpyAssignmentStatus;
 use App\Enums\SpyCampaignStatus;
 use App\Enums\SpyRoundStatus;
@@ -17,6 +18,7 @@ use App\Models\WarCounter;
 use App\Models\WarCounterAssignment;
 use App\Models\WarPlanAssignment;
 use App\Services\Discord\ApplicationDiscordStatusProjection;
+use App\Services\RaidFinderService;
 use App\Services\WarSimulator\WarSimulatorDataService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -25,6 +27,56 @@ use Illuminate\Validation\Rule;
 class OperationsController extends Controller
 {
     use DiscordApiResponses;
+
+    public function raids(Request $request, RaidFinderService $raidFinder): JsonResponse
+    {
+        $data = $request->validate([
+            'nation_id' => ['nullable', 'integer', 'min:1'],
+            'sort' => ['nullable', Rule::in(['value', 'cities', 'activity'])],
+            'limit' => ['nullable', 'integer', 'min:1', 'max:50'],
+        ]);
+        $actor = $this->actor($request);
+        $nationId = (int) ($data['nation_id'] ?? $actor->nation_id);
+
+        if ($nationId !== (int) $actor->nation_id && ! $actor->hasPermission('view-raids')) {
+            return $this->discordError('nation_not_owned', 'Raid searches are limited to the actor nation.', 403);
+        }
+
+        $rows = collect($raidFinder->find($nationId, new RaidFinderFilters(limit: (int) ($data['limit'] ?? 20)))->rows);
+        $rows = match ($data['sort'] ?? 'value') {
+            'cities' => $rows->sortByDesc(fn (array $row): int => (int) $row['nation']['num_cities']),
+            'activity' => $rows->sortByDesc(fn (array $row): string => (string) ($row['nation']['last_active'] ?? '')),
+            default => $rows,
+        };
+
+        return $this->discordData($rows->map(function (array $row): array {
+            $nation = $row['nation'];
+            $allianceId = $nation['alliance']['id'] ?? null;
+
+            return [
+                'nation_id' => (int) $nation['id'],
+                'nation_name' => (string) $nation['nation_name'],
+                'leader_name' => (string) $nation['leader_name'],
+                'alliance_id' => $allianceId,
+                'alliance_name' => $nation['alliance']['name'] ?? null,
+                'cities' => (int) $nation['num_cities'],
+                'score' => (float) $nation['score'],
+                'last_active' => $nation['last_active'],
+                'estimated_value' => (int) $row['valuation']['expected_net'],
+                'expected_range' => [(int) $row['valuation']['expected_net_low'], (int) $row['valuation']['expected_net_high']],
+                'confidence' => $row['valuation']['confidence'],
+                'defensive_wars' => (int) $nation['defensive_wars'],
+                'military' => [
+                    'soldiers' => (int) $nation['soldiers'],
+                    'tanks' => (int) $nation['tanks'],
+                    'aircraft' => (int) $nation['aircraft'],
+                    'ships' => (int) $nation['ships'],
+                ],
+                'nation_url' => 'https://politicsandwar.com/nation/id='.$nation['id'],
+                'alliance_url' => $allianceId ? 'https://politicsandwar.com/alliance/id='.$allianceId : null,
+            ];
+        })->values()->all());
+    }
 
     public function wars(Request $request): JsonResponse
     {

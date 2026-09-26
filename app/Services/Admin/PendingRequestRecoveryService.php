@@ -11,6 +11,7 @@ use App\Models\CityGrantRequest;
 use App\Models\DepositRequest;
 use App\Models\GrantApplication;
 use App\Models\Loan;
+use App\Models\RaidTargetClaim;
 use App\Models\RebuildingRequest;
 use App\Models\WarAidRequest;
 use App\Services\PendingRequestsService;
@@ -208,6 +209,17 @@ class PendingRequestRecoveryService
                     'pending_key' => null,
                     'expired_at' => $releasedAt,
                     'resolution_reason' => 'admin_stale_release',
+                ],
+            ],
+            'raid_target_claims' => [
+                'label' => 'raid target claims',
+                'table' => 'raid_target_claims',
+                'model' => RaidTargetClaim::class,
+                'pending_status' => RaidTargetClaim::STATUS_ACTIVE,
+                'release_payload' => fn (Carbon $releasedAt): array => [
+                    'status' => RaidTargetClaim::STATUS_RELEASED,
+                    'pending_key' => null,
+                    'released_at' => $releasedAt,
                 ],
             ],
         ];

@@ -2,6 +2,8 @@
 
 namespace Tests\Feature\API;
 
+use App\DataTransferObjects\Raids\RaidFinderFilters;
+use App\DataTransferObjects\Raids\RaidFinderResult;
 use App\Enums\ApplicationStatus;
 use App\Enums\DiscordQueueStatus;
 use App\Enums\SpyAssignmentStatus;
@@ -21,8 +23,11 @@ use App\Models\War;
 use App\Models\WarCounter;
 use App\Models\WarCounterAssignment;
 use App\Services\Discord\ApplicationDiscordStatusProjection;
+use App\Services\RaidFinderService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Cache;
+use Mockery;
+use Mockery\MockInterface;
 use Tests\Concerns\SignsDiscordInteractions;
 use Tests\TestCase;
 
@@ -210,6 +215,65 @@ class DiscordOperationsApiTest extends TestCase
             ->assertForbidden()
             ->assertJsonPath('error.code', 'forbidden')
             ->assertJsonPath('meta.contract_version', 1);
+    }
+
+    public function test_raid_targets_include_identity_links_valuation_and_military_context(): void
+    {
+        $row = fn (int $id, string $name, int $cities, string $lastActive, float $net): array => [
+            'rank' => 1,
+            'nation' => [
+                'id' => $id, 'nation_name' => $name, 'leader_name' => 'Target Leader',
+                'alliance' => ['id' => 456, 'name' => 'Target Alliance'], 'alliance_position' => 'MEMBER',
+                'num_cities' => $cities, 'score' => 7654.32, 'last_active' => $lastActive, 'activity_bucket' => 'idle',
+                'beige_turns' => 0, 'defensive_wars' => 1, 'soldiers' => 120000, 'tanks' => 8000,
+                'aircraft' => 2100, 'ships' => 75, 'war_policy' => 'TURTLE',
+            ],
+            'valuation' => ['expected_net' => $net, 'expected_net_low' => $net / 2, 'expected_net_high' => $net * 2, 'confidence' => 'high'],
+            'claim' => null,
+        ];
+
+        $this->mock(RaidFinderService::class, function (MockInterface $mock) use ($row): void {
+            $mock->shouldReceive('find')
+                ->once()
+                ->with($this->nation->id, Mockery::on(fn (RaidFinderFilters $filters): bool => $filters->limit === 10))
+                ->andReturn(new RaidFinderResult([
+                    $row(9876, 'Raid Target', 31, '2026-07-19T12:00:00+00:00', 42157764.4),
+                    $row(5432, 'Bigger Nation', 40, '2026-07-18T12:00:00+00:00', 1000),
+                ], []));
+        });
+
+        $this->withHeaders($this->headers())
+            ->getJson('/api/v1/discord/me/raids?limit=10')
+            ->assertOk()
+            ->assertJsonPath('data.0.nation_name', 'Raid Target')
+            ->assertJsonPath('data.0.leader_name', 'Target Leader')
+            ->assertJsonPath('data.0.alliance_id', 456)
+            ->assertJsonPath('data.0.alliance_name', 'Target Alliance')
+            ->assertJsonPath('data.0.estimated_value', 42157764)
+            ->assertJsonPath('data.0.expected_range', [21078882, 84315528])
+            ->assertJsonPath('data.0.confidence', 'high')
+            ->assertJsonPath('data.0.military.soldiers', 120000)
+            ->assertJsonPath('data.0.military.aircraft', 2100)
+            ->assertJsonMissingPath('data.0.last_beige_value')
+            ->assertJsonMissingPath('data.0.military.spies')
+            ->assertJsonPath('data.0.nation_url', 'https://politicsandwar.com/nation/id=9876')
+            ->assertJsonPath('data.0.alliance_url', 'https://politicsandwar.com/alliance/id=456');
+    }
+
+    public function test_raid_targets_can_be_sorted_by_cities(): void
+    {
+        $this->mock(RaidFinderService::class, function (MockInterface $mock): void {
+            $mock->shouldReceive('find')->once()->andReturn(new RaidFinderResult([
+                ['nation' => ['id' => 1, 'nation_name' => 'Small', 'leader_name' => 'A', 'alliance' => null, 'num_cities' => 10, 'score' => 1, 'last_active' => null, 'defensive_wars' => 0, 'soldiers' => 0, 'tanks' => 0, 'aircraft' => 0, 'ships' => 0], 'valuation' => ['expected_net' => 900, 'expected_net_low' => 1, 'expected_net_high' => 2, 'confidence' => 'low']],
+                ['nation' => ['id' => 2, 'nation_name' => 'Large', 'leader_name' => 'B', 'alliance' => null, 'num_cities' => 30, 'score' => 1, 'last_active' => null, 'defensive_wars' => 0, 'soldiers' => 0, 'tanks' => 0, 'aircraft' => 0, 'ships' => 0], 'valuation' => ['expected_net' => 100, 'expected_net_low' => 1, 'expected_net_high' => 2, 'confidence' => 'low']],
+            ], []));
+        });
+
+        $this->withHeaders($this->headers())
+            ->getJson('/api/v1/discord/me/raids?sort=cities')
+            ->assertOk()
+            ->assertJsonPath('data.0.nation_name', 'Large')
+            ->assertJsonPath('data.0.alliance_url', null);
     }
 
     public function test_spy_assignments_only_include_sent_orders_from_active_assigned_rounds(): void

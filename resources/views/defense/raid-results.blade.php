@@ -4,8 +4,8 @@
     $predictionRows = $predictions ?? collect();
     $assessment = is_array($assessment ?? null) ? $assessment : (array) ($assessment ?? []);
     $assessmentMetrics = is_array(data_get($assessment, 'metrics')) ? data_get($assessment, 'metrics') : [];
-    $capturedCount = (int) data_get($assessment, 'capture.total', 0);
     $completedCount = (int) data_get($assessment, 'sample_count', 0);
+    $victoryCalibration = (array) data_get($assessmentMetrics, 'victory_calibration', []);
     $money = static function (mixed $value): string {
         return is_numeric($value) ? '$'.number_format((float) $value, 0) : 'Unavailable';
     };
@@ -31,11 +31,10 @@
             return (string) $value;
         }
     };
-    $predictedNet = static function (mixed $prediction): mixed {
-        return data_get($prediction, 'expected_net');
-    };
-    $actualNet = static function (mixed $prediction): mixed {
-        return data_get($prediction, 'actual_net');
+    $confidenceIntent = static fn (?string $confidence): string => match ($confidence) {
+        'high' => 'badge-success',
+        'medium' => 'badge-warning',
+        default => 'badge-ghost',
     };
     $targetId = static fn (mixed $prediction): mixed => data_get($prediction, 'target.id', data_get($prediction, 'target_nation_id'));
     $targetLabel = static fn (mixed $prediction): string => (string) data_get($prediction, 'target.leader_name', 'Unknown target');
@@ -58,14 +57,9 @@
 
         <section class="nexus-metrics" aria-label="Raid prediction summary">
             <div class="nexus-metric">
-                <span class="nexus-stat-label">Predictions</span>
-                <strong class="nexus-stat-value">{{ number_format($capturedCount) }}</strong>
-                <span class="nexus-stat-helper">Captured in the last 30 days</span>
-            </div>
-            <div class="nexus-metric">
                 <span class="nexus-stat-label">Completed raids</span>
                 <strong class="nexus-stat-value">{{ number_format($completedCount) }}</strong>
-                <span class="nexus-stat-helper">Reconciled in this assessment window</span>
+                <span class="nexus-stat-helper">Reconciled in the last 30 days</span>
             </div>
             <div class="nexus-metric">
                 <span class="nexus-stat-label">Mean error</span>
@@ -75,7 +69,12 @@
             <div class="nexus-metric">
                 <span class="nexus-stat-label">Range coverage</span>
                 <strong class="nexus-stat-value">{{ $percent(data_get($assessmentMetrics, 'range_coverage.percent')) }}</strong>
-                <span class="nexus-stat-helper">Predictions within scenarios</span>
+                <span class="nexus-stat-helper">Actual net within the expected range</span>
+            </div>
+            <div class="nexus-metric">
+                <span class="nexus-stat-label">Victory calibration</span>
+                <strong class="nexus-stat-value">{{ $percent(data_get($victoryCalibration, 'actual_percent')) }}</strong>
+                <span class="nexus-stat-helper">Won, against {{ $percent(data_get($victoryCalibration, 'predicted_percent')) }} predicted</span>
             </div>
         </section>
 
@@ -83,7 +82,7 @@
             <div class="nexus-panel__header">
                 <div>
                     <h2 id="raid-results-heading" class="nexus-section-title">Declaration history</h2>
-                    <p class="mt-1 text-sm text-base-content/65">Prices and intelligence are frozen at declaration time for a fair comparison.</p>
+                    <p class="mt-1 text-sm text-base-content/65">The expected return is the finder valuation frozen at declaration, compared with what the war delivered.</p>
                 </div>
             </div>
 
@@ -94,25 +93,23 @@
                         <tr>
                             <th scope="col">Target</th>
                             <th scope="col">Declared</th>
-                            <th scope="col">Predicted net</th>
+                            <th scope="col">Expected</th>
                             <th scope="col">Actual net</th>
-                            <th scope="col">Difference</th>
-                            <th scope="col">Status</th>
-                            <th scope="col">Model</th>
+                            <th scope="col">Outcome</th>
+                            <th scope="col">Confidence</th>
+                            <th scope="col">Finder rank</th>
                         </tr>
                     </thead>
                     <tbody>
                         @forelse ($predictionRows as $prediction)
                             @php
-                                $predictedValue = $predictedNet($prediction);
-                                $actualValue = $actualNet($prediction);
-                                $difference = is_numeric($actualValue) && is_numeric($predictedValue)
-                                    ? (float) $actualValue - (float) $predictedValue
-                                    : null;
                                 $status = (string) data_get($prediction, 'outcome_status', data_get($prediction, 'capture_status', 'open'));
                                 $statusIntent = in_array(strtolower($status), ['won', 'completed', 'complete', 'reconciled'], true)
                                     ? 'badge-success'
                                     : (in_array(strtolower($status), ['lost', 'failed', 'incomplete'], true) ? 'badge-error' : 'badge-ghost');
+                                $confidence = data_get($prediction, 'confidence');
+                                $actualValue = data_get($prediction, 'actual_net');
+                                $finderRank = data_get($prediction, 'finder_rank');
                             @endphp
                             <tr>
                                 <td>
@@ -122,11 +119,16 @@
                                     <div class="mt-1 text-xs nexus-text-muted">War #{{ data_get($prediction, 'war_id', 'Unknown') }}</div>
                                 </td>
                                 <td class="whitespace-nowrap">{{ $date(data_get($prediction, 'declared_at')) }}</td>
-                                <td class="font-semibold tabular-nums">{{ $money($predictedValue) }}</td>
-                                <td class="tabular-nums">{{ $money($actualValue) }}</td>
-                                <td class="tabular-nums {{ is_numeric($difference) && $difference < 0 ? 'text-error' : 'text-success' }}">{{ is_numeric($difference) ? ($difference >= 0 ? '+' : '').$money($difference) : 'Pending' }}</td>
+                                <td class="tabular-nums">
+                                    <div class="font-semibold">{{ $money(data_get($prediction, 'expected_net')) }}</div>
+                                    @if (is_numeric(data_get($prediction, 'expected_net_low')) && is_numeric(data_get($prediction, 'expected_net_high')))
+                                        <div class="text-xs nexus-text-muted">{{ $money(data_get($prediction, 'expected_net_low')) }} – {{ $money(data_get($prediction, 'expected_net_high')) }}</div>
+                                    @endif
+                                </td>
+                                <td class="tabular-nums {{ is_numeric($actualValue) && (float) $actualValue < 0 ? 'text-error' : '' }}">{{ is_numeric($actualValue) ? $money($actualValue) : 'Pending' }}</td>
                                 <td><span class="badge {{ $statusIntent }}">{{ str($status)->headline() }}</span></td>
-                                <td class="text-xs nexus-text-muted">{{ data_get($prediction, 'model_version', 'Unknown') }}</td>
+                                <td><span class="badge {{ $confidenceIntent($confidence) }}">{{ $confidence ? str($confidence)->headline() : 'Unknown' }}</span></td>
+                                <td class="tabular-nums">{{ $finderRank ? '#'.$finderRank : 'Not from finder' }}</td>
                             </tr>
                         @empty
                             <tr>

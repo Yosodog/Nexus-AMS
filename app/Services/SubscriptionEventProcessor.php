@@ -17,6 +17,7 @@ use App\Models\City;
 use App\Models\Nation;
 use App\Models\War;
 use App\Models\WarAttack;
+use App\Services\Raids\RaidProfileDirtyMarker;
 use App\Services\TenantEvents\WarDeclarationReactionService;
 use App\Services\World\WorldWriteGuard;
 use InvalidArgumentException;
@@ -155,7 +156,9 @@ class SubscriptionEventProcessor
                 continue;
             }
 
-            $this->warDeclarations->react(War::updateFromAPI((object) $record));
+            $war = War::updateFromAPI((object) $record);
+            app(RaidProfileDirtyMarker::class)->mark([(int) $war->att_id, (int) $war->def_id]);
+            $this->warDeclarations->react($war);
         }
     }
 

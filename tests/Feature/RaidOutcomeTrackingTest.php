@@ -30,7 +30,7 @@ class RaidOutcomeTrackingTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_member_raid_declarations_are_captured_once_with_frozen_inputs(): void
+    public function test_member_raid_declarations_are_captured_once_even_without_target_intelligence(): void
     {
         Cache::forever('alliances:membership:ids', [777]);
         Queue::fake();
@@ -56,6 +56,7 @@ class RaidOutcomeTrackingTest extends TestCase
         $prediction = RaidPrediction::query()->where('war_id', $war->id)->firstOrFail();
         $this->assertSame(1, RaidPrediction::query()->where('war_id', $war->id)->count());
         $this->assertSame(RaidPrediction::CAPTURE_INCOMPLETE, $prediction->capture_status);
+        $this->assertSame('Target intelligence is unavailable.', $prediction->capture_reason);
         $this->assertSame(101, $prediction->attacker_nation_id);
         $this->assertSame(202, $prediction->target_nation_id);
     }
@@ -124,6 +125,10 @@ class RaidOutcomeTrackingTest extends TestCase
         $evidence = RaidOutcomeAttack::query()->where('attack_id', $attack->id)->firstOrFail();
         $this->assertSame(1, $evidence->revision);
         $this->assertSame(104.0, (float) $prediction->refresh()->actual_net);
+        $this->assertSame('observed', data_get($prediction->outcome_metadata, 'plan_adherence.status'));
+        $this->assertSame(['ground', 'ground'], data_get($prediction->outcome_metadata, 'plan_adherence.expected_actions'));
+        $this->assertSame(1, data_get($prediction->outcome_metadata, 'plan_adherence.matched_actions'));
+        $this->assertSame(0.5, data_get($prediction->outcome_metadata, 'plan_adherence.score'));
 
         $war->update([
             'winner_id' => 101,
@@ -637,6 +642,69 @@ class RaidOutcomeTrackingTest extends TestCase
         $this->assertSame('complete', data_get($complete?->prediction?->outcome_metadata, 'evidence_status'));
         $this->assertSame(150.0, (float) $complete?->prediction?->actual_net);
         $this->assertSame(50.0, (float) data_get($complete?->prediction?->actual_components, 'bounty'));
+    }
+
+    public function test_victory_loot_reveals_the_stockpile_error_against_the_prediction(): void
+    {
+        $war = $this->createWar(91015, ['att_id' => 101, 'def_id' => 202]);
+        $prediction = $this->createPrediction($war, [
+            'attacker_snapshot' => ['nation_id' => 101, 'war_policy' => 'PIRATE', 'pirate_economy' => false, 'advanced_pirate_economy' => false],
+            'target_snapshot' => ['nation_id' => 202, 'war_policy' => 'TURTLE', 'stockpile' => ['resources' => ['money' => 1_000_000, 'steel' => 100]]],
+            'price_snapshot' => ['acquisition' => ['steel' => 10], 'liquidation' => ['money' => 1, 'steel' => 10]],
+        ]);
+
+        app(RaidOutcomeService::class)->recordPayload([
+            'id' => 92017,
+            'war_id' => $war->id,
+            'att_id' => 101,
+            'def_id' => 202,
+            'date' => '2026-09-13 11:00:00',
+            'type' => 'VICTORY',
+            'victor' => 101,
+            'money_looted' => 280_000,
+            'steel_looted' => 7,
+        ]);
+
+        $estimation = data_get($prediction->refresh()->outcome_metadata, 'stockpile_estimation');
+        $this->assertEqualsWithDelta(0.14, $estimation['victory_loot_fraction'], 1e-9);
+        $this->assertEqualsWithDelta(1_000_000.0, $estimation['stockpile_error']['money'], 0.01);
+        $this->assertEqualsWithDelta(-50.0, $estimation['stockpile_error']['steel'], 0.01);
+        $this->assertEqualsWithDelta(999_500.0, $estimation['stockpile_value_error'], 0.01);
+    }
+
+    public function test_loot_report_fraction_is_used_for_the_revealed_stockpile(): void
+    {
+        $war = $this->createWar(91016, ['att_id' => 101, 'def_id' => 202]);
+        $prediction = $this->createPrediction($war);
+
+        app(RaidOutcomeService::class)->recordPayload([
+            'id' => 92018,
+            'war_id' => $war->id,
+            'att_id' => 101,
+            'def_id' => 202,
+            'date' => '2026-09-13 11:00:00',
+            'type' => 'VICTORY',
+            'victor' => 101,
+            'money_looted' => 250_000,
+            'loot_info' => 'Victor looted 12.5% of the resources.',
+        ]);
+
+        $estimation = data_get($prediction->refresh()->outcome_metadata, 'stockpile_estimation');
+        $this->assertSame(0.125, $estimation['victory_loot_fraction']);
+        $this->assertEqualsWithDelta(1_000_000.0, $estimation['stockpile_error']['money'], 0.01);
+    }
+
+    public function test_stockpile_error_is_unknown_without_a_victory(): void
+    {
+        $war = $this->createWar(91017, ['att_id' => 101, 'def_id' => 202]);
+        $prediction = $this->createPrediction($war);
+
+        app(RaidOutcomeService::class)->recordPayload([
+            'id' => 92019, 'war_id' => $war->id, 'att_id' => 101, 'def_id' => 202,
+            'date' => '2026-09-13 11:00:00', 'type' => 'GROUND', 'money_stolen' => 10,
+        ]);
+
+        $this->assertNull(data_get($prediction->refresh()->outcome_metadata, 'stockpile_estimation.stockpile_error'));
     }
 
     /** @param array<string, mixed> $overrides */

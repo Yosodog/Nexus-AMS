@@ -33,7 +33,7 @@ class RaidPolicyServiceTest extends TestCase
 
         $this->assertTrue($evaluation->allowed);
         $this->assertSame([], $evaluation->reasons);
-        $this->assertContains($allowed->id, app(RaidPolicyService::class)->raidableAllianceIds());
+        $this->assertNotContains($allowed->id, app(RaidPolicyService::class)->protectedAllianceIds());
     }
 
     public function test_top_cap_includes_the_boundary_and_excludes_the_next_alliance(): void
@@ -123,7 +123,7 @@ class RaidPolicyServiceTest extends TestCase
         $this->assertTrue(app(RaidPolicyService::class)->evaluateAlliance(999_999)->allowed);
     }
 
-    public function test_raidable_alliance_ids_apply_every_durable_rule(): void
+    public function test_protected_alliance_ids_apply_every_durable_rule(): void
     {
         $top = Alliance::factory()->create(['score' => 50_000]);
         $member = Alliance::factory()->create(['score' => 4_000]);
@@ -135,9 +135,10 @@ class RaidPolicyServiceTest extends TestCase
         NoRaidList::query()->create(['alliance_id' => $noRaid->id]);
         $this->createTreaty($treatyProtected, $top);
 
-        $raidableIds = app(RaidPolicyService::class)->raidableAllianceIds();
+        $protectedIds = app(RaidPolicyService::class)->protectedAllianceIds();
 
-        $this->assertSame([$allowed->id], $raidableIds);
+        $this->assertEqualsCanonicalizing([$top->id, $member->id, $noRaid->id, $treatyProtected->id], $protectedIds);
+        $this->assertNotContains($allowed->id, $protectedIds);
     }
 
     private function createTreaty(Alliance $first, Alliance $second): Treaty

@@ -243,27 +243,21 @@ final class WarSimulationService
     private function buildModifiers(WarSimRequestData $request): WarSimModifiers
     {
         $warType = $request->context->warType;
-        [$infraFactor, $lootFactor] = match ($warType) {
-            'ATTRITION' => [1.0, 0.25],
-            'RAID' => [0.25, 1.0],
-            default => [0.5, 0.5],
+        $infraFactor = match ($warType) {
+            'ATTRITION' => 1.0,
+            'RAID' => 0.25,
+            default => 0.5,
         };
 
         $attackerPolicy = $request->context->attackerPolicy;
         $defenderPolicy = $request->context->defenderPolicy;
-
-        $attackerLootPolicyFactor = $attackerPolicy === 'PIRATE' ? 1.4 : 1.0;
-        $defenderLootPolicyFactor = match ($defenderPolicy) {
-            'MONEYBAGS' => 0.6,
-            'GUARDIAN' => 0.8,
-            default => 1.0,
-        };
-        $pirateEconomy = $request->context->attackerPirateEconomy;
-        $advancedPirateEconomy = $request->context->attackerAdvancedPirateEconomy;
-        $attackerGroundLootProjectFactor = ($pirateEconomy ? 1.05 : 1.0)
-            * ($advancedPirateEconomy ? 1.05 : 1.0);
-        $attackerVictoryLootProjectFactor = $advancedPirateEconomy ? 1.10 : 1.0;
-        $attackerBankLootProjectFactor = $advancedPirateEconomy ? 1.10 : 1.0;
+        $loot = WarSimModifiers::forLoot(
+            $warType,
+            $attackerPolicy,
+            $defenderPolicy,
+            $request->context->attackerPirateEconomy,
+            $request->context->attackerAdvancedPirateEconomy,
+        );
 
         $attackerInfraPolicyFactor = $attackerPolicy === 'ATTRITION' ? 1.1 : 1.0;
         $defenderInfraPolicyFactor = 1.0;
@@ -296,9 +290,9 @@ final class WarSimulationService
 
         return new WarSimModifiers(
             warTypeInfraFactor: $infraFactor,
-            warTypeLootFactor: $lootFactor,
-            attackerLootPolicyFactor: $attackerLootPolicyFactor,
-            defenderLootPolicyFactor: $defenderLootPolicyFactor,
+            warTypeLootFactor: $loot->warTypeLootFactor,
+            attackerLootPolicyFactor: $loot->attackerLootPolicyFactor,
+            defenderLootPolicyFactor: $loot->defenderLootPolicyFactor,
             attackerInfraPolicyFactor: $attackerInfraPolicyFactor,
             defenderInfraPolicyFactor: $defenderInfraPolicyFactor,
             attackerBlitzFactor: $attackerBlitzFactor,
@@ -307,9 +301,9 @@ final class WarSimulationService
             defenderTankStrengthFactor: $defenderTankStrengthFactor,
             attackerCasualtyFactor: $attackerCasualtyFactor,
             defenderCasualtyFactor: $defenderCasualtyFactor,
-            attackerGroundLootProjectFactor: $attackerGroundLootProjectFactor,
-            attackerVictoryLootProjectFactor: $attackerVictoryLootProjectFactor,
-            attackerBankLootProjectFactor: $attackerBankLootProjectFactor,
+            attackerGroundLootProjectFactor: $loot->attackerGroundLootProjectFactor,
+            attackerVictoryLootProjectFactor: $loot->attackerVictoryLootProjectFactor,
+            attackerBankLootProjectFactor: $loot->attackerBankLootProjectFactor,
         );
     }
 

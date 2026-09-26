@@ -40,6 +40,7 @@ use App\Services\AuditLogger;
 use App\Services\PendingRequestsService;
 use App\Services\PWHealthService;
 use App\Services\PWMessageService;
+use App\Services\Raids\RaidModelParameters;
 use App\Services\SettingService;
 use App\Services\StaffWorkQueue\OperationsReadStore;
 use App\Services\StaffWorkQueue\Sources\ApplicationWorkQueueSource;
@@ -85,6 +86,7 @@ class AppServiceProvider extends ServiceProvider
         $this->app->bind(FederationTransport::class, DirectHttpTransport::class);
         $this->app->singleton(FederationOperationGuard::class);
         $this->app->singleton(AuditLogger::class);
+        $this->app->scoped(RaidModelParameters::class);
         $this->app->singleton(StaffWorkQueueRegistry::class, fn ($app): StaffWorkQueueRegistry => new StaffWorkQueueRegistry([
             $app->make(ApplicationWorkQueueSource::class),
             $app->make(CityGrantWorkQueueSource::class),
