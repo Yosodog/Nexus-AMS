@@ -6,6 +6,7 @@ use App\DataTransferObjects\Discord\PrivateNotificationPayload;
 use App\Enums\DiscordQueueAction;
 use App\Enums\DiscordQueueLane;
 use App\Enums\DiscordQueueStatus;
+use App\Models\DiscordAccount;
 use App\Models\DiscordNotificationPreference;
 use App\Models\DiscordQueue;
 use App\Models\Nation;
@@ -22,11 +23,15 @@ class PrivateNotificationService
         'grants' => 'Grants',
         'loans' => 'Loans',
         'war_aid' => 'War aid',
+        'war_map_alerts' => 'Maxed war action points',
         'rebuilding' => 'Rebuilding',
         'audits' => 'Audit reminders',
         'watchlists' => 'Custom alerts and watchlists',
         'blockade_relief' => 'Blockade relief coordination',
     ];
+
+    /** @var array<string, bool> */
+    private const CATEGORY_DEFAULTS = ['war_map_alerts' => true];
 
     /** @var array<int, string> */
     private const SENSITIVE_SUMMARY_KEYS = [
@@ -36,19 +41,19 @@ class PrivateNotificationService
     ];
 
     /**
-     * Preferences default off per category. Users must explicitly opt in, and the global setting remains a fail-closed master switch.
+     * Only maxed war action point alerts default on. The global setting remains a fail-closed master switch.
      *
      * @return array<string, bool>
      */
     public function preferencesFor(User $user): array
     {
-        $stored = $user->discordNotificationPreferences()
-            ->whereIn('category', array_keys(self::CATEGORIES))
-            ->pluck('enabled', 'category');
+        $stored = $user->relationLoaded('discordNotificationPreferences')
+            ? $user->discordNotificationPreferences->pluck('enabled', 'category')
+            : $user->discordNotificationPreferences()->whereIn('category', array_keys(self::CATEGORIES))->pluck('enabled', 'category');
 
         return collect(self::CATEGORIES)
             ->mapWithKeys(fn (string $label, string $category): array => [
-                $category => $stored->has($category) ? (bool) $stored->get($category) : false,
+                $category => $stored->has($category) ? (bool) $stored->get($category) : (self::CATEGORY_DEFAULTS[$category] ?? false),
             ])
             ->all();
     }
@@ -62,6 +67,8 @@ class PrivateNotificationService
                 ['enabled' => (bool) ($preferences[$category] ?? false)],
             );
         }
+
+        $user->unsetRelation('discordNotificationPreferences');
     }
 
     public function canSend(User $user, string $category): bool
@@ -70,15 +77,11 @@ class PrivateNotificationService
             return false;
         }
 
-        if ($user->disabled || ! $user->isVerified() || ! $user->activeDiscordAccount()) {
+        if ($user->disabled || ! $user->isVerified() || ! $this->activeDiscordAccount($user)) {
             return false;
         }
 
-        $stored = $user->discordNotificationPreferences()
-            ->where('category', $category)
-            ->value('enabled');
-
-        return $stored !== null && (bool) $stored;
+        return $this->preferencesFor($user)[$category];
     }
 
     /**
@@ -107,6 +110,7 @@ class PrivateNotificationService
                 'grants' => ['grant_', 'city_grant_'],
                 'loans' => ['loan_'],
                 'war_aid' => ['war_aid_'],
+                'war_map_alerts' => ['war_map_'],
                 'rebuilding' => ['rebuilding_'],
                 'audits' => ['audit_'],
                 'watchlists' => ['watchlist_'],
@@ -205,7 +209,7 @@ class PrivateNotificationService
         string $deepLinkPath,
         array $summary = [],
     ): PrivateNotificationPayload {
-        $discordId = $nation->user?->activeDiscordAccount()?->discord_id;
+        $discordId = $nation->user === null ? null : $this->activeDiscordAccount($nation->user)?->discord_id;
 
         if (! is_string($discordId) || $discordId === '') {
             throw new \LogicException('A linked Discord account is required for private notifications.');
@@ -251,6 +255,13 @@ class PrivateNotificationService
         $path = '/'.ltrim(parse_url($path, PHP_URL_PATH) ?: '/', '/');
 
         return Str::limit($path, 255, '');
+    }
+
+    private function activeDiscordAccount(User $user): ?DiscordAccount
+    {
+        return $user->relationLoaded('discordAccounts')
+            ? $user->discordAccounts->whereNull('unlinked_at')->sortByDesc('linked_at')->first()
+            : $user->activeDiscordAccount();
     }
 
     private function pendingAssignmentNotificationQuery(): Builder

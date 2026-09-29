@@ -99,7 +99,7 @@
                     <div class="flex items-start justify-between gap-3 mb-4">
                         <div>
                             <h2 class="text-lg font-semibold">Discord notifications</h2>
-                            <p class="text-sm text-base-content/70">Notifications are off by default. Opt in to the workflow updates you want sent to your linked Discord account.</p>
+                            <p class="text-sm text-base-content/70">Choose which updates are sent to your linked Discord account. Maxed war action point alerts are enabled by default; other notifications are opt-in.</p>
                         </div>
                         <span class="badge {{ $discordPrivateNotificationsEnabled ? 'badge-success' : 'badge-ghost' }}">
                             {{ $discordPrivateNotificationsEnabled ? 'Available' : 'Paused' }}
@@ -114,7 +114,12 @@
                         @csrf
                         @foreach($discordNotificationCategories as $category => $label)
                             <label class="label cursor-pointer justify-between gap-4 rounded-box border border-base-200 px-4 py-3">
-                                <span>{{ $label }}</span>
+                                <span>
+                                    {{ $label }}
+                                    @if ($category === 'war_map_alerts')
+                                        <span class="block text-sm text-base-content/70">Get a DM at 12/12 MAPs in each active war. Another alert is sent only after your MAPs drop and refill.</span>
+                                    @endif
+                                </span>
                                 <input
                                     class="toggle toggle-primary"
                                     type="checkbox"

@@ -9,6 +9,7 @@ use App\Jobs\DispatchBeigeTurnAlertsJob;
 use App\Jobs\DispatchScheduledAlertBatchesJob;
 use App\Jobs\EvaluateAlertSubscriptionsJob;
 use App\Jobs\EvaluateResourceShortfallAlertsJob;
+use App\Jobs\EvaluateWarMapAlertsJob;
 use App\Jobs\ExpireFederationResourcesJob;
 use App\Jobs\PruneAlertHistoryJob;
 use App\Jobs\PruneFederationMessagesJob;
@@ -236,6 +237,11 @@ final readonly class NexusScheduleRegistrar
         $schedule->job(new EvaluateResourceShortfallAlertsJob, 'sync')
             ->everyTenMinutes()
             ->withoutOverlapping(9)
+            ->onOneServer();
+        $schedule->job(new EvaluateWarMapAlertsJob, 'default')
+            ->everyTwoHours(15)
+            ->timezone('UTC')
+            ->withoutOverlapping(4)
             ->onOneServer();
         $schedule->job(new DispatchScheduledAlertBatchesJob, 'default')
             ->everyMinute()

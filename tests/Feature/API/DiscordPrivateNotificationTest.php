@@ -51,7 +51,7 @@ class DiscordPrivateNotificationTest extends TestCase
         SettingService::setDiscordPrivateNotificationsEnabled(true);
         $this->assertSame(
             collect(PrivateNotificationService::CATEGORIES)->mapWithKeys(
-                fn (string $label, string $category): array => [$category => false]
+                fn (string $label, string $category): array => [$category => $category === 'war_map_alerts']
             )->all(),
             $service->preferencesFor($user),
         );

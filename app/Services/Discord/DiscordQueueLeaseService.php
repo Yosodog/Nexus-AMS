@@ -11,9 +11,11 @@ use App\Models\DiscordQueue;
 use App\Models\MilcomDispatch;
 use App\Models\MilcomOperation;
 use App\Services\Alerts\AlertDeliveryReceiptService;
+use App\Services\War\WarMapAlertService;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 
 class DiscordQueueLeaseService
@@ -35,6 +37,7 @@ class DiscordQueueLeaseService
     public function __construct(
         private readonly FederationOperationGuard $federationGuard,
         private readonly AlertDeliveryReceiptService $receipts,
+        private readonly WarMapAlertService $warMapAlerts,
     ) {}
 
     /** @param list<DiscordQueueLane> $lanes */
@@ -113,6 +116,18 @@ class DiscordQueueLeaseService
 
                     if ($operation !== null && $this->federationGuard->isHeld($operation)) {
                         $this->suppressHeldCommand($command);
+
+                        continue;
+                    }
+
+                    $suppressionReason = $this->warMapAlerts->suppressionReason($command);
+                    if ($suppressionReason !== null) {
+                        $command->forceFill([
+                            'status' => DiscordQueueStatus::Complete,
+                            'result' => ['delivery' => 'suppressed', 'reason' => $suppressionReason],
+                            'completed_at' => now(),
+                        ])->save();
+                        Log::info('Maxed war action point alert suppressed.', ['queue_id' => $command->id, 'reason' => $suppressionReason]);
 
                         continue;
                     }
