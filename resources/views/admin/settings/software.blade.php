@@ -26,20 +26,28 @@
             </div>
         @endif
 
+        @php
+            $componentLabels = collect($components)->mapWithKeys(fn ($component) => [(string) ($component['component_id'] ?? '') => $component['label'] ?? $component['component_id'] ?? 'Component']);
+            $changes = is_array($updates['components'] ?? null) ? $updates['components'] : [];
+            $heldBack = is_array($updates['held_back'] ?? null) ? $updates['held_back'] : [];
+            $updaterRelease = is_array($updates['updater_release'] ?? null) ? $updates['updater_release'] : null;
+            $canRollBack = collect($components)->contains(fn ($component) => ! empty($component['previous_release_id']));
+        @endphp
+
         <section class="nexus-panel space-y-5 p-5" aria-labelledby="release-heading">
             <div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
                 <div>
                     <h2 id="release-heading" class="text-lg font-semibold">Nexus update</h2>
-                    <p class="text-sm text-base-content/65">Updates Core and every installed local component together.</p>
+                    <p class="text-sm text-base-content/65">Moves each installed local component to its newest release that is compatible with the others.</p>
                 </div>
                 <div class="stats stats-vertical border border-base-300 bg-base-100 shadow-sm sm:stats-horizontal">
                     <div class="stat py-3">
-                        <div class="stat-title text-xs">Installed</div>
-                        <div class="stat-value text-lg">{{ $updates['installed_release'] ?? $updater['installed_release_id'] ?? 'Not installed' }}</div>
+                        <div class="stat-title text-xs">Channel</div>
+                        <div class="stat-value text-lg">{{ str($updates['channel'] ?? $updater['channel'] ?? 'stable')->headline() }}</div>
                     </div>
                     <div class="stat py-3">
-                        <div class="stat-title text-xs">Latest</div>
-                        <div class="stat-value text-lg">{{ $updates['latest_release'] ?? 'Unknown' }}</div>
+                        <div class="stat-title text-xs">Updater</div>
+                        <div class="stat-value text-lg">{{ $updater['updater_version'] ?? 'Unknown' }}</div>
                     </div>
                 </div>
             </div>
@@ -47,21 +55,23 @@
             @if (($updates['update_available'] ?? false) === true)
                 <div class="rounded-box border border-info/30 bg-info/10 p-4">
                     <p class="font-semibold">An update is available.</p>
-                    @if (! empty($updates['releases']))
-                        <p class="mt-1 text-sm text-base-content/70">
-                            Releases applied in order:
-                            {{ collect($updates['releases'])->pluck('release_id')->filter()->implode(', ') }}
-                        </p>
-                    @endif
-                    @if (collect($updates['releases'] ?? [])->contains(fn ($release) => ! empty($release['release_notes'])))
+                    <ul class="mt-2 space-y-1 text-sm text-base-content/75">
+                        @foreach ($changes as $change)
+                            <li>{{ $componentLabels[$change['component_id'] ?? ''] ?? ($change['component_id'] ?? 'Component') }}: {{ $change['from_release'] ?? '—' }} → {{ $change['to_release'] ?? '—' }}</li>
+                        @endforeach
+                        @if ($updaterRelease)
+                            <li>Nexus updater: {{ $updaterRelease['from_release'] ?? '—' }} → {{ $updaterRelease['to_release'] ?? '—' }}</li>
+                        @endif
+                    </ul>
+                    @if (collect($changes)->contains(fn ($change) => ! empty($change['release_notes'])))
                         <details class="mt-3">
                             <summary class="cursor-pointer font-medium">Release notes</summary>
                             <div class="mt-3 space-y-4 text-sm text-base-content/75">
-                                @foreach ($updates['releases'] as $release)
-                                    @if (! empty($release['release_notes']))
+                                @foreach ($changes as $change)
+                                    @if (! empty($change['release_notes']))
                                         <section>
-                                            <h3 class="font-semibold text-base-content">{{ $release['release_id'] ?? 'Release' }}</h3>
-                                            <div class="mt-1 whitespace-pre-wrap">{{ $release['release_notes'] }}</div>
+                                            <h3 class="font-semibold text-base-content">{{ $componentLabels[$change['component_id'] ?? ''] ?? ($change['component_id'] ?? 'Component') }} {{ $change['to_release'] ?? '' }}</h3>
+                                            <div class="mt-1 whitespace-pre-wrap">{{ $change['release_notes'] }}</div>
                                         </section>
                                     @endif
                                 @endforeach
@@ -70,20 +80,31 @@
                     @endif
                 </div>
             @else
-                <p class="text-sm text-base-content/70">{{ isset($updates['error_code']) ? 'Update information could not be refreshed.' : 'This server is on the latest available release.' }}</p>
+                <p class="text-sm text-base-content/70">{{ isset($updates['error_code']) ? 'Update information could not be refreshed.' : 'Every component is on its latest compatible release.' }}</p>
+            @endif
+
+            @if (! empty($heldBack))
+                <div class="rounded-box border border-warning/30 bg-warning/10 p-4 text-sm">
+                    <p class="font-semibold">Waiting on other releases</p>
+                    <ul class="mt-2 space-y-1 text-base-content/75">
+                        @foreach ($heldBack as $held)
+                            <li>{{ $componentLabels[$held['component_id'] ?? ''] ?? ($held['component_id'] ?? 'Component') }} {{ $held['release_id'] ?? '' }} {{ $held['reason'] ?? '' }}.</li>
+                        @endforeach
+                    </ul>
+                </div>
             @endif
 
             @can('manage-system')
                 <div class="flex flex-wrap gap-3">
-                    <form method="POST" action="{{ route('admin.settings.software.updates.start') }}" onsubmit="return confirm('Update Nexus and restart its services now?');">
+                    <form method="POST" action="{{ route('admin.settings.software.updates.start') }}" onsubmit="return confirm('Update Nexus and restart the changed services now?');">
                         @csrf
                         <input type="hidden" name="confirmation" value="1">
                         <button type="submit" class="btn btn-primary" @disabled(($updates['update_available'] ?? false) !== true)>Update Nexus</button>
                     </form>
-                    <form method="POST" action="{{ route('admin.settings.software.rollback') }}" onsubmit="return confirm('Switch Nexus code back to the immediately previous release? Database migrations will not be reversed.');">
+                    <form method="POST" action="{{ route('admin.settings.software.rollback') }}" onsubmit="return confirm('Switch the components changed by the last update back to their previous releases? Database migrations will not be reversed.');">
                         @csrf
                         <input type="hidden" name="confirmation" value="1">
-                        <button type="submit" class="btn btn-outline btn-warning" @disabled(empty($updater['previous_release_id']))>Roll back code</button>
+                        <button type="submit" class="btn btn-outline btn-warning" @disabled(! $canRollBack)>Roll back last update</button>
                     </form>
                 </div>
             @endcan
@@ -116,6 +137,9 @@
                             <dt class="text-base-content/60">Installed</dt><dd>{{ ($component['installed'] ?? false) ? 'Yes' : 'No' }}</dd>
                             <dt class="text-base-content/60">Enabled</dt><dd>{{ ($component['enabled'] ?? false) ? 'Yes' : 'No' }}</dd>
                             <dt class="text-base-content/60">Release</dt><dd>{{ $component['release_id'] ?? '—' }}</dd>
+                            @if (! empty($component['previous_release_id']))
+                                <dt class="text-base-content/60">Previous</dt><dd>{{ $component['previous_release_id'] }}</dd>
+                            @endif
                             <dt class="text-base-content/60">Configuration</dt><dd>{{ str($component['configuration_state'] ?? 'unknown')->headline() }}</dd>
                         </dl>
 

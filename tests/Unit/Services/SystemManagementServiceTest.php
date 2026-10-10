@@ -17,7 +17,6 @@ class SystemManagementServiceTest extends TestCase
                 return [
                     'available' => true,
                     'installed' => true,
-                    'installed_release_id' => 'v1.0.0',
                     'components' => [['component_id' => 'nexus-core', 'installed' => true]],
                     'operations' => [['id' => 'operation-from-root']],
                     'cleanup' => ['reclaimable_bytes' => 42, 'entries' => ['nexus-core/v0.9.0']],
@@ -27,17 +26,16 @@ class SystemManagementServiceTest extends TestCase
             public function checkUpdates(): array
             {
                 return [
-                    'installed_release' => 'v1.0.0',
-                    'latest_release' => 'v1.0.1',
+                    'channel' => 'stable',
                     'update_available' => true,
-                    'releases' => [['release_id' => 'v1.0.1']],
+                    'components' => [['component_id' => 'nexus-core', 'from_release' => 'v1.0.0', 'to_release' => 'v1.0.1']],
                 ];
             }
         });
 
         $snapshot = app(SystemManagementService::class)->snapshot();
 
-        $this->assertSame('v1.0.1', $snapshot['updates']['latest_release']);
+        $this->assertSame('v1.0.1', $snapshot['updates']['components'][0]['to_release']);
         $this->assertSame('nexus-core', $snapshot['components'][0]['component_id']);
         $this->assertSame('operation-from-root', $snapshot['operations'][0]['id']);
         $this->assertSame(42, $snapshot['cleanup']['reclaimable_bytes']);

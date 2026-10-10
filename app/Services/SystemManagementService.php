@@ -23,9 +23,9 @@ class SystemManagementService
         $status = $this->updater->status();
         $updates = [
             'update_available' => false,
-            'installed_release' => $status['installed_release_id'] ?? null,
-            'latest_release' => $status['installed_release_id'] ?? null,
-            'releases' => [],
+            'channel' => $status['channel'] ?? 'stable',
+            'components' => [],
+            'held_back' => [],
         ];
 
         if ($refreshUpdates && ($status['available'] ?? false) === true && ($status['installed'] ?? false) === true) {

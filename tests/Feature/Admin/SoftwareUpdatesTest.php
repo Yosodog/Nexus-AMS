@@ -40,6 +40,18 @@ class SoftwareUpdatesTest extends TestCase
             ->assertDontSee('Update component');
     }
 
+    public function test_update_panel_lists_component_changes_and_held_back_releases(): void
+    {
+        $this->bindUpdater();
+
+        $this->actingAs($this->createAdmin(['view-diagnostic-info', 'manage-system']))
+            ->get(route('admin.settings.software'))
+            ->assertOk()
+            ->assertSee('Nexus Subs: v1.0.0 → v1.0.1')
+            ->assertSee('requires nexus-core v2.0.0 or newer')
+            ->assertSee('Roll back last update');
+    }
+
     public function test_admin_without_manage_system_permission_cannot_start_an_update(): void
     {
         $admin = $this->createAdmin(['view-diagnostic-info']);
@@ -147,8 +159,6 @@ class SoftwareUpdatesTest extends TestCase
                 return [
                     'available' => true,
                     'installed' => true,
-                    'installed_release_id' => 'v1.0.0',
-                    'previous_release_id' => 'v0.9.0',
                     'updater_version' => 'v1.0.0',
                     'channel' => 'stable',
                     'profile' => 'full',
@@ -159,6 +169,7 @@ class SoftwareUpdatesTest extends TestCase
                         'installed' => true,
                         'enabled' => true,
                         'release_id' => 'v1.0.0',
+                        'previous_release_id' => 'v0.9.0',
                         'health_state' => 'healthy',
                         'configuration_state' => 'ready',
                         'available_actions' => ['restart', 'disable'],
@@ -171,11 +182,21 @@ class SoftwareUpdatesTest extends TestCase
             public function checkUpdates(): array
             {
                 return [
-                    'installed_release' => 'v1.0.0',
-                    'latest_release' => 'v1.0.1',
+                    'channel' => 'stable',
                     'update_available' => true,
-                    'releases' => [['release_id' => 'v1.0.1']],
-                    'release_notes' => 'A safe release.',
+                    'components' => [[
+                        'component_id' => 'nexus-subs',
+                        'from_release' => 'v1.0.0',
+                        'to_release' => 'v1.0.1',
+                        'release_notes' => 'A safe release.',
+                    ]],
+                    'held_back' => [[
+                        'component_id' => 'nexus-subs',
+                        'release_id' => 'v1.1.0',
+                        'reason' => 'requires nexus-core v2.0.0 or newer',
+                    ]],
+                    'updater_version' => 'v1.0.0',
+                    'installed' => ['nexus-subs' => 'v1.0.0'],
                 ];
             }
 
