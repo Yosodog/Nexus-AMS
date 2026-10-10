@@ -30,8 +30,12 @@ jobs:
         run: composer test:fast
       - name: Build production artifact
         run: bash scripts/build-release.sh "${GITHUB_REF_NAME}"
-      - name: Publish fixed release asset
+      - name: Publish release assets
         env:
           GH_TOKEN: ${{ github.token }}
           RELEASE_TAG: ${{ github.ref_name }}
-        run: gh release create "${RELEASE_TAG}" dist/nexus-core.tar.gz --verify-tag --generate-notes --title "Nexus ${RELEASE_TAG}"
+        run: |
+          prerelease=()
+          [[ "${RELEASE_TAG}" == *-* ]] && prerelease=(--prerelease)
+          gh release create "${RELEASE_TAG}" dist/nexus-core.tar.gz dist/nexus-release.json \
+            --verify-tag --generate-notes --title "Nexus Core ${RELEASE_TAG}" "${prerelease[@]}"
