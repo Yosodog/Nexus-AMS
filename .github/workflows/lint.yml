@@ -35,14 +35,26 @@ jobs:
       - name: Install Composer dependencies
         run: composer install --no-interaction --prefer-dist --no-progress
 
-      - name: Audit Composer dependencies
-        run: composer audit --locked
-
       - name: Run Pint
         run: ./vendor/bin/pint
 
       - name: Verify Pint made no changes
         run: git diff --exit-code
+
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+
+      - name: Audit Composer dependencies
+        run: composer audit --locked
 
   phpunit-fast:
     runs-on: ubuntu-latest
