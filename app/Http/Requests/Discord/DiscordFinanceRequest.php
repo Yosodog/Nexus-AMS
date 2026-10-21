@@ -34,7 +34,7 @@ abstract class DiscordFinanceRequest extends FormRequest
                 'message' => 'The request payload is invalid.',
                 'details' => $validator->errors()->toArray(),
             ],
-            'meta' => ['contract_version' => 1],
+            'meta' => ['contract_version' => 1, 'app_name' => config('app.name')],
         ], 422));
     }
 }

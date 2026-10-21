@@ -118,7 +118,7 @@ class ResolveDiscordActor
                 'message' => $message,
                 ...($details === [] ? [] : ['details' => $details]),
             ],
-            'meta' => ['contract_version' => 1],
+            'meta' => ['contract_version' => 1, 'app_name' => config('app.name')],
         ], $status);
     }
 }

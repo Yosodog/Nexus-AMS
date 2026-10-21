@@ -281,7 +281,7 @@ class FinanceController extends Controller
     {
         return response()->json([
             'data' => $data,
-            'meta' => ['contract_version' => 1],
+            'meta' => ['contract_version' => 1, 'app_name' => config('app.name')],
         ], $status);
     }
 
@@ -297,7 +297,7 @@ class FinanceController extends Controller
                 'code' => $error,
                 'message' => $message,
             ],
-            'meta' => ['contract_version' => 1],
+            'meta' => ['contract_version' => 1, 'app_name' => config('app.name')],
         ], $status);
     }
 }

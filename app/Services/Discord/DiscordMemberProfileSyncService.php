@@ -49,10 +49,10 @@ final readonly class DiscordMemberProfileSyncService
             'plan_hash' => $plan['plan_hash'],
             'observed' => $plan['observed'],
             'summary' => [
-                'title' => 'Synchronize your Nexus Discord profile?',
+                'title' => 'Synchronize your Discord profile?',
                 'description' => $plan['change_count'] === 0
-                    ? 'Your observed nickname and Nexus-managed roles already match Nexus policy.'
-                    : 'Confirm to apply the nickname and managed-role changes calculated by Nexus.',
+                    ? 'Your observed nickname and managed roles already match '.config('app.name').' policy.'
+                    : 'Confirm to apply the nickname and managed-role changes calculated by '.config('app.name').'.',
                 'nickname' => [
                     'current' => $plan['observed']['nickname'],
                     'desired' => data_get($plan, 'queue_payload.desired.nickname'),
@@ -105,7 +105,7 @@ final readonly class DiscordMemberProfileSyncService
             || ! hash_equals($plan['plan_hash'], $planHash)) {
             throw new DiscordProfileSyncException(
                 'profile_sync_stale',
-                'Your Nexus profile or managed-role policy changed after this preview.',
+                'Your '.config('app.name').' profile or managed-role policy changed after this preview.',
                 409,
                 'Run /me and preview profile synchronization again.',
             );
@@ -159,7 +159,7 @@ final readonly class DiscordMemberProfileSyncService
                 'state' => 'unavailable',
                 'label' => 'This Discord installation does not support safe profile synchronization.',
                 'checked_at' => $checkedAt->toIso8601String(),
-                'issues' => ['Ask a server administrator to update the Nexus Discord integration.'],
+                'issues' => ['Ask a server administrator to update the Discord integration.'],
             ];
         }
 
@@ -241,7 +241,7 @@ final readonly class DiscordMemberProfileSyncService
         if ($managedRoleIds->count() > 100) {
             throw new DiscordProfileSyncException(
                 'profile_role_configuration_too_large',
-                'Nexus has too many managed Discord roles for self-service synchronization.',
+                config('app.name').' has too many managed Discord roles for self-service synchronization.',
                 409,
                 'Ask a server administrator to review Discord role mappings.',
             );
@@ -253,13 +253,13 @@ final readonly class DiscordMemberProfileSyncService
             if ($applicantRoleId) {
                 $desiredRoleIds->push($applicantRoleId);
             } else {
-                $warnings[] = 'The Nexus applicant role is not configured.';
+                $warnings[] = 'The applicant role is not configured.';
             }
         } else {
             if ($memberRoleId) {
                 $desiredRoleIds->push($memberRoleId);
             } else {
-                $warnings[] = 'The Nexus member role is not configured.';
+                $warnings[] = 'The member role is not configured.';
             }
             $cityRole = $cityRoles->first(fn (DiscordCityTierRole $role): bool => (int) $nation->num_cities >= $role->bucket_start
                 && (int) $nation->num_cities <= $role->bucket_end);
@@ -346,7 +346,7 @@ final readonly class DiscordMemberProfileSyncService
                 'profile_sync_unavailable',
                 'This Discord installation cannot safely synchronize member profiles yet.',
                 409,
-                'Ask a server administrator to update the Nexus Discord integration.',
+                'Ask a server administrator to update the Discord integration.',
             );
         }
     }
@@ -359,9 +359,9 @@ final readonly class DiscordMemberProfileSyncService
             || $actor->disabled) {
             throw new DiscordProfileSyncException(
                 'profile_sync_actor_ineligible',
-                'This Nexus account is not eligible for Discord profile synchronization.',
+                'This '.config('app.name').' account is not eligible for Discord profile synchronization.',
                 403,
-                'Review your Nexus account-link and verification status.',
+                'Review your '.config('app.name').' account-link and verification status.',
             );
         }
 
@@ -379,9 +379,9 @@ final readonly class DiscordMemberProfileSyncService
             || ! in_array($position, $eligiblePositions, true)) {
             throw new DiscordProfileSyncException(
                 'profile_sync_membership_ineligible',
-                'Nexus does not currently recognize this nation as an alliance member or applicant.',
+                config('app.name').' does not currently recognize this nation as an alliance member or applicant.',
                 409,
-                'Wait for nation data to synchronize or contact a Nexus administrator.',
+                'Wait for nation data to synchronize or contact an administrator.',
             );
         }
 
@@ -397,7 +397,7 @@ final readonly class DiscordMemberProfileSyncService
         if (! $this->isSnowflake($roleId)) {
             throw new DiscordProfileSyncException(
                 'profile_role_configuration_invalid',
-                'A Nexus-managed Discord role mapping is invalid.',
+                'A managed Discord role mapping is invalid.',
                 409,
                 'Ask a server administrator to review Discord role mappings.',
             );
@@ -414,9 +414,9 @@ final readonly class DiscordMemberProfileSyncService
         if ($candidate === '') {
             throw new DiscordProfileSyncException(
                 'profile_nickname_unavailable',
-                'Nexus could not calculate a safe Discord nickname for this nation.',
+                config('app.name').' could not calculate a safe Discord nickname for this nation.',
                 409,
-                'Update the nation leader name in Politics & War and allow Nexus to synchronize it.',
+                'Update the nation leader name in Politics & War and allow '.config('app.name').' to synchronize it.',
             );
         }
 
@@ -432,9 +432,9 @@ final readonly class DiscordMemberProfileSyncService
     {
         return match ($reason) {
             'missing_discord_permission' => 'The bot is missing permission to edit nicknames or roles.',
-            'member_unmanageable', 'role_unmanageable' => 'The bot role is below the member or a Nexus-managed role.',
+            'member_unmanageable', 'role_unmanageable' => 'The bot role is below the member or a managed role.',
             'member_unavailable' => 'The linked Discord member is no longer available in this server.',
-            'role_not_found' => 'A Nexus-managed Discord role no longer exists.',
+            'role_not_found' => 'A managed Discord role no longer exists.',
             'stale_connection_generation', 'wrong_connection' => 'The Discord installation changed while synchronization was running.',
             default => 'Retry from /me. If the problem continues, ask a server administrator to run /nexus status.',
         };

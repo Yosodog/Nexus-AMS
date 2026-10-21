@@ -11,7 +11,7 @@ trait DiscordApiResponses
     {
         return response()->json([
             'data' => $data,
-            'meta' => ['contract_version' => 1, ...$meta],
+            'meta' => ['contract_version' => 1, 'app_name' => config('app.name'), ...$meta],
         ], $status);
     }
 
@@ -28,7 +28,7 @@ trait DiscordApiResponses
                 'message' => $message,
                 'details' => $details,
             ], fn (mixed $value): bool => $value !== []),
-            'meta' => ['contract_version' => 1, ...$meta],
+            'meta' => ['contract_version' => 1, 'app_name' => config('app.name'), ...$meta],
         ], $status);
     }
 }

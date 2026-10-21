@@ -141,7 +141,7 @@ final readonly class DiscordOperationsReadProvider
     private function authorizeActor(User $actor): void
     {
         if (! $actor->is_admin || $actor->disabled || $actor->verified_at === null) {
-            throw new AuthorizationException('Discord Operations requires an active Nexus administrator.');
+            throw new AuthorizationException('Discord Operations requires an active '.config('app.name').' administrator.');
         }
     }
 

@@ -60,6 +60,7 @@ class DiscordQueueController extends Controller
 
         return response()->json([
             'data' => $command ? $this->commandData($command) : null,
+            'meta' => ['app_name' => config('app.name')],
         ]);
     }
 

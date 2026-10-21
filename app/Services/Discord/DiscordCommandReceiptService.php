@@ -170,7 +170,7 @@ class DiscordCommandReceiptService
                 'code' => $error,
                 'message' => $message,
             ],
-            'meta' => ['contract_version' => 1],
+            'meta' => ['contract_version' => 1, 'app_name' => config('app.name')],
         ], $status);
     }
 }

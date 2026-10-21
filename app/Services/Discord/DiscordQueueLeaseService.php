@@ -426,7 +426,7 @@ class DiscordQueueLeaseService
             || array_diff($checkpoint['notifications'], $desiredNotificationKeys) !== []) {
             throw new DiscordQueueLeaseException(
                 'application_reconcile_checkpoint_conflict',
-                'The checkpoint contains Discord operations outside the Nexus desired state.',
+                'The checkpoint contains Discord operations outside the desired state.',
                 409,
             );
         }
@@ -471,7 +471,7 @@ class DiscordQueueLeaseService
             || array_diff($checkpoint['roles_removed'], $desiredRemoves) !== []) {
             throw new DiscordQueueLeaseException(
                 'member_profile_sync_checkpoint_conflict',
-                'The checkpoint contains Discord operations outside the Nexus profile plan.',
+                'The checkpoint contains Discord operations outside the profile plan.',
                 409,
             );
         }

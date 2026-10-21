@@ -52,11 +52,11 @@ final readonly class DiscordMemberSummaryService
         if (! $nation) {
             return (new DiscordActorContext(
                 state: DiscordActorContextState::NoNation,
-                message: 'The linked Nexus account has no synchronized nation profile.',
+                message: 'The linked '.config('app.name').' account has no synchronized nation profile.',
                 actor: $actor,
                 discordAccount: $discordAccount,
                 userAction: [
-                    'label' => 'Open Nexus dashboard',
+                    'label' => 'Open '.config('app.name').' dashboard',
                     'deep_link_path' => route('user.dashboard', absolute: false),
                 ],
             ))->safePayload();
@@ -73,7 +73,7 @@ final readonly class DiscordMemberSummaryService
         return [
             'contract_version' => 1,
             'state' => 'ready',
-            'message' => 'Your linked Nexus account summary is ready.',
+            'message' => 'Your linked '.config('app.name').' account summary is ready.',
             'identity' => [
                 'display_name' => $actor->name,
                 'discord_username' => $discordAccount->discord_username,

@@ -46,7 +46,7 @@ final class MemberContextController extends Controller
             ? $this->profileSync->status($context->actor, $context->discordAccount, $connection)
             : [
                 'state' => 'unavailable',
-                'label' => 'Profile synchronization requires a ready linked Nexus account.',
+                'label' => 'Profile synchronization requires a ready linked '.config('app.name').' account.',
                 'checked_at' => now()->toIso8601String(),
                 'issues' => [],
             ];
