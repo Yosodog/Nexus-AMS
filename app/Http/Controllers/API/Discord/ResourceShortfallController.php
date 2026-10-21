@@ -191,7 +191,7 @@ class ResourceShortfallController extends Controller
                 'code' => $exception->errorCode,
                 'message' => $exception->getMessage(),
             ],
-            'meta' => ['contract_version' => 1],
+            'meta' => ['contract_version' => 1, 'app_name' => config('app.name')],
         ], $exception->httpStatus);
     }
 
@@ -202,7 +202,7 @@ class ResourceShortfallController extends Controller
                 'code' => $code,
                 'message' => $message,
             ],
-            'meta' => ['contract_version' => 1],
+            'meta' => ['contract_version' => 1, 'app_name' => config('app.name')],
         ], $status);
     }
 
@@ -213,6 +213,7 @@ class ResourceShortfallController extends Controller
             'data' => $data,
             'meta' => [
                 'contract_version' => 1,
+                'app_name' => config('app.name'),
                 'capabilities' => ['alerts.resource-shortfall-actions.v1'],
             ],
         ], $status);

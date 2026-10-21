@@ -23,7 +23,7 @@ class ValidateDiscordBotAPI
         if (empty($botToken) || ! hash_equals($expectedToken, $providedToken)) {
             return response()->json([
                 'error' => ['code' => 'unauthorized', 'message' => 'Discord bot authentication failed.'],
-                'meta' => ['contract_version' => 1],
+                'meta' => ['contract_version' => 1, 'app_name' => config('app.name')],
             ], 401);
         }
 

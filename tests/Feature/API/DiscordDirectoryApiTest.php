@@ -70,6 +70,34 @@ class DiscordDirectoryApiTest extends TestCase
         $this->assertStringNotContainsString('balance', $encoded);
     }
 
+    public function test_discord_responses_carry_the_deployment_app_name_in_meta(): void
+    {
+        config(['app.name' => 'Rose Command']);
+
+        $this->withHeaders($this->headers('who'))
+            ->getJson('/api/v1/discord/directory/discord-users/'.self::ACTOR_DISCORD_ID)
+            ->assertOk()
+            ->assertJsonPath('meta.contract_version', 1)
+            ->assertJsonPath('meta.app_name', 'Rose Command');
+
+        $targetNation = Nation::factory()->create();
+        $target = User::factory()->verified()->create(['nation_id' => $targetNation->id]);
+        DiscordAccount::factory()->create([
+            'user_id' => $target->id,
+            'discord_id' => self::TARGET_DISCORD_ID,
+            'unlinked_at' => null,
+        ]);
+
+        $response = $this->withHeaders($this->headers('who'))
+            ->getJson('/api/v1/discord/directory/discord-users/'.self::TARGET_DISCORD_ID)
+            ->assertForbidden()
+            ->assertJsonPath('error.code', 'forbidden')
+            ->assertJsonPath('error.message', 'You do not have permission to view another member.')
+            ->assertJsonPath('meta.app_name', 'Rose Command');
+
+        $this->assertStringNotContainsString('Nexus', (string) $response->getContent());
+    }
+
     public function test_another_user_requires_nexus_member_view_permission(): void
     {
         $targetNation = Nation::factory()->create();

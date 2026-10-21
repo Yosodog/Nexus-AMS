@@ -171,13 +171,13 @@ final readonly class DiscordMilcomReadProvider
     private function actorNationId(User $actor): int
     {
         if ($actor->disabled || $actor->verified_at === null || ! is_numeric($actor->nation_id)) {
-            throw new AuthorizationException('Discord Milcom requires an active verified Nexus nation.');
+            throw new AuthorizationException('Discord Milcom requires an active verified '.config('app.name').' nation.');
         }
 
         $nationId = (int) $actor->nation_id;
 
         if ($nationId < 1) {
-            throw new AuthorizationException('Discord Milcom requires an active verified Nexus nation.');
+            throw new AuthorizationException('Discord Milcom requires an active verified '.config('app.name').' nation.');
         }
 
         return $nationId;

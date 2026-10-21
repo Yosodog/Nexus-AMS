@@ -44,7 +44,7 @@ class ApplicationController extends Controller
                 409,
                 [
                     'retryable' => false,
-                    'user_action' => 'Ask a server administrator to update the Nexus Discord integration.',
+                    'user_action' => 'Ask a server administrator to update the Discord integration.',
                 ],
                 $this->metadata($request, $connection),
             );
@@ -86,10 +86,10 @@ class ApplicationController extends Controller
             ],
             'summary' => [
                 'title' => $application
-                    ? 'Continue your Nexus application?'
-                    : 'Submit your Nexus application?',
+                    ? 'Continue your '.config('app.name').' application?'
+                    : 'Submit your '.config('app.name').' application?',
                 'description' => $application
-                    ? 'Nexus found your pending application. Confirm to continue its Discord setup.'
+                    ? config('app.name').' found your pending application. Confirm to continue its Discord setup.'
                     : 'Confirm to submit this nation for review and start private Discord setup.',
                 'nation' => array_filter([
                     'id' => (int) $nation->id,
@@ -119,7 +119,7 @@ class ApplicationController extends Controller
                 409,
                 [
                     'retryable' => false,
-                    'user_action' => 'Ask a server administrator to update the Nexus Discord integration.',
+                    'user_action' => 'Ask a server administrator to update the Discord integration.',
                 ],
                 $this->metadata($request, $connection),
             );
@@ -367,7 +367,7 @@ class ApplicationController extends Controller
         $userAction = match ($exception->error) {
             'nation_not_in_our_alliance', 'nation_not_applicant' => 'Join the configured alliance as an applicant, then run /apply again.',
             'application_preview_stale' => 'Run /apply again to review the latest application details.',
-            'pending_application_exists' => 'Continue the existing application that Nexus identifies, or contact application staff.',
+            'pending_application_exists' => 'Continue your existing application, or contact application staff.',
             'system_disabled' => 'Contact application staff for the current application process.',
             default => $retryable
                 ? 'Wait a moment and try again.'
