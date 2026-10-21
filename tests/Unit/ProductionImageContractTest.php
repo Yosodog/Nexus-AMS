@@ -242,9 +242,15 @@ STATUS);
                 'pkg:oci/php@sha256%3A'.str_repeat('d', 64).'?repository_url=docker.io%2Flibrary%2Fphp&tag=8.3-apache-bookworm',
                 $references,
             );
-            $this->assertContains('pkg:composer/laravel/framework@v13.23.0', $references);
+            $this->assertContains(
+                'pkg:composer/laravel/framework@'.$this->lockedPackageVersion('packages', 'laravel/framework'),
+                $references,
+            );
             $this->assertContains('pkg:deb/debian/libc6@2.36-9%2Bdeb12u13?arch=amd64', $references);
-            $this->assertNotContains('pkg:composer/phpunit/phpunit@12.5.33', $references);
+            $this->assertNotContains(
+                'pkg:composer/phpunit/phpunit@'.$this->lockedPackageVersion('packages-dev', 'phpunit/phpunit'),
+                $references,
+            );
             $this->assertTrue((bool) array_filter(
                 $references,
                 static fn (mixed $reference): bool => is_string($reference)
@@ -312,6 +318,15 @@ STATUS);
             '--dpkg-status='.$dpkgStatus,
         ], $this->projectRoot);
         $process->mustRun();
+    }
+
+    private function lockedPackageVersion(string $section, string $name): string
+    {
+        $lock = json_decode($this->contents('composer.lock'), true, 512, JSON_THROW_ON_ERROR);
+        $versions = array_column($lock[$section] ?? [], 'version', 'name');
+        $this->assertArrayHasKey($name, $versions);
+
+        return $versions[$name];
     }
 
     private function contents(string $path, bool $absolute = false): string
