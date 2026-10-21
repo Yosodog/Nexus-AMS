@@ -253,8 +253,8 @@ class DiscordBotGuideController extends Controller
             ],
             [
                 'command' => '/sweepbank [note]',
-                'description' => 'Sweep the main bank into the primary offshore with an optional audit note.',
-                'note' => "{$appName} permissions, idempotency, and reconciliation safeguards are applied before any transfer is accepted.",
+                'description' => 'Sweep the main bank into the primary offshore with an optional audit note. Available to any administrator.',
+                'note' => "Balances are only shown to administrators who can view offshores or financial reports in {$appName}. Idempotency and reconciliation safeguards are applied before any transfer is accepted.",
             ],
         ];
     }

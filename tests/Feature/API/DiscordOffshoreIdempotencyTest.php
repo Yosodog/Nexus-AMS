@@ -72,7 +72,9 @@ class DiscordOffshoreIdempotencyTest extends TestCase
             ])
             ->assertOk()
             ->assertJsonPath('replayed', true)
-            ->assertJsonPath('transfer.id', $completed->id);
+            ->assertJsonPath('transfer.id', $completed->id)
+            ->assertJsonPath('transfer.payload', null)
+            ->assertJsonPath('resources_hidden', true);
 
         $pending = OffshoreTransfer::query()->create([
             'idempotency_key' => 'interaction-api-pending',
