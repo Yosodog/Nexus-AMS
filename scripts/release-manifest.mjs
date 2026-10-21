@@ -48,6 +48,9 @@ for (const [name, minimum] of Object.entries(requires)) {
   if (typeof minimum !== 'string' || !validTag(minimum)) {
     fail(`${requiresPath} requirement ${name} must be a release tag such as v1.2.0`);
   }
+  if (!release.includes('-') && minimum.includes('-')) {
+    fail(`stable release ${release} cannot require prerelease ${name} ${minimum}; stable hosts never see prereleases`);
+  }
 }
 
 const manifest = { schema_version: 2, component, release };

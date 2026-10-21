@@ -4,6 +4,13 @@ on:
   push:
     tags:
       - 'v*'
+  # Called by cut-release.yml, whose GITHUB_TOKEN tag push triggers nothing.
+  workflow_call:
+    inputs:
+      tag:
+        description: 'Existing v* tag to build and publish'
+        type: string
+        required: true
 
 permissions:
   contents: write
@@ -12,8 +19,12 @@ jobs:
   release:
     runs-on: ubuntu-latest
     timeout-minutes: 25
+    env:
+      RELEASE_TAG: ${{ inputs.tag || github.ref_name }}
     steps:
       - uses: actions/checkout@v5
+        with:
+          ref: refs/tags/${{ inputs.tag || github.ref_name }}
       - uses: shivammathur/setup-php@v2
         with:
           php-version: '8.3'
@@ -29,11 +40,10 @@ jobs:
       - name: Test
         run: composer test:fast
       - name: Build production artifact
-        run: bash scripts/build-release.sh "${GITHUB_REF_NAME}"
+        run: bash scripts/build-release.sh "${RELEASE_TAG}"
       - name: Publish release assets
         env:
           GH_TOKEN: ${{ github.token }}
-          RELEASE_TAG: ${{ github.ref_name }}
         run: |
           prerelease=()
           [[ "${RELEASE_TAG}" == *-* ]] && prerelease=(--prerelease)
