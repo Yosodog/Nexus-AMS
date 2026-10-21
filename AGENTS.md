@@ -8,12 +8,11 @@ subdirectories, follow the most specific guidance available.
   migrations and seeders live in `database/`, and HTTP entry points are defined under `routes/`.
 - GraphQL data objects and resolvers live in `app/GraphQL`. They model the Politics & War API, so
   be mindful of the nullable typed properties and the `buildWithJSON` hydration helpers.
-- Front-end assets are built with Vite. Alpine/Vue is not used; instead the app relies on plain
-  JavaScript in `resources/js/app.js` and Tailwind + DaisyUI components in `resources/views`.
+- Front-end assets are built with Vite. Both the member and admin sides use Blade with Tailwind
+  CSS 4, daisyUI 5, and MaryUI components, plus plain JavaScript in `resources/js/app.js`. A few
+  interactive screens use Livewire 3 (and the Alpine it bundles); Vue is not used.
 - Environment configuration is managed through Laravel's config files in `config/`; never commit
   `.env` changes.
-- The frontend is separated into two sections: the user side uses Tailwind CSS 4 and daisyUI 5,
-  while the admin side uses Bootstrap and AdminLTE.
 
 ## Workflow Expectations
 - Review the relevant files before editing and match the surrounding conventions (e.g. nullable
