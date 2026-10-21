@@ -11,12 +11,12 @@ use App\Http\Requests\Discord\DiscordOffshoreSweepRequest;
 use App\Models\OffshoreTransfer;
 use App\Models\User;
 use App\Services\AuditLogger;
+use App\Services\Discord\DiscordOffshoreSweepIntentService;
 use App\Services\MainBankService;
 use App\Services\OffshoreService;
 use App\Services\OffshoreTransferService;
 use App\Services\PWHelperService;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Support\Facades\Gate;
 
 class OffshoreController extends Controller
 {
@@ -50,7 +50,7 @@ class OffshoreController extends Controller
             ], 403);
         }
 
-        if (! $moderator->is_admin || ! Gate::forUser($moderator)->allows('manage-offshores')) {
+        if (! $moderator->is_admin) {
             $this->auditLogger->denied(
                 category: 'offshore',
                 action: 'discord_main_bank_sweep',
@@ -69,7 +69,7 @@ class OffshoreController extends Controller
 
             return response()->json([
                 'error' => 'forbidden',
-                'message' => 'You do not have permission to manage offshores.',
+                'message' => 'Only administrators can sweep the main bank.',
             ], 403);
         }
 
@@ -87,7 +87,7 @@ class OffshoreController extends Controller
             }
 
             if ($existingTransfer->status === OffshoreTransfer::STATUS_COMPLETED) {
-                return $this->sweepResponse($existingTransfer, true);
+                return $this->sweepResponse($existingTransfer, true, $moderator);
             }
 
             return $this->reconciliationResponse($existingTransfer);
@@ -195,7 +195,7 @@ class OffshoreController extends Controller
             ],
         );
 
-        return $this->sweepResponse($transfer, false);
+        return $this->sweepResponse($transfer, false, $moderator);
     }
 
     private function reconciliationResponse(OffshoreTransfer $transfer): JsonResponse
@@ -210,9 +210,10 @@ class OffshoreController extends Controller
         ], 409);
     }
 
-    private function sweepResponse(OffshoreTransfer $transfer, bool $replayed): JsonResponse
+    private function sweepResponse(OffshoreTransfer $transfer, bool $replayed, User $moderator): JsonResponse
     {
         $offshore = $transfer->destinationOffshore;
+        $balancesVisible = app(DiscordOffshoreSweepIntentService::class)->canViewBalances($moderator);
 
         return response()->json([
             'swept' => true,
@@ -229,9 +230,10 @@ class OffshoreController extends Controller
                 'id' => $transfer->id,
                 'status' => $transfer->status,
                 'message' => $transfer->message,
-                'payload' => $transfer->payload,
+                'payload' => $balancesVisible ? $transfer->payload : null,
                 'completed_at' => optional($transfer->completed_at)->toIso8601String(),
             ],
+            'resources_hidden' => ! $balancesVisible,
         ]);
     }
 }

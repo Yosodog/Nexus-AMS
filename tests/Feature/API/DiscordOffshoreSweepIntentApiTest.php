@@ -55,7 +55,7 @@ class DiscordOffshoreSweepIntentApiTest extends TestCase
             'nation_id' => $nation->id,
             'is_admin' => true,
         ]);
-        $this->moderator = $this->grantPermissions($user, ['manage-offshores']);
+        $this->moderator = $this->grantPermissions($user, ['view-offshores']);
         DiscordAccount::factory()->create([
             'user_id' => $this->moderator->id,
             'discord_id' => self::DISCORD_ID,
@@ -156,7 +156,89 @@ class DiscordOffshoreSweepIntentApiTest extends TestCase
         $this->assertDatabaseCount('discord_action_intents', 0);
     }
 
-    public function test_confirmation_rechecks_permission_removed_after_preview(): void
+    public function test_admin_without_bank_visibility_can_sweep_without_seeing_balances(): void
+    {
+        config(['app.name' => 'Test Alliance Bank']);
+        DB::table('role_permissions')->delete();
+        $balances = ['money' => 1250.5, 'food' => 25.0];
+        $mainBank = $this->createMock(MainBankService::class);
+        $mainBank->expects($this->exactly(3))->method('refreshBalances')->willReturnOnConsecutiveCalls(
+            $balances,
+            $balances,
+            [],
+        );
+        $transfers = $this->createMock(OffshoreTransferService::class);
+        $transfers->expects($this->once())->method('transfer')
+            ->with(
+                OffshoreTransfer::TYPE_MAIN,
+                null,
+                OffshoreTransfer::TYPE_OFFSHORE,
+                $this->offshore,
+                ['food' => 25.0, 'money' => 1250.5],
+            )
+            ->willReturnCallback(fn (...$arguments): OffshoreTransfer => $this->completedTransfer($arguments));
+        $this->bindSweepService($mainBank, $transfers, expectRefresh: true);
+
+        $preview = $this->withHeaders($this->headers('135791357913579135'))
+            ->postJson('/api/v1/discord/offshores/sweep-primary/preview', [])
+            ->assertCreated()
+            ->assertJsonPath('data.sweep_required', true)
+            ->assertJsonPath('data.summary.resources', null)
+            ->assertJsonPath('data.summary.resources_hidden', true)
+            ->assertJsonPath('data.summary.app_name', 'Test Alliance Bank')
+            ->assertJsonPath('data.resource_version', null);
+        $this->assertStringNotContainsString('1250.5', $preview->getContent());
+
+        $confirm = $this->withHeaders($this->headers('246802468024680246'))
+            ->postJson('/api/v1/discord/offshores/sweep-primary/confirm', [
+                'intent_id' => $preview->json('data.intent.id'),
+            ])
+            ->assertCreated()
+            ->assertJsonPath('data.swept', true)
+            ->assertJsonPath('data.transfer.payload', null)
+            ->assertJsonPath('data.resources_hidden', true)
+            ->assertJsonPath('data.app_name', 'Test Alliance Bank');
+        $this->assertStringNotContainsString('1250.5', $confirm->getContent());
+        $this->assertSame(1250.5, (float) OffshoreTransfer::query()->sole()->payload['money']);
+    }
+
+    public function test_financial_report_viewers_see_sweep_balances(): void
+    {
+        DB::table('role_permissions')->update(['permission' => 'view-financial-reports']);
+        $mainBank = $this->createMock(MainBankService::class);
+        $mainBank->expects($this->once())->method('refreshBalances')->willReturn(['money' => 500.0]);
+        $transfers = $this->createMock(OffshoreTransferService::class);
+        $transfers->expects($this->never())->method('transfer');
+        $this->bindSweepService($mainBank, $transfers);
+
+        $this->withHeaders($this->headers('357913579135791357'))
+            ->postJson('/api/v1/discord/offshores/sweep-primary/preview', [])
+            ->assertCreated()
+            ->assertJsonPath('data.summary.resources.money', 500)
+            ->assertJsonPath('data.summary.resources_hidden', false);
+    }
+
+    public function test_non_admin_cannot_preview_a_sweep_even_with_offshore_permissions(): void
+    {
+        $this->moderator->forceFill(['is_admin' => false])->save();
+        DB::table('role_permissions')->insert([
+            'role_id' => $this->moderator->roles()->firstOrFail()->id,
+            'permission' => 'manage-offshores',
+        ]);
+        $mainBank = $this->createMock(MainBankService::class);
+        $mainBank->expects($this->never())->method('refreshBalances');
+        $transfers = $this->createMock(OffshoreTransferService::class);
+        $transfers->expects($this->never())->method('transfer');
+        $this->bindSweepService($mainBank, $transfers);
+
+        $this->withHeaders($this->headers('468024680246802468'))
+            ->postJson('/api/v1/discord/offshores/sweep-primary/preview', [])
+            ->assertForbidden()
+            ->assertJsonPath('error.code', 'forbidden');
+        $this->assertDatabaseCount('discord_action_intents', 0);
+    }
+
+    public function test_confirmation_rechecks_admin_status_removed_after_preview(): void
     {
         $mainBank = $this->createMock(MainBankService::class);
         $mainBank->expects($this->once())->method('refreshBalances')->willReturn(['money' => 100.0]);
@@ -168,7 +250,7 @@ class DiscordOffshoreSweepIntentApiTest extends TestCase
             ->postJson('/api/v1/discord/offshores/sweep-primary/preview', [])
             ->assertCreated();
 
-        DB::table('role_permissions')->where('permission', 'manage-offshores')->delete();
+        $this->moderator->forceFill(['is_admin' => false])->save();
 
         $this->withHeaders($this->headers('912345678901234567'))
             ->postJson('/api/v1/discord/offshores/sweep-primary/confirm', [
@@ -177,6 +259,22 @@ class DiscordOffshoreSweepIntentApiTest extends TestCase
             ->assertForbidden()
             ->assertJsonPath('error.code', 'forbidden');
         $this->assertDatabaseCount('offshore_transfers', 0);
+    }
+
+    /** @param  array<int, mixed>  $arguments */
+    private function completedTransfer(array $arguments): OffshoreTransfer
+    {
+        return OffshoreTransfer::query()->create([
+            'idempotency_key' => $arguments[7],
+            'user_id' => $this->moderator->id,
+            'source_type' => OffshoreTransfer::TYPE_MAIN,
+            'destination_type' => OffshoreTransfer::TYPE_OFFSHORE,
+            'destination_offshore_id' => $this->offshore->id,
+            'payload' => $arguments[4],
+            'status' => OffshoreTransfer::STATUS_COMPLETED,
+            'message' => 'Transfer completed successfully.',
+            'completed_at' => now(),
+        ]);
     }
 
     private function bindSweepService(

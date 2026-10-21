@@ -47,6 +47,8 @@ final class OffshoreSweepIntentController extends Controller
             return $this->sweepError($request, $connection, $exception);
         }
 
+        $balancesVisible = $sweeps->canViewBalances($actor);
+
         return $this->discordData([
             'sweep_required' => $preview['sweep_required'],
             'intent' => $intent ? [
@@ -56,15 +58,19 @@ final class OffshoreSweepIntentController extends Controller
             ] : null,
             'summary' => [
                 'title' => $preview['sweep_required'] ? 'Sweep the main bank?' : 'Main bank already empty',
-                'description' => $preview['sweep_required']
-                    ? 'Confirm to transfer the exact refreshed balances below into the primary offshore.'
-                    : 'Nexus found no positive main-bank balances to sweep.',
+                'description' => match (true) {
+                    ! $preview['sweep_required'] => config('app.name').' found no positive main-bank balances to sweep.',
+                    $balancesVisible => 'Confirm to transfer the exact refreshed balances below into the primary offshore.',
+                    default => 'Confirm to transfer the full main-bank balance into the primary offshore. Balances are hidden because you cannot view alliance bank balances.',
+                },
                 'offshore' => $preview['offshore'],
-                'resources' => $preview['resources'],
+                'resources' => $balancesVisible ? $preview['resources'] : null,
+                'resources_hidden' => ! $balancesVisible,
                 'note' => $preview['note'],
+                'app_name' => config('app.name'),
             ],
             'warnings' => $preview['warnings'],
-            'resource_version' => $preview['resource_version'],
+            'resource_version' => $balancesVisible ? $preview['resource_version'] : null,
         ], 201, $this->metadata($request, $connection));
     }
 
@@ -95,11 +101,12 @@ final class OffshoreSweepIntentController extends Controller
 
         $transfer->loadMissing('destinationOffshore');
         $reconciliation = $transfer->status === OffshoreTransfer::STATUS_RECONCILIATION_REQUIRED;
+        $balancesVisible = $sweeps->canViewBalances($actor);
         $data = [
             'swept' => ! $reconciliation,
             'reconciliation_required' => $reconciliation,
             'message' => $reconciliation
-                ? 'The bank response was ambiguous. Nexus recorded the transfer for manual reconciliation.'
+                ? 'The bank response was ambiguous. '.config('app.name').' recorded the transfer for manual reconciliation.'
                 : 'Main bank sweep completed.',
             'offshore' => [
                 'id' => $transfer->destinationOffshore?->id,
@@ -109,9 +116,11 @@ final class OffshoreSweepIntentController extends Controller
             'transfer' => [
                 'id' => $transfer->id,
                 'status' => $transfer->status,
-                'payload' => $transfer->payload,
+                'payload' => $balancesVisible ? $transfer->payload : null,
                 'completed_at' => $transfer->completed_at?->toIso8601String(),
             ],
+            'resources_hidden' => ! $balancesVisible,
+            'app_name' => config('app.name'),
         ];
 
         return $this->discordData(
