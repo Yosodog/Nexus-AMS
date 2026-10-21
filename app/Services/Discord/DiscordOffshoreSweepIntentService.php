@@ -97,7 +97,7 @@ final readonly class DiscordOffshoreSweepIntentService
                 'offshore_sweep_failed',
                 $exception->getMessage(),
                 422,
-                'Review the error in Nexus before retrying the sweep.',
+                'Review the error in '.config('app.name').' before retrying the sweep.',
             );
         }
 
@@ -126,9 +126,18 @@ final readonly class DiscordOffshoreSweepIntentService
         return $transfer;
     }
 
+    /**
+     * Any administrator may sweep the main bank, but only staff who can already see
+     * alliance liquidity may see the balances being moved.
+     */
+    public function canViewBalances(User $moderator): bool
+    {
+        return Gate::forUser($moderator)->any(['view-offshores', 'view-financial-reports']);
+    }
+
     private function authorize(User $moderator): void
     {
-        if (! $moderator->is_admin || ! Gate::forUser($moderator)->allows('manage-offshores')) {
+        if (! $moderator->is_admin) {
             $this->audit->denied(
                 category: 'offshore',
                 action: 'discord_main_bank_sweep_intent',
@@ -141,7 +150,7 @@ final readonly class DiscordOffshoreSweepIntentService
             );
             throw new DiscordOffshoreSweepException(
                 'forbidden',
-                'You do not have permission to manage offshores.',
+                'Only administrators can sweep the main bank.',
                 403,
             );
         }
@@ -155,7 +164,7 @@ final readonly class DiscordOffshoreSweepIntentService
                 'offshore_not_configured',
                 'No enabled offshore is configured for sweeps.',
                 422,
-                'Configure a primary offshore in Nexus before retrying.',
+                'Configure a primary offshore in '.config('app.name').' before retrying.',
             );
         }
 
