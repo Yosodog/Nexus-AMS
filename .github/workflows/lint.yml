@@ -6,6 +6,7 @@ on:
     branches:
       - main
       - master
+      - 'release/**'
   schedule:
     - cron: '0 7 * * *'
 
@@ -40,6 +41,16 @@ jobs:
 
       - name: Verify Pint made no changes
         run: git diff --exit-code
+
+  release-scripts:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+
+      - name: Test release version rules
+        run: node --test scripts/release-version.test.mjs
 
   audit:
     runs-on: ubuntu-latest
