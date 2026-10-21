@@ -25,7 +25,7 @@ class EnsureDiscordInteractionIdempotency
                     'code' => 'discord_actor_invalid',
                     'message' => 'The resolved Discord actor is invalid.',
                 ],
-                'meta' => ['contract_version' => 1],
+                'meta' => ['contract_version' => 1, 'app_name' => config('app.name')],
             ], 500);
         }
 
@@ -46,7 +46,7 @@ class EnsureDiscordInteractionIdempotency
                     'message' => 'The request payload is invalid.',
                     'details' => $exception->errors(),
                 ],
-                'meta' => ['contract_version' => 1],
+                'meta' => ['contract_version' => 1, 'app_name' => config('app.name')],
             ], 422));
         } catch (Throwable $exception) {
             $this->receipts->fail($receipt);

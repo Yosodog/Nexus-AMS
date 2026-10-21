@@ -28,7 +28,7 @@ final class DirectoryController extends Controller
         } catch (AuthorizationException) {
             return $this->discordError(
                 'forbidden',
-                'You do not have permission to view another Nexus member.',
+                'You do not have permission to view another member.',
                 403,
                 ['retryable' => false],
                 $this->metadata($request, $connection),

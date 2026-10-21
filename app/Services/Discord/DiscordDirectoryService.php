@@ -39,7 +39,7 @@ final class DiscordDirectoryService
                 'contract_version' => 1,
                 'state' => 'unlinked',
                 'discord_user_id' => $discordUserId,
-                'message' => 'This Discord user is not linked to an active Nexus account.',
+                'message' => 'This Discord user is not linked to an active '.config('app.name').' account.',
             ];
         }
 
@@ -48,7 +48,7 @@ final class DiscordDirectoryService
                 'contract_version' => 1,
                 'state' => 'ambiguous',
                 'discord_user_id' => $discordUserId,
-                'message' => 'Nexus found multiple active links for this Discord user. An administrator must resolve them.',
+                'message' => config('app.name').' found multiple active links for this Discord user. An administrator must resolve them.',
             ];
         }
 
@@ -59,7 +59,7 @@ final class DiscordDirectoryService
                 'contract_version' => 1,
                 'state' => 'unavailable',
                 'discord_user_id' => $discordUserId,
-                'message' => 'This Discord link does not have an available verified Nexus member profile.',
+                'message' => 'This Discord link does not have an available verified member profile.',
             ];
         }
 

@@ -141,7 +141,7 @@ final class ApplicationDiscordStatusProjection
         return [
             [
                 'key' => 'submitted',
-                'label' => 'Application submitted to Nexus',
+                'label' => 'Application submitted to '.config('app.name'),
                 'complete' => true,
             ],
             [
@@ -174,9 +174,9 @@ final class ApplicationDiscordStatusProjection
         if ($needsStaffAttention) {
             return [[
                 'code' => 'discord_follow_up_needs_staff',
-                'message' => 'Nexus could not confirm all Discord application follow-up. Application staff need to review the server integration.',
+                'message' => config('app.name').' could not confirm all Discord application follow-up. Application staff need to review the server integration.',
                 'user_action' => [
-                    'label' => 'Continue your application in Nexus',
+                    'label' => 'Continue your application in '.config('app.name'),
                     'deep_link_path' => $path,
                 ],
             ]];
@@ -184,9 +184,9 @@ final class ApplicationDiscordStatusProjection
         if ($application->status === ApplicationStatus::Pending && $channelState === 'unknown') {
             return [[
                 'code' => 'discord_setup_unconfirmed',
-                'message' => 'Nexus has not yet confirmed a private Discord interview channel for this application.',
+                'message' => config('app.name').' has not yet confirmed a private Discord interview channel for this application.',
                 'user_action' => [
-                    'label' => 'Continue your application in Nexus',
+                    'label' => 'Continue your application in '.config('app.name'),
                     'deep_link_path' => $path,
                 ],
             ]];
@@ -200,17 +200,17 @@ final class ApplicationDiscordStatusProjection
     {
         if ($application->status === ApplicationStatus::Approved) {
             return [
-                'label' => 'Open your Nexus dashboard',
+                'label' => 'Open your '.config('app.name').' dashboard',
                 'deep_link_path' => route('user.dashboard', absolute: false),
             ];
         }
 
         $label = match (true) {
-            $needsStaffAttention => 'Continue in Nexus and contact application staff',
-            $application->status !== ApplicationStatus::Pending => 'Review your application in Nexus',
+            $needsStaffAttention => 'Continue in '.config('app.name').' and contact application staff',
+            $application->status !== ApplicationStatus::Pending => 'Review your application in '.config('app.name'),
             $channelState === 'ready' => 'Continue in your private interview channel',
-            $channelState === 'preparing' => 'Wait for Discord setup or continue in Nexus',
-            default => 'Continue your application in Nexus',
+            $channelState === 'preparing' => 'Wait for Discord setup or continue in '.config('app.name'),
+            default => 'Continue your application in '.config('app.name'),
         };
 
         return [

@@ -56,7 +56,7 @@ final readonly class DiscordBuildRecommendationService
         return [
             ...$base,
             'state' => 'ready',
-            'message' => 'Current recommended city build from Nexus.',
+            'message' => 'Current recommended city build from '.config('app.name').'.',
             'recommendation' => [
                 'target_infrastructure' => (int) $recommendation->infra_needed,
                 'land_used' => (float) $recommendation->land_used,

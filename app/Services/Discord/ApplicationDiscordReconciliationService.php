@@ -130,14 +130,14 @@ final class ApplicationDiscordReconciliationService
         } catch (InvalidArgumentException|JsonException $exception) {
             throw new ApplicationDiscordReconciliationException(
                 'application_reconciliation_plan_invalid',
-                'Nexus could not build a safe Discord application reconciliation plan.',
+                config('app.name').' could not build a safe Discord application reconciliation plan.',
                 422,
                 $exception,
             );
         } catch (Throwable $exception) {
             throw new ApplicationDiscordReconciliationException(
                 'application_reconciliation_queue_failed',
-                'Nexus could not queue Discord application reconciliation.',
+                config('app.name').' could not queue Discord application reconciliation.',
                 503,
                 $exception,
             );
