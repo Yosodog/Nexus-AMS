@@ -2,11 +2,13 @@
 
 Nexus AMS is an open-source alliance management system for [Politics & War](https://politicsandwar.com/). It brings banking, grants, loans, recruitment, audits, military operations, and member services into one application, with Discord commands and notifications connected to the same records and permissions.
 
-## Beta status
+## Get started
 
-Nexus AMS is in beta. Bugs and configuration changes are still possible before 1.0.
+- **Run Nexus for your alliance:** install it with [Nexus Setup](https://github.com/Yosodog/Nexus-Setup), which sets up a production server from published releases in a few prompts. See [Production and self-hosting](#production-and-self-hosting).
+- **Add Discord:** install the [Discord bot](https://github.com/Yosodog/Nexus-AMS-Discord) as an optional component after Core.
+- **Contribute:** see [Local development](#local-development).
 
-Use a tagged beta release for an installation. The `main` branch is for ongoing development and may move ahead of the latest supported release.
+Install from a published release. The `main` branch is for ongoing development and can be ahead of the latest release.
 
 ## Why Nexus
 
@@ -111,6 +113,8 @@ Grant requirements are not tied to a fixed command. Staff can require a minimum 
 - Discord war-room creation and archival with the plan and delivery state retained in Nexus
 - Staff workspaces for reviewing targets, recommended defenders, available slots, and team coverage
 
+The raid finder ranks targets by each member's expected net return, with suggested attack approaches, costs, confidence, and live availability checks. Raids are recorded automatically, including wars declared outside the finder. **My raid results** compares each prediction with the actual outcome, and admins can review rolling 30-day accuracy under **Prediction assessment** in raid settings.
+
 ### Audits and readiness
 
 - Configurable audit rules with priorities, grouped conditions, exceptions, and scheduled evaluation
@@ -121,7 +125,7 @@ Grant requirements are not tied to a fixed command. Staff can require a minimum 
 
 ### Federation
 
-Federation is an advanced beta feature for sharing selected military planning data between Nexus installations. It is disabled by default.
+Federation is an advanced, opt-in feature for sharing selected military planning data between Nexus installations. It is disabled by default.
 
 Each link is bilateral and uses signing and encryption keys. Administrators control sharing by direction, peer, coalition, and resource type. The first federation protocol supports war-plan snapshots, including recipient review, expiry, payload hashes, signed delivery, and local draft import. Each installation keeps its own authoritative records and can suspend or revoke links and keys.
 
@@ -137,27 +141,25 @@ See [Federation operations](docs/federation-operations.md) and the [federation p
 
 ## Companion services
 
-Nexus uses separate repositories for the web application, Discord process, subscription listener, and installer. A managed installation uses the same stable release tag in all four repositories. Nexus Setup publishes its canonical release last, after the matching Core, Subs, and Discord assets are available.
+Nexus is split across four repositories: this web application (Core), the Discord bot, the subscription listener (Subs), and the installer. Each is versioned and released on its own. Nexus Setup installs the newest releases that are compatible with each other, so you do not need to match version numbers yourself.
 
 ### Nexus AMS Discord
 
 [Nexus AMS Discord](https://github.com/Yosodog/Nexus-AMS-Discord) connects Discord to Nexus permissions and workflows. It supports commands for accounts, transactions, requests, grants, loans, builds, war aid, raids, wars, spy assignments, and applications.
 
-The bot also handles account linking, private notifications, interview channels, intelligence-report capture, member departures, alliance role removal, and war-room creation and archival. Protected actions are authorized by Nexus rather than trusted solely because they came from Discord. Queue leases, retries, acknowledgements, signed interaction proofs, and stable delivery identifiers reduce duplicate or lost work.
+The bot also handles account linking, private notifications, interview channels, intelligence-report capture, member departures, alliance role removal, and war-room creation and archival. Nexus authorizes every action, so Discord roles never grant Nexus permissions.
 
-Dedicated self-hosting supports one Nexus installation. A shared hosted mode exists for managed development and Cloud pilots, but public hosted-bot onboarding is not ready yet.
+Each bot connects one Discord server to one Nexus installation. On a Nexus Setup host, install it with `sudo nexus component install discord` or from **Admin → Settings → Software**. A shared, multi-alliance hosted bot exists, but public onboarding for it is not available yet.
 
 ### Nexus AMS Subs
 
 [Nexus AMS Subs](https://github.com/Yosodog/Nexus-AMS-Subs) listens for Politics & War GraphQL subscription events through Pusher. It sends nation, alliance, and war changes to Nexus without waiting for the next scheduled full synchronization.
 
-Subs supports protected HTTP delivery or signed Redis Streams delivery. It includes bounded concurrency, retries, dead-letter storage, health checks, and graceful shutdown. The delivery mode is explicit so it does not switch transports after an ambiguous failure.
+Nexus Setup installs Subs alongside Core by default, and it can also run on a separate worker host.
 
 ### Nexus Setup
 
-[Nexus Setup](https://github.com/Yosodog/Nexus-Setup) installs a managed deployment on supported Ubuntu and Debian amd64 hosts. It can place Core, Subs, and the database on one server or use profiles for an existing remote database, web-only, database-only, and Subs-only hosts.
-
-The guided installer provisions packages, Nginx, MySQL or MariaDB where local, systemd services, TLS, migrations, and the first administrator from published release artifacts. It generates internal credentials and preserves existing secrets on updates. Routine updates do not run the broad `DatabaseSeeder` or create automatic database backups.
+[Nexus Setup](https://github.com/Yosodog/Nexus-Setup) installs and updates a production deployment on Ubuntu and Debian amd64 hosts. It sets up packages, Nginx, the database, systemd services, TLS, migrations, and the first administrator, and it can split Core, Subs, and the database across hosts.
 
 ## Stack
 
@@ -185,12 +187,15 @@ composer install
 npm install
 cp .env.example .env
 php artisan key:generate
+```
+
+Edit `.env` before migrating: set `APP_URL`, the `DB_*` database credentials, `PW_API_KEY`, `PW_API_MUTATION_KEY`, `PW_ALLIANCE_ID`, and `NEXUS_API_TOKEN`. Set `DISCORD_BOT_KEY` only if you are connecting a Discord bot. Do not commit `.env`.
+
+```bash
 php artisan migrate --seed
 npm run build
 composer run dev
 ```
-
-Set the application URL, database credentials, Politics & War API credentials, alliance ID, and Nexus API token in `.env` before first sign-in. Add the Discord bot key when using Discord-connected workflows. Do not commit `.env`.
 
 `composer run dev` starts the Laravel server, queue listener, log tailer, and Vite development server.
 
@@ -213,49 +218,18 @@ See [AGENTS.md](AGENTS.md) for repository conventions, testing guidance, and sec
 
 ## Production and self-hosting
 
-Use [Nexus Setup](https://github.com/Yosodog/Nexus-Setup) for a standalone production installation. Have the domain and inbound ports 80/443 ready before installation; the setup process requests a TLS certificate. The default profile asks only for the domain, administrator email/password/nation ID, alliance ID, and Politics & War API key.
-
-Split profiles need an existing remote database connection, or, on a new
-database-only server, that server's private IPv4 address and the application
-server's private IPv4 address. Restrict database port 3306 to the application
-host in your firewall; database-only hosts do not run the Admin GUI.
+Install Nexus with [Nexus Setup](https://github.com/Yosodog/Nexus-Setup). You need an Ubuntu or Debian amd64 server, a domain pointed at it with ports 80 and 443 open, the administrator's email, password, and nation ID, your alliance ID, and a Politics & War API key and mutation key.
 
 ```bash
-git clone https://github.com/Yosodog/Nexus-Setup.git
-cd Nexus-Setup
-sudo ./bootstrap.sh
+curl -fsSL https://raw.githubusercontent.com/Yosodog/Nexus-Setup/main/bootstrap.sh | sudo bash
 sudo nexus install
 ```
 
-After installation, use `nexus update --check`, `nexus update`, `nexus status`,
-`nexus doctor`, `nexus rollback`, and `nexus cleanup` on the host. Administrators
-with `manage-system` can view release notes and initiate the same supported
-local operations at **Admin → Settings → Software**. The CLI and GUI use the
-same root-owned updater. Optional Subs and Discord components can be installed
-locally; remote hosts remain CLI-managed.
+The [installation guide](https://github.com/Yosodog/Nexus-Setup/blob/main/docs/getting-started.md) covers every prompt, and [installation profiles](https://github.com/Yosodog/Nexus-Setup/blob/main/docs/installation-profiles.md) cover remote and split databases.
 
-Updates apply every intermediate stable release, run forward-only migrations,
-and preserve the previous code release for rollback. They do **not** back up or
-restore the database. Take a manual snapshot first if you need one. Database
-migrations in stable releases must remain compatible with the immediately
-previous Core version. Cleanup removes older managed code only; it keeps the
-current and previous releases, credentials, uploads, writable storage, and
-legacy checkouts. Read the [Nexus Setup operator guide](https://github.com/Yosodog/Nexus-Setup#operate-nexus)
-before an update or cleanup.
+After installation, update with `sudo nexus update`, or from **Admin → Settings → Software** if your account has the `manage-system` permission. Updates run migrations and keep the previous release for code rollback, but they **do not back up the database**. Take your own backups. Read the [operations guide](https://github.com/Yosodog/Nexus-Setup/blob/main/docs/operations.md) before your first update.
 
-The repository also contains a hardened container build for managed deployments. Its runtime roles, release metadata, health contracts, and deployment restrictions are intended for an orchestrated environment rather than a basic standalone install.
-
-## Nexus Cloud
-
-Nexus Cloud is the managed deployment path under development. The application already contains the runtime boundaries and service contracts needed by managed environments, but public Cloud onboarding is not ready yet.
-
-Self-hosted installations should use `NEXUS_RUNTIME=standalone` through Nexus Setup. The hosted runtime modes are for operator-managed development and pilots.
-
-## Raid predictions and outcomes
-
-The raid finder ranks targets by personalized expected net return, with suggested attack approaches, costs, confidence, and current availability checks. Results update as background evaluation progresses, and uncertain estimates remain clearly labeled.
-
-Member Raid declarations are captured automatically, including wars declared outside the finder. **My raid results** compares predictions with actual outcomes using the original prices. Authorized admins can review rolling 30-day accuracy through **Prediction assessment** in raid settings.
+Use `NEXUS_RUNTIME=standalone` (the default) for self-hosted installations. The repository's container build and hosted runtime modes are for the managed Nexus Cloud environment, which is not open to the public yet.
 
 ## Contributing
 
