@@ -20,7 +20,8 @@ class WarDeclaredDiscordNotification extends Notification
         private readonly Nation $defender,
         private readonly ?WarAlertCounterReference $counter,
         private readonly string $channelId,
-        private readonly ?CarbonInterface $availableAt = null
+        private readonly ?CarbonInterface $availableAt = null,
+        private readonly ?string $defenderDiscordUserId = null,
     ) {}
 
     /**
@@ -57,6 +58,7 @@ class WarDeclaredDiscordNotification extends Notification
                 ],
                 'attacker' => $this->formatNation($this->attacker),
                 'defender' => $this->formatNation($this->defender),
+                'defender_discord_user_id' => $this->defenderDiscordUserId,
             ],
         ];
     }
