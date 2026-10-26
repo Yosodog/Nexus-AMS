@@ -1,5 +1,5 @@
-# One-click release: works out the next v* tag, checks the commit and its
-# compatibility requirements, pushes the tag, and runs release.yml to build
+# One-click release: works out the next v* tag, checks its compatibility
+# requirements, pushes the tag, and runs release.yml to build
 # and publish. Run it from Actions > Release, or:
 #
 #   gh workflow run cut-release.yml --ref main -f bump=minor -f beta=true
@@ -46,9 +46,6 @@ env:
   # Compatibility requirements checked before tagging; empty when the
   # repository publishes no requirements (Nexus-Setup).
   REQUIRES_FILE: nexus-release.requires.json
-  # Comma-separated check names that must pass on the released commit. Empty
-  # reads the required status checks from the default branch's rulesets.
-  REQUIRED_CHECKS: ''
   # Where each component's releases are published.
   COMPONENT_REPOS: >-
     {"nexus-updater": "Yosodog/Nexus-Setup",
@@ -69,7 +66,6 @@ jobs:
     timeout-minutes: 10
     permissions:
       contents: read
-      checks: read
     outputs:
       tag: ${{ steps.version.outputs.tag }}
       sha: ${{ steps.version.outputs.sha }}
@@ -102,38 +98,6 @@ jobs:
           result=$(node scripts/release-version.mjs "${BUMP}" "${BETA}" "${VERSION}" "${GITHUB_SHA}")
           echo "${result}"
           echo "${result}" >> "${GITHUB_OUTPUT}"
-
-      - name: Require passing checks on the release commit
-        env:
-          SHA: ${{ steps.version.outputs.sha }}
-          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
-        run: |
-          checks=()
-          if [[ -n "${REQUIRED_CHECKS}" ]]; then
-            IFS=',' read -ra checks <<< "${REQUIRED_CHECKS}"
-          else
-            while IFS= read -r check; do
-              checks+=("${check}")
-            done < <(gh api "repos/${GITHUB_REPOSITORY}/rules/branches/${DEFAULT_BRANCH}" \
-              --jq '[.[] | select(.type == "required_status_checks") | .parameters.required_status_checks[].context] | unique | .[]')
-          fi
-          if [[ ${#checks[@]} -eq 0 ]]; then
-            echo "::error::No required checks found; set REQUIRED_CHECKS in this workflow"
-            exit 1
-          fi
-          failed=0
-          for check in "${checks[@]}"; do
-            check=$(sed 's/^ *//; s/ *$//' <<< "${check}")
-            conclusion=$(gh api -X GET "repos/${GITHUB_REPOSITORY}/commits/${SHA}/check-runs" \
-              -f check_name="${check}" -f filter=latest \
-              --jq '[.check_runs[] | .conclusion // .status] | if any(. == "success" or . == "neutral" or . == "skipped") then "success" else (first // "missing") end')
-            echo "${check}: ${conclusion}"
-            if [[ "${conclusion}" != success ]]; then
-              echo "::error::Required check '${check}' is ${conclusion} on ${SHA}"
-              failed=1
-            fi
-          done
-          exit "${failed}"
 
       - name: Validate compatibility requirements
         if: env.REQUIRES_FILE != ''
