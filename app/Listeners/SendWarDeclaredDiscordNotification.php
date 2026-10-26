@@ -169,6 +169,7 @@ class SendWarDeclaredDiscordNotification
                     $counter,
                     $channelId,
                     Carbon::now(),
+                    $defender->user?->activeDiscordAccount()?->discord_id,
                 ));
 
             return true;

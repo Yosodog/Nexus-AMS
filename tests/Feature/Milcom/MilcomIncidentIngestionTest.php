@@ -14,12 +14,14 @@ use App\Jobs\AutoPickCounterAssignmentsJob;
 use App\Jobs\GenerateMilcomRecommendationsJob;
 use App\Listeners\SendWarDeclaredDiscordNotification;
 use App\Models\Alliance;
+use App\Models\DiscordAccount;
 use App\Models\DiscordQueue;
 use App\Models\MilcomIncident;
 use App\Models\MilcomObjective;
 use App\Models\MilcomOperation;
 use App\Models\MilcomRecommendationRun;
 use App\Models\Nation;
+use App\Models\User;
 use App\Models\WarCounter;
 use App\Services\SettingService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -154,6 +156,46 @@ class MilcomIncidentIngestionTest extends TestCase
                 Mockery::on(fn (array $context): bool => $context['war_id'] === 92_007),
             )
             ->once();
+    }
+
+    public function test_discord_war_alert_mentions_the_defender_when_their_discord_is_linked(): void
+    {
+        SettingService::setDiscordWarAlertEnabled(true);
+        SettingService::setDiscordWarAlertChannelId('123456789012345678');
+        [$friendlyAlliance, $enemyAlliance] = $this->alliances();
+        $attacked = Nation::factory()->create(['alliance_id' => $friendlyAlliance->id]);
+        $aggressor = Nation::factory()->create(['alliance_id' => $enemyAlliance->id]);
+        $defenderUser = User::factory()->create(['nation_id' => $attacked->id]);
+        DiscordAccount::factory()->unlinked()->create([
+            'user_id' => $defenderUser->id,
+            'discord_id' => '111111111111111111',
+            'linked_at' => now()->subDay(),
+        ]);
+        DiscordAccount::factory()->create([
+            'user_id' => $defenderUser->id,
+            'discord_id' => '222222222222222222',
+        ]);
+
+        $this->postIncomingWar($this->incomingWarPayload(92_008, $aggressor, $attacked))->assertOk();
+
+        $alert = DiscordQueue::query()->where('action', 'WAR_ALERT')->sole();
+        $this->assertSame('222222222222222222', $alert->payload['defender_discord_user_id']);
+    }
+
+    public function test_discord_war_alert_omits_the_mention_when_the_defender_has_no_linked_discord(): void
+    {
+        SettingService::setDiscordWarAlertEnabled(true);
+        SettingService::setDiscordWarAlertChannelId('123456789012345678');
+        [$friendlyAlliance, $enemyAlliance] = $this->alliances();
+        $attacked = Nation::factory()->create(['alliance_id' => $friendlyAlliance->id]);
+        $aggressor = Nation::factory()->create(['alliance_id' => $enemyAlliance->id]);
+        $defenderUser = User::factory()->create(['nation_id' => $attacked->id]);
+        DiscordAccount::factory()->unlinked()->create(['user_id' => $defenderUser->id]);
+
+        $this->postIncomingWar($this->incomingWarPayload(92_009, $aggressor, $attacked))->assertOk();
+
+        $alert = DiscordQueue::query()->where('action', 'WAR_ALERT')->sole();
+        $this->assertNull($alert->payload['defender_discord_user_id']);
     }
 
     public function test_incident_is_linked_to_an_active_plan_only_when_minimum_reserved_coverage_exists(): void
