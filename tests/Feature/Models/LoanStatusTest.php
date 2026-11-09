@@ -18,24 +18,6 @@ class LoanStatusTest extends TestCase
 {
     use RefreshDatabase;
 
-    protected function setUp(): void
-    {
-        parent::setUp();
-
-        if (DB::getDriverName() === 'sqlite') {
-            DB::statement('PRAGMA ignore_check_constraints = ON');
-        }
-    }
-
-    protected function tearDown(): void
-    {
-        if (DB::getDriverName() === 'sqlite') {
-            DB::statement('PRAGMA ignore_check_constraints = OFF');
-        }
-
-        parent::tearDown();
-    }
-
     public function test_unsaved_loan_uses_the_database_status_default(): void
     {
         $loan = new Loan;

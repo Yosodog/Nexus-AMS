@@ -431,16 +431,10 @@ class LoanWorkflowTest extends TestCase
         ]);
         $admin = $this->createAdminWithPermission('manage-loans');
 
-        $this->allowExtendedLoanStatusesOnSqlite();
-
-        try {
-            $this->actingAs($admin)
-                ->post(route('admin.loans.markPaid', ['Loan' => $loan->id]))
-                ->assertRedirect(route('admin.loans'))
-                ->assertSessionHas('alert-type', 'success');
-        } finally {
-            $this->restoreLoanStatusChecksOnSqlite();
-        }
+        $this->actingAs($admin)
+            ->post(route('admin.loans.markPaid', ['Loan' => $loan->id]))
+            ->assertRedirect(route('admin.loans'))
+            ->assertSessionHas('alert-type', 'success');
 
         $loan->refresh();
 
@@ -634,20 +628,6 @@ class LoanWorkflowTest extends TestCase
             'next_due_date' => now()->addWeek(),
             ...$overrides,
         ]);
-    }
-
-    private function allowExtendedLoanStatusesOnSqlite(): void
-    {
-        if (DB::getDriverName() === 'sqlite') {
-            DB::statement('PRAGMA ignore_check_constraints = ON');
-        }
-    }
-
-    private function restoreLoanStatusChecksOnSqlite(): void
-    {
-        if (DB::getDriverName() === 'sqlite') {
-            DB::statement('PRAGMA ignore_check_constraints = OFF');
-        }
     }
 
     private function attachAdminPermission(User $admin, string $permission): User

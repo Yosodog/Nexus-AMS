@@ -10,7 +10,6 @@ use App\Models\Loan;
 use App\Models\Nation;
 use App\Services\MemberFinanceSummaryService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Mockery\MockInterface;
 use Tests\Concerns\BuildsTestUsers;
@@ -203,29 +202,16 @@ class MemberDashboardFinanceSummaryTest extends TestCase
 
     private function createLoan(Nation $nation, Account $account, string $status, float $remainingBalance): Loan
     {
-        $requiresSqliteStatusCompatibility = DB::getDriverName() === 'sqlite'
-            && in_array($status, ['missed', 'paid'], true);
-
-        if ($requiresSqliteStatusCompatibility) {
-            DB::statement('PRAGMA ignore_check_constraints = ON');
-        }
-
-        try {
-            return Loan::query()->create([
-                'nation_id' => $nation->id,
-                'account_id' => $account->id,
-                'amount' => max($remainingBalance, 1000),
-                'remaining_balance' => $remainingBalance,
-                'interest_rate' => 1,
-                'term_weeks' => 10,
-                'status' => $status,
-                'pending_key' => $status === 'pending' ? 1 : null,
-                'approved_at' => in_array($status, ['approved', 'missed', 'paid'], true) ? now() : null,
-            ]);
-        } finally {
-            if ($requiresSqliteStatusCompatibility) {
-                DB::statement('PRAGMA ignore_check_constraints = OFF');
-            }
-        }
+        return Loan::query()->create([
+            'nation_id' => $nation->id,
+            'account_id' => $account->id,
+            'amount' => max($remainingBalance, 1000),
+            'remaining_balance' => $remainingBalance,
+            'interest_rate' => 1,
+            'term_weeks' => 10,
+            'status' => $status,
+            'pending_key' => $status === 'pending' ? 1 : null,
+            'approved_at' => in_array($status, ['approved', 'missed', 'paid'], true) ? now() : null,
+        ]);
     }
 }

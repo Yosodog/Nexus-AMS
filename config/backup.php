@@ -36,7 +36,7 @@ return [
                 'relative_path' => null,
             ],
             'databases' => [
-                env('DB_CONNECTION', 'mysql'),
+                env('DB_CONNECTION', 'sqlite'),
             ],
         ],
         'database_dump_compressor' => GzipCompressor::class,

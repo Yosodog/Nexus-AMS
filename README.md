@@ -164,7 +164,7 @@ Nexus Setup installs Subs alongside Core by default, and it can also run on a se
 ## Stack
 
 - PHP 8.3 and Laravel 13
-- MySQL or compatible MariaDB
+- MySQL or compatible MariaDB, or SQLite 3.35+ for local development and small single-host installs
 - Blade and Livewire 3
 - Tailwind CSS 4, DaisyUI 5, and MaryUI 2
 - Vite 6
@@ -177,7 +177,7 @@ Requirements:
 - PHP 8.3 or later
 - Composer
 - Node.js 20 or later
-- MySQL 8 or compatible MariaDB
+- MySQL 8 or compatible MariaDB, or SQLite 3.35+ with the `pdo_sqlite` PHP extension
 - Redis is optional locally and recommended for production queue, cache, and session workloads
 
 ```bash
@@ -189,7 +189,9 @@ cp .env.example .env
 php artisan key:generate
 ```
 
-Edit `.env` before migrating: set `APP_URL`, the `DB_*` database credentials, `PW_API_KEY`, `PW_API_MUTATION_KEY`, `PW_ALLIANCE_ID`, and `NEXUS_API_TOKEN`. Set `DISCORD_BOT_KEY` only if you are connecting a Discord bot. Do not commit `.env`.
+Edit `.env` before migrating: set `APP_URL`, the `DB_*` database settings, `PW_API_KEY`, `PW_API_MUTATION_KEY`, `PW_ALLIANCE_ID`, and `NEXUS_API_TOKEN`. Set `DISCORD_BOT_KEY` only if you are connecting a Discord bot. Do not commit `.env`.
+
+To use SQLite instead of MySQL, set `DB_CONNECTION=sqlite`, remove the other `DB_*` connection lines, and create the database file before migrating (`touch database/database.sqlite`, or set `DB_DATABASE` to an absolute path). The SQLite connection enables WAL mode and a 5-second busy timeout by default so the web server, queue worker, and scheduler can share the file; tune them with `DB_JOURNAL_MODE`, `DB_BUSY_TIMEOUT`, and `DB_SYNCHRONOUS`.
 
 ```bash
 php artisan migrate --seed
