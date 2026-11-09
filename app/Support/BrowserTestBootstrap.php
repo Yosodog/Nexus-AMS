@@ -332,6 +332,19 @@ class BrowserTestBootstrap
             'pending_key' => 1,
         ]);
 
+        Loan::query()->create([
+            'nation_id' => $memberNation->id,
+            'account_id' => $memberAccount->id,
+            'amount' => 2000000,
+            'remaining_balance' => 1250000.5,
+            'scheduled_weekly_payment' => 250000,
+            'interest_rate' => 0,
+            'term_weeks' => 8,
+            'status' => LoanStatus::Approved,
+            'approved_at' => now()->subWeeks(3),
+            'next_due_date' => now()->addDays(4)->startOfDay(),
+        ]);
+
         AllianceFinanceEntry::query()->create([
             'date' => now()->toDateString(),
             'direction' => AllianceFinanceEntry::DIRECTION_INCOME,

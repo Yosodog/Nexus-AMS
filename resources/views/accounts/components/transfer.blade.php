@@ -321,19 +321,25 @@
         }
 
         input.dataset.validationBound = 'true';
+
+        // Only cap the maximum while typing. Raising the value to the minimum on every keystroke
+        // rewrites partial entries such as "", "0" or "0." (e.g. min 0.01 for loan payments),
+        // which locks the field at the minimum. The minimum is enforced once the value is committed.
         input.addEventListener('input', function () {
             const value = Number(this.value);
-            const minimum = this.min === '' ? 0 : Number(this.min);
             const maximum = this.max === '' ? Number.POSITIVE_INFINITY : Number(this.max);
 
-            if (!Number.isFinite(value)) {
-                return;
-            }
-
-            if (value < minimum) {
-                this.value = minimum;
-            } else if (value > maximum) {
+            if (this.value !== '' && Number.isFinite(value) && value > maximum) {
                 this.value = maximum;
+            }
+        });
+
+        input.addEventListener('change', function () {
+            const value = Number(this.value);
+            const minimum = this.min === '' ? 0 : Number(this.min);
+
+            if (this.value !== '' && Number.isFinite(value) && value < minimum) {
+                this.value = minimum;
             }
         });
     }
