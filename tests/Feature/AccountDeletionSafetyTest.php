@@ -281,27 +281,14 @@ class AccountDeletionSafetyTest extends TestCase
 
     private function createLoanWithStatus(Account $account, LoanStatus $status): void
     {
-        $ignoreStaleSqliteConstraint = DB::getDriverName() === 'sqlite'
-            && in_array($status, [LoanStatus::Paid, LoanStatus::Missed], true);
-
-        if ($ignoreStaleSqliteConstraint) {
-            DB::statement('PRAGMA ignore_check_constraints = ON');
-        }
-
-        try {
-            Loan::query()->create([
-                'nation_id' => $account->nation_id,
-                'account_id' => $account->id,
-                'amount' => 1000,
-                'remaining_balance' => 1000,
-                'status' => $status,
-                'pending_key' => $status === LoanStatus::Pending ? 1 : null,
-            ]);
-        } finally {
-            if ($ignoreStaleSqliteConstraint) {
-                DB::statement('PRAGMA ignore_check_constraints = OFF');
-            }
-        }
+        Loan::query()->create([
+            'nation_id' => $account->nation_id,
+            'account_id' => $account->id,
+            'amount' => 1000,
+            'remaining_balance' => 1000,
+            'status' => $status,
+            'pending_key' => $status === LoanStatus::Pending ? 1 : null,
+        ]);
     }
 
     private function createPendingMemberTransfer(Account $source, Account $destination, User $user): void

@@ -13,7 +13,6 @@ use App\Models\Loan;
 use App\Models\Nation;
 use App\Services\MemberDashboardAttentionService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Support\Facades\DB;
 use Tests\Concerns\BuildsTestUsers;
 use Tests\TestCase;
 
@@ -127,29 +126,19 @@ class MemberDashboardAttentionTest extends TestCase
 
     private function createMissedLoan(Nation $nation, Account $account): Loan
     {
-        if (DB::getDriverName() === 'sqlite') {
-            DB::statement('PRAGMA ignore_check_constraints = ON');
-        }
-
-        try {
-            return Loan::query()->create([
-                'nation_id' => $nation->id,
-                'account_id' => $account->id,
-                'amount' => 1000,
-                'remaining_balance' => 900,
-                'scheduled_weekly_payment' => 100,
-                'past_due_amount' => 125,
-                'accrued_interest_due' => 15,
-                'interest_rate' => 2,
-                'term_weeks' => 10,
-                'status' => LoanStatus::Missed,
-                'next_due_date' => now()->subDay(),
-            ]);
-        } finally {
-            if (DB::getDriverName() === 'sqlite') {
-                DB::statement('PRAGMA ignore_check_constraints = OFF');
-            }
-        }
+        return Loan::query()->create([
+            'nation_id' => $nation->id,
+            'account_id' => $account->id,
+            'amount' => 1000,
+            'remaining_balance' => 900,
+            'scheduled_weekly_payment' => 100,
+            'past_due_amount' => 125,
+            'accrued_interest_due' => 15,
+            'interest_rate' => 2,
+            'term_weeks' => 10,
+            'status' => LoanStatus::Missed,
+            'next_due_date' => now()->subDay(),
+        ]);
     }
 
     private function createAuditFinding(Nation $nation): AuditResult
