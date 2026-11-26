@@ -237,6 +237,69 @@ class RaidTerminalEvidenceRefreshTest extends TestCase
         $this->assertSame('incomplete', data_get($result->outcome_metadata, 'evidence_status'));
     }
 
+    public function test_refresh_query_asks_for_ended_wars(): void
+    {
+        Http::fake(['*' => Http::response($this->warResponse(91111, []), 200)]);
+
+        app(RaidOutcomeService::class)->reconcile($this->terminalPrediction(91111));
+
+        Http::assertSent(fn (Request $request): bool => preg_match('/active:\s*false/', (string) $request['query']) === 1);
+    }
+
+    public function test_attempts_made_before_the_query_version_do_not_count_and_the_war_is_refreshed_again(): void
+    {
+        Http::fake(['*' => Http::response($this->warResponse(91112, [[
+            'id' => 92112,
+            'date' => '2026-09-13 11:00:00',
+            'att_id' => 101,
+            'def_id' => 202,
+            'type' => 'VICTORY',
+            'victor' => 101,
+            'money_looted' => 100,
+        ]]), 200)]);
+        $prediction = $this->terminalPrediction(91112, ['att_money_looted' => 100]);
+        $prediction->forceFill(['outcome_metadata' => ['evidence_refresh' => [
+            'attempted' => true,
+            'attempted_at' => CarbonImmutable::now()->subHour()->toIso8601String(),
+            'attempt_count' => 6,
+            'status' => 'unavailable',
+            'count' => 0,
+            'error' => 'The terminal war was not returned by the bounded refresh.',
+        ]]])->saveQuietly();
+
+        $result = app(RaidOutcomeService::class)->reconcile($prediction);
+
+        Http::assertSentCount(1);
+        $this->assertSame('refreshed', data_get($result?->outcome_metadata, 'evidence_refresh.status'));
+        $this->assertSame(1, data_get($result?->outcome_metadata, 'evidence_refresh.attempt_count'));
+        $this->assertSame(2, data_get($result?->outcome_metadata, 'evidence_refresh.query_version'));
+        $this->assertNotNull($result?->outcome_finalized_at);
+    }
+
+    public function test_a_war_the_api_does_not_return_stops_at_the_bound_under_the_current_query(): void
+    {
+        config(['raids.reconciliation_max_refresh_attempts' => 3]);
+        Http::fake(['*' => Http::response(['data' => ['wars' => [
+            'data' => [],
+            'paginatorInfo' => ['perPage' => 100, 'count' => 0, 'lastPage' => 1],
+        ]]], 200)]);
+        $prediction = $this->terminalPrediction(91113);
+
+        $now = CarbonImmutable::parse('2026-10-01 12:00:00');
+        for ($i = 0; $i < 20; $i++) {
+            CarbonImmutable::setTestNow($now->addHours($i * 8));
+            $result = app(RaidOutcomeService::class)->reconcile($prediction);
+        }
+        CarbonImmutable::setTestNow();
+
+        Http::assertSentCount(3);
+        $this->assertSame(3, data_get($result?->outcome_metadata, 'evidence_refresh.attempt_count'));
+        $this->assertSame(
+            'The terminal war was not returned by the bounded refresh.',
+            data_get($result?->outcome_metadata, 'evidence_refresh.error'),
+        );
+    }
+
     /** @return list<string> */
     private function serviceArguments(): array
     {

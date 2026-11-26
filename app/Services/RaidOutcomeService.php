@@ -34,6 +34,14 @@ final class RaidOutcomeService
         private readonly RaidLootFraction $lootFractions,
     ) {}
 
+    /**
+     * Version of the terminal evidence refresh query. Attempts recorded under
+     * an older version are not counted, so a corrected query gets its full
+     * allowance again. Version 1 omitted `active`, which made the API return
+     * only active wars, so ended wars were never found.
+     */
+    private const EVIDENCE_QUERY_VERSION = 2;
+
     /** @var list<string> */
     private const LOOT_RESOURCES = [
         'coal',
@@ -1039,7 +1047,7 @@ final class RaidOutcomeService
     private function shouldRefreshTerminalEvidence(RaidPrediction $prediction): bool
     {
         $metadata = is_array($prediction->outcome_metadata) ? $prediction->outcome_metadata : [];
-        $attempts = max(0, (int) data_get($metadata, 'evidence_refresh.attempt_count', 0));
+        $attempts = $this->refreshAttemptCount($metadata);
         $lastAttempt = $this->timestamp(data_get($metadata, 'evidence_refresh.attempted_at'));
         if ($lastAttempt === null) {
             return true;
@@ -1057,6 +1065,22 @@ final class RaidOutcomeService
     }
 
     /**
+     * Attempts made with the current query version; attempts recorded without
+     * a version, or with an older one, were made with a query that could not
+     * find ended wars and do not count against the bound.
+     *
+     * @param  array<string, mixed>  $metadata
+     */
+    private function refreshAttemptCount(array $metadata): int
+    {
+        if ((int) data_get($metadata, 'evidence_refresh.query_version', 1) < self::EVIDENCE_QUERY_VERSION) {
+            return 0;
+        }
+
+        return max(0, (int) data_get($metadata, 'evidence_refresh.attempt_count', 0));
+    }
+
+    /**
      * Fetch at most one bounded page for a terminal war. This is only used
      * after local aggregates show that the tenant ledger is incomplete.
      *
@@ -1070,11 +1094,12 @@ final class RaidOutcomeService
 
         $attemptedAt = CarbonImmutable::now();
         $previousMetadata = is_array($prediction->outcome_metadata) ? $prediction->outcome_metadata : [];
-        $attemptCount = max(0, (int) data_get($previousMetadata, 'evidence_refresh.attempt_count', 0)) + 1;
+        $attemptCount = $this->refreshAttemptCount($previousMetadata) + 1;
         $result = [
             'attempted' => true,
             'attempted_at' => $attemptedAt->toIso8601String(),
             'attempt_count' => $attemptCount,
+            'query_version' => self::EVIDENCE_QUERY_VERSION,
             'status' => 'unavailable',
             'count' => 0,
         ];
@@ -1089,6 +1114,7 @@ final class RaidOutcomeService
                 ->setRootField('wars')
                 ->addArgument([
                     'id' => [(int) $war->getKey()],
+                    'active' => false,
                     'first' => $pageSize,
                     'page' => 1,
                 ])
