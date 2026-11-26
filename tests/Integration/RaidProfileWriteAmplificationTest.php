@@ -54,6 +54,39 @@ class RaidProfileWriteAmplificationTest extends MySqlIntegrationTestCase
         $this->assertSame(['write' => 0, 'update' => 0], $projection);
     }
 
+    public function test_a_bulk_update_of_changed_profiles_stores_values_a_rebuild_reads_back_unchanged(): void
+    {
+        $nations = collect(range(1, 6))->map(fn (): Nation => $this->nation(['score' => 1_000, 'war_policy' => 'TURTLE']));
+        $ids = $nations->pluck('id')->all();
+        app(RaidTargetProfileBuilder::class)->build($ids);
+        $nations->each(fn (Nation $nation, int $index) => $nation->update([
+            'score' => 1_000 + ($index + 1) * 12.34,
+            'war_policy' => $index % 2 === 0 ? 'MONEYBAGS' : 'PIRATE',
+            'beige_turns' => $index,
+        ]));
+        City::query()->whereIn('nation_id', array_slice($ids, 0, 3))->update(['infrastructure' => 2_345.67]);
+        app(RaidProfileDirtyMarker::class)->mark($ids);
+        $this->travel(RaidProfileDirtyMarker::SETTLE_SECONDS)->seconds();
+
+        $statements = [];
+        DB::listen(function (QueryExecuted $query) use (&$statements): void {
+            if (preg_match('/^\s*(insert|update)\b.*raid_target_profiles/is', $query->sql) === 1) {
+                $statements[] = $query->sql;
+            }
+        });
+        $this->artisan('raids:process-profiles')->assertSuccessful();
+
+        $this->assertCount(1, $statements);
+        $this->assertSame(0, RaidTargetProfile::query()->whereNotNull('dirty_at')->count());
+        $nations->each(function (Nation $nation, int $index): void {
+            $profile = RaidTargetProfile::query()->findOrFail($nation->id);
+            $this->assertSame(round(1_000 + ($index + 1) * 12.34, 2), $profile->score);
+            $this->assertSame($index % 2 === 0 ? 'MONEYBAGS' : 'PIRATE', $profile->war_policy);
+            $this->assertSame($index, $profile->beige_turns);
+        });
+        $this->assertSame(['write' => 0, 'update' => 0], $this->handlerWrites(fn () => app(RaidTargetProfileBuilder::class)->build($ids)));
+    }
+
     public function test_a_mark_placed_while_a_profile_is_rebuilding_keeps_it_dirty(): void
     {
         $nation = $this->nation(['score' => 1_000]);

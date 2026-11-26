@@ -13,22 +13,27 @@ use App\Services\Economy\EconomyRules;
 use App\Services\Economy\MarketValuationService;
 use App\Services\RaidStockpileEstimator;
 use Carbon\CarbonImmutable;
-use Illuminate\Database\ConnectionInterface;
+use DateTimeInterface;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Log;
 use Throwable;
 
 /**
- * Builds raid target profiles for a batch of nations. Reads take a fixed number of queries;
- * writes are one insert for new profiles plus one update per profile that changed or has a
- * settled dirty mark to clear, all in one transaction.
+ * Builds raid target profiles for a batch of nations with a fixed number of queries: one
+ * insert for new profiles and one bulk update for existing profiles that changed or have a
+ * settled dirty mark to clear.
  */
 final class RaidTargetProfileBuilder
 {
     private const RETENTION_EVENT_LIMIT = 5;
 
     private const RETENTION_MIN_GAP_HOURS = 12;
+
+    /**
+     * Upper bound on placeholders in one bulk profile UPDATE, below the SQLite and MySQL limits.
+     */
+    private const MAX_UPDATE_BINDINGS = 20_000;
 
     public function __construct(
         private EconomyCalculator $economy,
@@ -41,8 +46,8 @@ final class RaidTargetProfileBuilder
      *
      * Existing profiles are read before nation data, so the dirty mark seen here is never
      * newer than the data the profile is built from. The mark is cleared only when it has
-     * settled (see RaidProfileDirtyMarker::settledCutoff()) and is still the same value at
-     * write time; a mark placed while this build runs therefore keeps the profile dirty.
+     * settled (see RaidProfileDirtyMarker::settledCutoff()); a mark placed while this build
+     * runs is always newer than that cutoff, so it keeps the profile dirty.
      *
      * @param  list<int>  $nationIds
      * @return int profiles rebuilt
@@ -121,9 +126,9 @@ final class RaidTargetProfileBuilder
             }
 
             $changes = $this->changedColumns($profile, $row);
-            $settledMark = $profile->dirty_at !== null && $profile->dirty_at->lessThanOrEqualTo($settled) ? $profile->dirty_at : null;
+            $hasSettledMark = $profile->dirty_at !== null && $profile->dirty_at->lessThanOrEqualTo($settled);
 
-            if ($changes === [] && $settledMark === null) {
+            if ($changes === [] && ! $hasSettledMark) {
                 continue;
             }
 
@@ -131,26 +136,30 @@ final class RaidTargetProfileBuilder
                 $changes['projected_at'] = $now;
             }
 
-            $updates[(int) $nationId] = [
-                'values' => $changes + ['computed_at' => $now, 'updated_at' => $now],
-                'clear' => $settledMark,
-            ];
+            $updates[(int) $nationId] = $changes;
         }
 
         if ($inserts !== []) {
             RaidTargetProfile::query()->insertOrIgnore($inserts);
         }
 
-        if ($updates === []) {
-            return;
+        $batch = [];
+        $bindings = 0;
+
+        foreach ($updates as $nationId => $changes) {
+            if ($batch !== [] && $bindings + 2 * count($changes) + 1 > self::MAX_UPDATE_BINDINGS) {
+                $this->updateProfiles($batch, $settled, $now);
+                $batch = [];
+                $bindings = 0;
+            }
+
+            $batch[$nationId] = $changes;
+            $bindings += 2 * count($changes) + 1;
         }
 
-        $connection = (new RaidTargetProfile)->getConnection();
-        $connection->transaction(function () use ($connection, $updates): void {
-            foreach ($updates as $nationId => $update) {
-                $this->updateProfile($connection, $nationId, $update['values'], $update['clear']);
-            }
-        });
+        if ($batch !== []) {
+            $this->updateProfiles($batch, $settled, $now);
+        }
     }
 
     /**
@@ -168,26 +177,60 @@ final class RaidTargetProfileBuilder
     }
 
     /**
-     * Update one profile. A settled dirty mark is cleared only if it is still the value read
-     * before the build; a newer mark survives.
+     * Update a batch of profiles with one statement. Each changed column gets a CASE that
+     * groups the profiles sharing a value, so a value common to the batch (a sliding
+     * production-only baseline, projected_at) costs one binding.
      *
-     * @param  array<string, mixed>  $values
+     * Settled marks are cleared with `dirty_at <= $settled`, which matches comparing with the
+     * value read before the build: once the build has started, every dirty_at the marker writes
+     * is a later second than $settled, and a mark the marker skips is already newer than
+     * $settled. A stored value at or before $settled is therefore the one the build read.
+     *
+     * @param  array<int, array<string, mixed>>  $updates  changed columns keyed by nation id
      */
-    private function updateProfile(ConnectionInterface $connection, int $nationId, array $values, ?CarbonImmutable $clear): void
+    private function updateProfiles(array $updates, CarbonImmutable $settled, CarbonImmutable $now): void
     {
+        $connection = (new RaidTargetProfile)->getConnection();
         $grammar = $connection->getQueryGrammar();
-        $assignments = collect(array_keys($values))->map(fn (string $column): string => $grammar->wrap($column).' = ?');
-        $bindings = array_values($values);
+        $nationIdColumn = $grammar->wrap('nation_id');
+        $assignments = [];
+        $bindings = [];
+        $columns = collect($updates)->flatMap(fn (array $changes): array => array_keys($changes))->unique()->sort()->values();
 
-        if ($clear !== null) {
-            $dirtyAt = $grammar->wrap('dirty_at');
-            $assignments->push("{$dirtyAt} = CASE WHEN {$dirtyAt} = ? THEN NULL ELSE {$dirtyAt} END");
-            $bindings[] = $clear;
+        foreach ($columns as $column) {
+            $groups = [];
+
+            foreach ($updates as $nationId => $changes) {
+                if (array_key_exists($column, $changes)) {
+                    $value = $changes[$column];
+                    $key = $value instanceof DateTimeInterface ? 'date:'.$value->getTimestamp() : get_debug_type($value).':'.var_export($value, true);
+                    $groups[$key] ??= ['value' => $value, 'ids' => []];
+                    $groups[$key]['ids'][] = $nationId;
+                }
+            }
+
+            $wrapped = $grammar->wrap($column);
+            $cases = '';
+
+            foreach ($groups as $group) {
+                $cases .= " WHEN {$nationIdColumn} IN (".implode(', ', array_fill(0, count($group['ids']), '?')).') THEN ?';
+                array_push($bindings, ...$group['ids'], ...[$group['value']]);
+            }
+
+            $assignments[] = "{$wrapped} = CASE{$cases} ELSE {$wrapped} END";
         }
 
+        $dirtyAt = $grammar->wrap('dirty_at');
+        $assignments[] = $grammar->wrap('computed_at').' = ?';
+        $assignments[] = $grammar->wrap('updated_at').' = ?';
+        $assignments[] = "{$dirtyAt} = CASE WHEN {$dirtyAt} <= ? THEN NULL ELSE {$dirtyAt} END";
+        array_push($bindings, $now, $now, $settled);
+        $ids = array_keys($updates);
+
         $connection->update(
-            'UPDATE '.$grammar->wrapTable((new RaidTargetProfile)->getTable()).' SET '.$assignments->implode(', ').' WHERE '.$grammar->wrap('nation_id').' = ?',
-            [...$bindings, $nationId],
+            'UPDATE '.$grammar->wrapTable((new RaidTargetProfile)->getTable()).' SET '.implode(', ', $assignments)
+                ." WHERE {$nationIdColumn} IN (".implode(', ', array_fill(0, count($ids), '?')).')',
+            [...$bindings, ...$ids],
         );
     }
 

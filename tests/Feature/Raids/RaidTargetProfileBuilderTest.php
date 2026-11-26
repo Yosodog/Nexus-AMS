@@ -212,6 +212,42 @@ class RaidTargetProfileBuilderTest extends TestCase
         $this->assertSame(1_100.5, RaidTargetProfile::query()->findOrFail($nation->id)->score);
     }
 
+    public function test_write_statements_do_not_grow_with_the_number_of_settled_dirty_profiles(): void
+    {
+        $small = collect(range(1, 3))->map(fn (): int => $this->nation()->id)->all();
+        $large = collect(range(1, 30))->map(fn (): int => $this->nation()->id)->all();
+        $this->builder()->build([...$small, ...$large]);
+        app(RaidProfileDirtyMarker::class)->mark([...$small, ...$large]);
+        $this->travel(RaidProfileDirtyMarker::SETTLE_SECONDS)->seconds();
+
+        $smallWrites = $this->recordWrites('raid_target_profiles', fn () => $this->builder()->build($small));
+        $largeWrites = $this->recordWrites('raid_target_profiles', fn () => $this->builder()->build($large));
+
+        $this->assertCount(1, $smallWrites['statements']);
+        $this->assertCount(1, $largeWrites['statements']);
+        $this->assertSame(3, $smallWrites['rows']);
+        $this->assertSame(30, $largeWrites['rows']);
+        $this->assertSame(0, RaidTargetProfile::query()->whereNotNull('dirty_at')->count());
+    }
+
+    public function test_changed_profiles_are_written_in_one_bulk_update(): void
+    {
+        $nations = collect(range(1, 5))->map(fn (): Nation => $this->nation(['score' => 1_000]));
+        $this->builder()->build($nations->pluck('id')->all());
+        $nations->each(fn (Nation $nation, int $index) => $nation->update(['score' => 1_000 + ($index + 1) * 10.25]));
+        $unchanged = $this->nation();
+        $this->builder()->build([$unchanged->id]);
+
+        $writes = $this->recordWrites('raid_target_profiles', fn () => $this->builder()->build([...$nations->pluck('id')->all(), $unchanged->id]));
+
+        $this->assertCount(1, $writes['statements']);
+        $this->assertSame(5, $writes['rows']);
+        $nations->each(fn (Nation $nation, int $index) => $this->assertSame(
+            1_000 + ($index + 1) * 10.25,
+            RaidTargetProfile::query()->findOrFail($nation->id)->score,
+        ));
+    }
+
     public function test_fresh_dirty_marks_are_not_cleared(): void
     {
         $nation = $this->nation();
