@@ -57,6 +57,10 @@ return [
         'tries' => 1,
         'retry_delay' => 0,
     ],
+    'schedule' => [
+        // UTC cron for scheduled backups. An admin-saved schedule wins; empty or invalid values fall back to App\Support\BackupSchedule::DEFAULT_CRON.
+        'cron' => env('BACKUP_SCHEDULE_CRON'),
+    ],
     'notifications' => [
         'notifications' => [
             BackupHasFailedNotification::class => $failureNotificationChannels,

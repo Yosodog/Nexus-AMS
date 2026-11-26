@@ -21,12 +21,15 @@ use App\Jobs\RefreshBankBalanceSnapshots;
 use App\Jobs\RollupAlertMetricsJob;
 use App\Jobs\SendAuditRemindersJob;
 use App\Jobs\SweepFederationOutboxJob;
+use App\Services\Backups\BackupRunService;
 use App\Services\ProcessHeartbeatRecorder;
 use App\Services\PWHealthService;
 use App\Services\RuntimeCapabilities;
 use App\Services\SettingService;
+use App\Support\BackupSchedule;
 use Closure;
 use Illuminate\Console\Scheduling\Schedule;
+use Throwable;
 
 final readonly class NexusScheduleRegistrar
 {
@@ -295,12 +298,17 @@ final readonly class NexusScheduleRegistrar
 
     private function registerBackupSchedules(Schedule $schedule): void
     {
-        $schedule->command('backup:run')
-            ->cron('30 1,7,13,19 * * *')
+        $schedule->command('backups:execute --trigger=scheduled')
+            ->cron(BackupSchedule::expression())
             ->timezone('UTC')
             ->runInBackground()
             ->withoutOverlapping(360)
             ->when(fn (): bool => SettingService::isBackupsEnabled());
+        $schedule->command('backups:execute --trigger=manual')
+            ->everyMinute()
+            ->runInBackground()
+            ->withoutOverlapping(360)
+            ->when(fn (): bool => $this->hasQueuedBackupRun());
         $schedule->command('backup:monitor')
             ->dailyAt('02:10')
             ->runInBackground()
@@ -311,6 +319,15 @@ final readonly class NexusScheduleRegistrar
             ->runInBackground()
             ->withoutOverlapping(120)
             ->when(fn (): bool => SettingService::isBackupsEnabled());
+    }
+
+    private function hasQueuedBackupRun(): bool
+    {
+        try {
+            return app(BackupRunService::class)->hasQueuedRun();
+        } catch (Throwable) {
+            return false;
+        }
     }
 
     private function registerTenantProcessingSchedules(Schedule $schedule, Closure $whenPWUp): void

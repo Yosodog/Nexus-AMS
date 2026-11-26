@@ -17,10 +17,12 @@ use App\Http\Middleware\EnsureMfaConfigured;
 use App\Http\Middleware\EnsureUserIsVerified;
 use App\Http\Requests\Admin\CancelDataSyncRequest;
 use App\Http\Requests\Admin\ReleaseStalePendingRequestsRequest;
+use App\Http\Requests\Admin\RunBackupNowRequest;
 use App\Http\Requests\Admin\RunDataSyncRequest;
 use App\Http\Requests\Admin\StoreFaviconRequest;
 use App\Http\Requests\Admin\UpdateAuditRetentionSettingsRequest;
 use App\Http\Requests\Admin\UpdateAutoWithdrawSettingsRequest;
+use App\Http\Requests\Admin\UpdateBackupConfigurationRequest;
 use App\Http\Requests\Admin\UpdateBackupSettingsRequest;
 use App\Http\Requests\Admin\UpdateDiscordCityTierSettingsRequest;
 use App\Http\Requests\Admin\UpdateDiscordDepartureRequest;
@@ -137,6 +139,8 @@ class SettingsDomainControllerTest extends TestCase
             'admin.settings.favicon' => StoreFaviconRequest::class,
             'admin.settings.auto-withdraw' => UpdateAutoWithdrawSettingsRequest::class,
             'admin.settings.backups' => UpdateBackupSettingsRequest::class,
+            'admin.settings.backups.configuration' => UpdateBackupConfigurationRequest::class,
+            'admin.settings.backups.run' => RunBackupNowRequest::class,
             'admin.settings.loan-payments' => UpdateLoanPaymentSettingsRequest::class,
             'admin.settings.grants.approvals' => UpdateGrantApprovalSettingsRequest::class,
             'admin.settings.audit-retention' => UpdateAuditRetentionSettingsRequest::class,
@@ -183,6 +187,7 @@ class SettingsDomainControllerTest extends TestCase
             ->get(route('admin.settings.security-retention'))
             ->assertOk()
             ->assertSee('Backups')
+            ->assertSee('30 1,7,13,19 * * *')
             ->assertSee('Audit log retention')
             ->assertDontSee('Account Inactivity Auto-Disable');
 
