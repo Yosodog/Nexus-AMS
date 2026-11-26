@@ -3,9 +3,11 @@
 namespace App\Services\Admin;
 
 use App\Enums\ApplicationStatus;
+use App\Enums\BackupRunStatus;
 use App\Enums\GrantDecisionReason;
 use App\Enums\LoanStatus;
 use App\Models\Application;
+use App\Models\BackupRun;
 use App\Models\BlockadeReliefRequest;
 use App\Models\CityGrantRequest;
 use App\Models\DepositRequest;
@@ -185,6 +187,18 @@ class PendingRequestRecoveryService
                     'status' => 'expired',
                     'pending_key' => null,
                     'expired_at' => $releasedAt,
+                ],
+            ],
+            'backup_runs' => [
+                'label' => 'queued backups',
+                'table' => 'backup_runs',
+                'model' => BackupRun::class,
+                'pending_status' => BackupRunStatus::Queued->value,
+                'release_payload' => fn (Carbon $releasedAt): array => [
+                    'status' => BackupRunStatus::Cancelled->value,
+                    'pending_key' => null,
+                    'finished_at' => $releasedAt,
+                    'error_message' => 'Cancelled by staff from stuck-request recovery.',
                 ],
             ],
             'blockade_relief_pending' => [

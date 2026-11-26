@@ -64,6 +64,10 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withExceptions(function (Exceptions $exceptions) {
         $exceptions->dontFlash([
             'configuration',
+            's3_access_key_id',
+            's3_secret_access_key',
+            'archive_password',
+            'archive_password_confirmation',
         ]);
 
         $exceptions->render(function (QueryException $exception, Request $request) {

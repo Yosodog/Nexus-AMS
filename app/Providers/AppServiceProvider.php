@@ -37,10 +37,12 @@ use App\Observers\OffshoreGuardrailObserver;
 use App\Observers\OffshoreObserver;
 use App\Observers\StaffWorkQueueCacheObserver;
 use App\Services\AuditLogger;
+use App\Services\Backups\BackupRuntimeConfig;
 use App\Services\PendingRequestsService;
 use App\Services\PWHealthService;
 use App\Services\PWMessageService;
 use App\Services\Raids\RaidModelParameters;
+use App\Services\RuntimeCapabilities;
 use App\Services\Settings\SettingValueStore;
 use App\Services\SettingService;
 use App\Services\StaffWorkQueue\OperationsReadStore;
@@ -133,6 +135,10 @@ class AppServiceProvider extends ServiceProvider
                 $this->app->make(SettingValueStore::class)->noteWrite();
             }
         });
+
+        if ($this->app->runningInConsole() && $this->app->make(RuntimeCapabilities::class)->runsPlatformBackups()) {
+            $this->app->booted(fn () => $this->app->make(BackupRuntimeConfig::class)->applyIfDatabaseReady());
+        }
 
         $applicationUrl = (string) config('app.url');
         $applicationScheme = parse_url($applicationUrl, PHP_URL_SCHEME);

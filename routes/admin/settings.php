@@ -96,6 +96,12 @@ Route::post('/settings/auto-withdraw', [FinancePolicySettingsController::class, 
 Route::post('/settings/backups', [SecurityRetentionSettingsController::class, 'updateBackups'])->name(
     'admin.settings.backups'
 );
+Route::post('/settings/backups/configuration', [SecurityRetentionSettingsController::class, 'updateBackupConfiguration'])
+    ->middleware('throttle:10,1')
+    ->name('admin.settings.backups.configuration');
+Route::post('/settings/backups/run', [SecurityRetentionSettingsController::class, 'runBackupNow'])
+    ->middleware('throttle:6,1')
+    ->name('admin.settings.backups.run');
 Route::post('/settings/loan-payments', [FinancePolicySettingsController::class, 'updateLoanPayments'])->name(
     'admin.settings.loan-payments'
 );
