@@ -78,6 +78,10 @@ class BeigeAlertService
         int $currentBeigeTurns,
         ?CarbonInterface $detectedAt = null
     ): void {
+        if ($currentBeigeTurns !== 0 || $previousBeigeTurns <= 1) {
+            return;
+        }
+
         if (! SettingService::isBeigeAlertsEnabled()) {
             return;
         }
@@ -85,10 +89,6 @@ class BeigeAlertService
         $channelId = SettingService::getBeigeAlertsDiscordChannelId();
 
         if ($channelId === '') {
-            return;
-        }
-
-        if ($currentBeigeTurns !== 0 || $previousBeigeTurns <= 1) {
             return;
         }
 

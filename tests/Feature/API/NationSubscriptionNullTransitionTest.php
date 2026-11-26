@@ -67,9 +67,9 @@ class NationSubscriptionNullTransitionTest extends TestCase
         $profitabilityService->shouldReceive('shouldStoreSnapshotForNation')
             ->once()
             ->andReturnFalse();
-        $profitabilityService->shouldReceive('deleteStoredSnapshotForNationId')
+        $profitabilityService->shouldReceive('deleteStoredSnapshotsForNationIds')
             ->once()
-            ->with($nation->id);
+            ->with([$nation->id]);
 
         (new UpdateNationJob([[
             'id' => $nation->id,

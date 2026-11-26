@@ -45,10 +45,10 @@ class SubscriptionEventProcessor
 
         switch ($subscriptionEvent->key()) {
             case 'nation:create':
-                CreateNationJob::dispatch($records);
+                $this->dispatchInChunks(CreateNationJob::class, $records);
                 break;
             case 'nation:update':
-                UpdateNationJob::dispatch($records);
+                $this->dispatchInChunks(UpdateNationJob::class, $records);
                 break;
             case 'nation:delete':
                 $this->deleteNations($records);
@@ -57,14 +57,14 @@ class SubscriptionEventProcessor
                 $this->queueAllianceCreation($records);
                 break;
             case 'alliance:update':
-                UpdateAllianceJob::dispatch($records);
+                $this->dispatchInChunks(UpdateAllianceJob::class, $records);
                 break;
             case 'alliance:delete':
                 $this->deleteAlliances($records);
                 break;
             case 'city:create':
             case 'city:update':
-                UpdateCityJob::dispatch($records);
+                $this->dispatchInChunks(UpdateCityJob::class, $records);
                 break;
             case 'city:delete':
                 $this->deleteCities($records);
@@ -73,7 +73,7 @@ class SubscriptionEventProcessor
                 $this->createWars($records);
                 break;
             case 'war:update':
-                UpdateWarJob::dispatch($records);
+                $this->dispatchInChunks(UpdateWarJob::class, $records);
                 break;
             case 'war:delete':
                 $this->deleteWars($records);
@@ -89,6 +89,25 @@ class SubscriptionEventProcessor
                 DeleteNationAccountJob::dispatch($records);
                 break;
         }
+    }
+
+    /**
+     * Split a bulk message into bounded jobs so one job never carries a whole turn-change burst.
+     * Records keep their message order inside each chunk.
+     *
+     * @param  class-string<CreateNationJob|UpdateNationJob|UpdateAllianceJob|UpdateCityJob|UpdateWarJob>  $jobClass
+     * @param  list<array<string, mixed>>  $records
+     */
+    private function dispatchInChunks(string $jobClass, array $records): void
+    {
+        foreach (array_chunk($records, $this->bulkJobChunkSize()) as $chunk) {
+            $jobClass::dispatch($chunk);
+        }
+    }
+
+    private function bulkJobChunkSize(): int
+    {
+        return max((int) config('subscriptions.ingestion.bulk_job_chunk_size', 25), 1);
     }
 
     /** @param  list<array<string, mixed>>  $records */
