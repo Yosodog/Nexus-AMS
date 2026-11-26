@@ -52,4 +52,8 @@ return [
         'max_age_seconds' => (int) env('NEXUS_TENANT_EVENTS_MAX_AGE', 300),
         'future_tolerance_seconds' => (int) env('NEXUS_TENANT_EVENTS_FUTURE_TOLERANCE', 30),
     ],
+    'discord_queue' => [
+        'retention_days' => (int) env('NEXUS_DISCORD_QUEUE_RETENTION_DAYS', 90),
+        'prune_batch_size' => (int) env('NEXUS_DISCORD_QUEUE_PRUNE_BATCH_SIZE', 500),
+    ],
 ];

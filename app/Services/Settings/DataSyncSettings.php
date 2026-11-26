@@ -10,7 +10,7 @@ class DataSyncSettings
 
     public function getLastScannedBankRecordId(): int
     {
-        $id = $this->settings->get('last_bank_record_id');
+        $id = $this->settings->getFresh('last_bank_record_id');
 
         if (is_null($id)) {
             $this->settings->set('last_bank_record_id', 0);
@@ -80,7 +80,7 @@ class DataSyncSettings
 
     public function getLastManualNationSyncBatchId(): string
     {
-        $value = $this->settings->get('last_nation_sync_batch_id');
+        $value = $this->settings->getFresh('last_nation_sync_batch_id');
 
         if (is_null($value)) {
             $this->setLastManualNationSyncBatchId('');
@@ -98,7 +98,7 @@ class DataSyncSettings
 
     public function getLastRollingNationSyncBatchId(): string
     {
-        $value = $this->settings->get('last_rolling_nation_sync_batch_id');
+        $value = $this->settings->getFresh('last_rolling_nation_sync_batch_id');
 
         if (is_null($value)) {
             $this->setLastRollingNationSyncBatchId('');
@@ -116,7 +116,7 @@ class DataSyncSettings
 
     public function getLastAllianceSyncBatchId(): string
     {
-        $value = $this->settings->get('last_alliance_sync_batch_id');
+        $value = $this->settings->getFresh('last_alliance_sync_batch_id');
 
         if (is_null($value)) {
             $this->setLastAllianceSyncBatchId('');
@@ -134,7 +134,7 @@ class DataSyncSettings
 
     public function getLastWarSyncBatchId(): string
     {
-        $value = $this->settings->get('last_war_sync_batch_id');
+        $value = $this->settings->getFresh('last_war_sync_batch_id');
 
         if (is_null($value)) {
             $this->setLastWarSyncBatchId('');

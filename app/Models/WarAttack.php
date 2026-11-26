@@ -24,11 +24,43 @@ class WarAttack extends Model
 
     protected $guarded = [];
 
+    /**
+     * Decimal columns come back from MySQL as fixed-scale strings, so they are cast to the same
+     * scale to keep an unchanged API payload from looking dirty ("120.50" versus 120.5).
+     */
     protected $casts = [
         'date' => 'datetime',
         'type' => WarAttackTypeEnum::class,
         'improvements_destroyed' => 'array',
         'cities_infra_before' => 'array',
+        'attcas1' => 'decimal:2',
+        'defcas1' => 'decimal:2',
+        'attcas2' => 'decimal:2',
+        'defcas2' => 'decimal:2',
+        'infra_destroyed' => 'decimal:2',
+        'money_stolen' => 'decimal:2',
+        'city_infra_before' => 'decimal:2',
+        'infra_destroyed_value' => 'decimal:2',
+        'att_mun_used' => 'decimal:2',
+        'def_mun_used' => 'decimal:2',
+        'att_gas_used' => 'decimal:2',
+        'def_gas_used' => 'decimal:2',
+        'money_destroyed' => 'decimal:2',
+        'military_salvage_aluminum' => 'decimal:2',
+        'military_salvage_steel' => 'decimal:2',
+        'infra_destroyed_percentage' => 'decimal:2',
+        'money_looted' => 'decimal:2',
+        'coal_looted' => 'decimal:2',
+        'oil_looted' => 'decimal:2',
+        'uranium_looted' => 'decimal:2',
+        'iron_looted' => 'decimal:2',
+        'bauxite_looted' => 'decimal:2',
+        'lead_looted' => 'decimal:2',
+        'gasoline_looted' => 'decimal:2',
+        'munitions_looted' => 'decimal:2',
+        'steel_looted' => 'decimal:2',
+        'aluminum_looted' => 'decimal:2',
+        'food_looted' => 'decimal:2',
     ];
 
     private const COLUMN_WHITELIST = [

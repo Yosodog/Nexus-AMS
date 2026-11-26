@@ -6,6 +6,8 @@ use App\Enums\ScheduledTaskRunStatus;
 use App\Jobs\ReconcileMilcomLifecycleJob;
 use App\Models\ScheduledTaskRun;
 use App\Services\Scheduling\ScheduledTaskFreshnessService;
+use App\Services\Scheduling\ScheduledTaskLifecycleRecorder;
+use App\Services\Scheduling\ScheduledTaskRunReaper;
 use Carbon\CarbonImmutable;
 use Illuminate\Console\Events\ScheduledBackgroundTaskFinished;
 use Illuminate\Console\Events\ScheduledTaskFailed;
@@ -16,6 +18,7 @@ use Illuminate\Console\Scheduling\Event;
 use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Context;
 use Illuminate\Support\Str;
 use RuntimeException;
 use Tests\FeatureTestCase;
@@ -28,6 +31,7 @@ class ScheduledTaskLifecycleTest extends FeatureTestCase
     {
         Carbon::setTestNow();
         CarbonImmutable::setTestNow();
+        Context::flush();
 
         parent::tearDown();
     }
@@ -230,6 +234,7 @@ class ScheduledTaskLifecycleTest extends FeatureTestCase
             'skipped_days' => 5,
             'overlap_days' => 7,
             'running_days' => 2,
+            'abandoned_days' => 2,
             'batch_size' => 2,
         ]);
 
@@ -270,9 +275,244 @@ class ScheduledTaskLifecycleTest extends FeatureTestCase
         $this->assertModelExists($oldRun);
     }
 
+    public function test_overlapping_background_runs_each_close_their_own_row(): void
+    {
+        Carbon::setTestNow('2026-08-06 12:00:00');
+        $firstLaunch = $this->launchInBackground('recruit:nations');
+        $firstRun = ScheduledTaskRun::query()->latest('id')->first();
+
+        Carbon::setTestNow('2026-08-06 12:01:00');
+        $secondLaunch = $this->launchInBackground('recruit:nations');
+        $secondRun = ScheduledTaskRun::query()->latest('id')->first();
+
+        Carbon::setTestNow('2026-08-06 12:01:02');
+        $this->finishInSeparateProcess('recruit:nations', $secondLaunch, 0);
+
+        Carbon::setTestNow('2026-08-06 12:01:30');
+        $this->finishInSeparateProcess('recruit:nations', $firstLaunch, 0);
+
+        $firstRun->refresh();
+        $secondRun->refresh();
+
+        $this->assertSame(ScheduledTaskRunStatus::Success, $firstRun->status);
+        $this->assertSame(90000, $firstRun->duration_ms);
+        $this->assertSame(ScheduledTaskRunStatus::Success, $secondRun->status);
+        $this->assertSame(2000, $secondRun->duration_ms);
+        $this->assertSame(2, ScheduledTaskRun::query()->count());
+    }
+
+    public function test_background_finish_in_a_fresh_process_closes_the_row_named_by_its_correlation_id(): void
+    {
+        Carbon::setTestNow('2026-08-06 12:00:00');
+        $olderStuckRun = ScheduledTaskRun::factory()->running()->create([
+            'task_identifier' => 'artisan:pw:health-check',
+            'task_mutex_hash' => $this->mutexHashFor('pw:health-check'),
+            'hostname' => $this->recorderHostname(),
+            'started_at' => now()->subMinutes(30),
+        ]);
+
+        Carbon::setTestNow('2026-08-06 12:00:05');
+        $launch = $this->launchInBackground('pw:health-check');
+        $ownRun = ScheduledTaskRun::query()->latest('id')->first();
+
+        $newerStuckRun = ScheduledTaskRun::factory()->running()->create([
+            'task_identifier' => 'artisan:pw:health-check',
+            'task_mutex_hash' => $this->mutexHashFor('pw:health-check'),
+            'hostname' => $this->recorderHostname(),
+            'started_at' => now()->addSeconds(30),
+        ]);
+
+        $this->assertSame(
+            $ownRun->correlation_id,
+            $this->carriedRun($launch)['correlation_id'] ?? null,
+        );
+
+        Carbon::setTestNow('2026-08-06 12:00:08');
+        $this->finishInSeparateProcess('pw:health-check', $launch, 3);
+
+        $ownRun->refresh();
+
+        $this->assertSame(ScheduledTaskRunStatus::Failure, $ownRun->status);
+        $this->assertSame(3, $ownRun->exit_code);
+        $this->assertSame(3000, $ownRun->duration_ms);
+        $this->assertSame(ScheduledTaskRunStatus::Running, $olderStuckRun->refresh()->status);
+        $this->assertSame(ScheduledTaskRunStatus::Running, $newerStuckRun->refresh()->status);
+    }
+
+    public function test_background_finish_without_a_correlation_id_closes_the_newest_open_row(): void
+    {
+        Carbon::setTestNow('2026-08-06 12:00:00');
+        $this->launchInBackground('recruit:nations');
+        $olderRun = ScheduledTaskRun::query()->latest('id')->first();
+
+        Carbon::setTestNow('2026-08-06 12:05:00');
+        $this->launchInBackground('recruit:nations');
+        $newerRun = ScheduledTaskRun::query()->latest('id')->first();
+
+        Carbon::setTestNow('2026-08-06 12:05:01');
+        $this->finishInSeparateProcess('recruit:nations', null, 0);
+
+        $newerRun->refresh();
+
+        $this->assertSame(ScheduledTaskRunStatus::Success, $newerRun->status);
+        $this->assertSame(1000, $newerRun->duration_ms);
+        $this->assertSame(ScheduledTaskRunStatus::Running, $olderRun->refresh()->status);
+    }
+
+    public function test_correlation_id_carried_for_another_task_is_ignored(): void
+    {
+        Carbon::setTestNow('2026-08-06 12:00:00');
+        $otherLaunch = $this->launchInBackground('sync:wars');
+        $otherRun = ScheduledTaskRun::query()->latest('id')->first();
+        $this->launchInBackground('recruit:nations');
+        $ownRun = ScheduledTaskRun::query()->latest('id')->first();
+
+        Carbon::setTestNow('2026-08-06 12:00:02');
+        $this->finishInSeparateProcess('recruit:nations', $otherLaunch, 0);
+
+        $this->assertSame(ScheduledTaskRunStatus::Success, $ownRun->refresh()->status);
+        $this->assertSame(2000, $ownRun->duration_ms);
+        $this->assertSame(ScheduledTaskRunStatus::Running, $otherRun->refresh()->status);
+    }
+
+    public function test_finish_for_a_reaped_run_records_the_outcome_without_a_duration(): void
+    {
+        Carbon::setTestNow('2026-08-06 12:00:00');
+        $launch = $this->launchInBackground('sync:wars');
+        $run = ScheduledTaskRun::query()->latest('id')->first();
+        app(ScheduledTaskRunReaper::class)->reap(now: now()->addDay());
+        $this->assertSame(ScheduledTaskRunStatus::Abandoned, $run->refresh()->status);
+
+        Carbon::setTestNow('2026-08-06 15:00:00');
+        $this->finishInSeparateProcess('sync:wars', $launch, 0);
+
+        $run->refresh();
+
+        $this->assertSame(ScheduledTaskRunStatus::Success, $run->status);
+        $this->assertNull($run->duration_ms);
+        $this->assertSame('2026-08-06 15:00:00', $run->finished_at->format('Y-m-d H:i:s'));
+        $this->assertSame(1, ScheduledTaskRun::query()->count());
+    }
+
+    public function test_finish_with_an_unknown_correlation_id_never_closes_another_run(): void
+    {
+        Carbon::setTestNow('2026-08-06 12:00:00');
+        $this->launchInBackground('recruit:nations');
+        $openRun = ScheduledTaskRun::query()->latest('id')->first();
+        $launch = [
+            'data' => [],
+            'hidden' => [
+                ScheduledTaskLifecycleRecorder::CONTEXT_KEY => serialize([
+                    'task_mutex_hash' => $this->mutexHashFor('recruit:nations'),
+                    'correlation_id' => (string) Str::uuid(),
+                ]),
+            ],
+        ];
+
+        Carbon::setTestNow('2026-08-06 12:00:02');
+        $this->finishInSeparateProcess('recruit:nations', $launch, 0);
+
+        $this->assertSame(ScheduledTaskRunStatus::Running, $openRun->refresh()->status);
+        $this->assertSame(2, ScheduledTaskRun::query()->count());
+        $this->assertSame(
+            ScheduledTaskRunStatus::Success,
+            ScheduledTaskRun::query()->latest('id')->first()->status,
+        );
+    }
+
+    public function test_run_identity_is_only_carried_while_launching_a_background_task(): void
+    {
+        $foreground = $this->scheduledCommand('audits:run');
+        event(new ScheduledTaskStarting($foreground));
+
+        $this->assertNull($this->carriedRun(Context::dehydrate()));
+
+        $foreground->exitCode = 0;
+        event(new ScheduledTaskFinished($foreground, 0.1));
+
+        $background = $this->scheduledCommand('recruit:nations')->runInBackground();
+        event(new ScheduledTaskStarting($background));
+
+        $this->assertNotNull($this->carriedRun(Context::dehydrate()));
+
+        event(new ScheduledTaskFinished($background, 0.01));
+
+        $this->assertNull($this->carriedRun(Context::dehydrate()));
+
+        Context::addHidden(ScheduledTaskLifecycleRecorder::CONTEXT_KEY, ['correlation_id' => 'inherited']);
+
+        $this->assertNull(
+            $this->carriedRun(Context::dehydrate()),
+            'A run identity inherited by a child process must not reach queue payloads.',
+        );
+    }
+
     private function scheduledCommand(string $command): Event
     {
         return app(Schedule::class)->command($command);
+    }
+
+    /**
+     * Start a background task the way `schedule:run` does and return the
+     * context the spawned process would inherit.
+     *
+     * @return array<string, mixed>|null
+     */
+    private function launchInBackground(string $command): ?array
+    {
+        $task = $this->scheduledCommand($command)->runInBackground();
+
+        event(new ScheduledTaskStarting($task));
+        $launchContext = Context::dehydrate();
+        event(new ScheduledTaskFinished($task, 0.01));
+
+        return $launchContext;
+    }
+
+    /**
+     * Dispatch the background finish from a simulated `schedule:finish`
+     * process: a new recorder instance and a context hydrated only from what
+     * the launch handed down.
+     *
+     * @param  array<string, mixed>|null  $launchContext
+     */
+    private function finishInSeparateProcess(string $command, ?array $launchContext, int $exitCode): void
+    {
+        app()->forgetInstance(ScheduledTaskLifecycleRecorder::class);
+        Context::flush();
+        Context::hydrate($launchContext);
+
+        $task = $this->scheduledCommand($command)->runInBackground();
+        $task->exitCode = $exitCode;
+
+        event(new ScheduledBackgroundTaskFinished($task));
+
+        Context::flush();
+        app()->forgetInstance(ScheduledTaskLifecycleRecorder::class);
+    }
+
+    /**
+     * @param  array<string, mixed>|null  $dehydrated
+     * @return array<string, string>|null
+     */
+    private function carriedRun(?array $dehydrated): ?array
+    {
+        $serialized = $dehydrated['hidden'][ScheduledTaskLifecycleRecorder::CONTEXT_KEY] ?? null;
+
+        return is_string($serialized) ? unserialize($serialized) : null;
+    }
+
+    private function mutexHashFor(string $command): string
+    {
+        return hash('sha256', $this->scheduledCommand($command)->mutexName());
+    }
+
+    private function recorderHostname(): string
+    {
+        $hostname = gethostname();
+        $hostname = is_string($hostname) ? Str::squish($hostname) : '';
+
+        return Str::limit($hostname !== '' ? $hostname : 'unknown', 191, '');
     }
 
     private function serializedRuns(): string
