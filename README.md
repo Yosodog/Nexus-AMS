@@ -193,6 +193,8 @@ Edit `.env` before migrating: set `APP_URL`, the `DB_*` database settings, `PW_A
 
 MySQL is the default. To opt into SQLite instead, set `DB_CONNECTION=sqlite`, remove the other `DB_*` connection lines, and create the database file before migrating (`touch database/database.sqlite`, or set `DB_DATABASE` to an absolute path). When SQLite is selected, the connection uses WAL mode and a 5-second busy timeout so the web server, queue worker, and scheduler can share the file; tune them with `DB_JOURNAL_MODE`, `DB_BUSY_TIMEOUT`, and `DB_SYNCHRONOUS`.
 
+On MySQL, `DB_EMULATE_PREPARES=true` makes PDO bind parameters client-side instead of using server-side prepared statements, which removes two of the three network round trips per query and the repeated column metadata. It is off by default, also disables multi-statement queries on the connection, and needs `php artisan config:cache` plus a restart of queue workers and PHP-FPM to take effect.
+
 ```bash
 php artisan migrate --seed
 npm run build

@@ -78,6 +78,8 @@ class NexusRuntimeScheduleMatrixTest extends TestCase
         'App\\Jobs\\DispatchBeigeTurnAlertsJob@50 1-23/2 * * *',
         'App\\Jobs\\DispatchBeigeTurnAlertsJob@10 */2 * * *',
         'queue:prune-failed --hours=48@0 0 * * *',
+        'queue:prune-batches --hours=168@0 0 * * *',
+        'discord-queue:prune@45 1 * * *',
     ];
 
     private const HOSTED_TENANT_EVENTS = [
@@ -125,6 +127,8 @@ class NexusRuntimeScheduleMatrixTest extends TestCase
         'App\\Jobs\\DispatchBeigeTurnAlertsJob@50 1-23/2 * * *',
         'App\\Jobs\\DispatchBeigeTurnAlertsJob@10 */2 * * *',
         'queue:prune-failed --hours=48@0 0 * * *',
+        'queue:prune-batches --hours=168@0 0 * * *',
+        'discord-queue:prune@45 1 * * *',
     ];
 
     private const WORLD_WRITER_EVENTS = [

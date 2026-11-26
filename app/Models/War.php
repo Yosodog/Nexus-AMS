@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Casts\IntegerFlagCast;
 use App\GraphQL\Models\War as WarGraphQL;
 use App\Services\ApiDateNormalizer;
 use Illuminate\Database\Eloquent\Builder;
@@ -69,6 +70,19 @@ class War extends Model
     protected $table = 'wars';
 
     protected $guarded = [];
+
+    /**
+     * @return array<string, class-string>
+     */
+    protected function casts(): array
+    {
+        return [
+            'att_peace' => IntegerFlagCast::class,
+            'def_peace' => IntegerFlagCast::class,
+            'att_fortify' => IntegerFlagCast::class,
+            'def_fortify' => IntegerFlagCast::class,
+        ];
+    }
 
     public static function updateFromAPI(WarGraphQL|array|stdClass $war): War
     {

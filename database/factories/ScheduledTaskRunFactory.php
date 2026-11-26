@@ -73,4 +73,14 @@ class ScheduledTaskRunFactory extends Factory
             'exit_code' => null,
         ]);
     }
+
+    public function abandoned(): static
+    {
+        return $this->state(fn (): array => [
+            'status' => ScheduledTaskRunStatus::Abandoned,
+            'finished_at' => null,
+            'duration_ms' => null,
+            'exit_code' => null,
+        ]);
+    }
 }

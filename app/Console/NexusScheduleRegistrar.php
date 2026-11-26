@@ -425,5 +425,7 @@ final readonly class NexusScheduleRegistrar
             ->when($whenPWUp);
 
         $schedule->command('queue:prune-failed --hours=48')->daily();
+        $schedule->command('queue:prune-batches --hours=168')->daily();
+        $schedule->command('discord-queue:prune')->dailyAt('01:45')->withoutOverlapping(60)->onOneServer();
     }
 }
