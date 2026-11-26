@@ -6,6 +6,9 @@ use App\Models\Nation;
 use App\Services\GraphQLQueryBuilder;
 use App\Services\QueryService;
 use App\Services\World\WorldWriteGuard;
+use Carbon\CarbonInterface;
+use Illuminate\Database\Eloquent\Collection as EloquentCollection;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use RuntimeException;
 
@@ -13,10 +16,36 @@ final class EconomyContextService
 {
     private const READ_CHUNK_SIZE = 1000;
 
-    private const UPSERT_CHUNK_SIZE = 100;
+    private const WRITE_CHUNK_SIZE = 100;
+
+    /**
+     * Half of the smallest step the decimal(8, 6) column can store.
+     */
+    private const MODIFIER_TOLERANCE = 0.0000005;
+
+    private const CONTEXT_COLUMNS = [
+        'id',
+        'alliance_id',
+        'alliance_position',
+        'color',
+        'treasure_income_modifier',
+        'color_turn_bonus',
+        'economy_context_synced_at',
+    ];
 
     public function __construct(private readonly WorldWriteGuard $worldWriteGuard) {}
 
+    /**
+     * Recompute every active nation's treasure and color context and persist the rows that changed.
+     *
+     * Nations are read without locks in bounded chunks. Only nations whose stored context differs,
+     * or whose stamp is due for renewal, are locked and written, each chunk in its own short
+     * transaction. Upstream data is fully validated before anything is written, so a bad response
+     * leaves every nation untouched; a failure while writing keeps the chunks already committed,
+     * each of which is correct on its own.
+     *
+     * @return int The number of active nations whose context is current after the refresh.
+     */
     public function refresh(): int
     {
         $this->worldWriteGuard->assertCanWrite(Nation::class);
@@ -87,119 +116,218 @@ final class EconomyContextService
             ->filter(fn (object $treasure): bool => (int) data_get($treasure, 'nation.alliance_id', 0) > 0)
             ->countBy(fn (object $treasure): int => (int) data_get($treasure, 'nation.alliance_id'));
         $timestamp = now()->toDateTimeString();
+        $restampBefore = now()->subHours(EconomyRules::ECONOMY_CONTEXT_RESTAMP_AFTER_HOURS);
 
-        $nationCount = DB::transaction(function () use (
-            $treasureOwners,
-            $allianceTreasureCounts,
-            $colorBonuses,
-            $timestamp,
-        ): int {
-            // Capture and lock the active nation set before validating or processing it. New nations
-            // committed while this refresh runs will be picked up by the next refresh instead of
-            // changing the expected count midway through this transaction.
-            $nationIds = Nation::query()->lockForUpdate()->pluck('id');
-            $nationCount = $nationIds->count();
+        // Bound the run to the nations that exist when it starts. Nations created while it runs
+        // keep their empty context until the next refresh instead of joining a half-finished pass.
+        $maxNationId = Nation::query()->max('id');
 
-            if ($nationCount === 0) {
-                throw new RuntimeException('No active nations were available for economy context synchronization.');
-            }
+        if ($maxNationId === null) {
+            throw new RuntimeException('No active nations were available for economy context synchronization.');
+        }
 
-            if (
-                Nation::query()
-                    ->whereKey($nationIds->all())
-                    ->where(function ($query): void {
-                        $query->whereNull('color')->orWhere('color', '');
-                    })
-                    ->exists()
-            ) {
-                throw new RuntimeException('One or more active nations are missing a color.');
-            }
+        $this->assertActiveNationColorsAreCovered((int) $maxNationId, $colorBonuses);
 
-            $missingColors = Nation::query()->whereKey($nationIds->all())->distinct()->pluck('color')
-                ->filter()
-                ->map(fn (mixed $color): string => strtolower((string) $color))
-                ->unique()
-                ->diff($colorBonuses->keys());
+        $processedCount = 0;
 
-            if ($missingColors->isNotEmpty()) {
-                throw new RuntimeException('Economy context response omitted active nation colors.');
-            }
-
-            $processedCount = 0;
-
-            $nationIds->chunk(self::READ_CHUNK_SIZE)->each(function ($nationIds) use (
+        Nation::query()
+            ->select(self::CONTEXT_COLUMNS)
+            ->where('id', '<=', $maxNationId)
+            ->chunkById(self::READ_CHUNK_SIZE, function (EloquentCollection $nations) use (
                 $treasureOwners,
                 $allianceTreasureCounts,
                 $colorBonuses,
                 $timestamp,
+                $restampBefore,
                 &$processedCount
             ): void {
-                $nations = Nation::query()
-                    ->whereKey($nationIds->all())
-                    ->lockForUpdate()
-                    ->orderBy('id')
-                    ->get();
+                $staleNationIds = $nations
+                    ->filter(fn (Nation $nation): bool => $this->needsWrite(
+                        $nation,
+                        $this->contextFor($nation, $treasureOwners, $allianceTreasureCounts, $colorBonuses),
+                        $restampBefore
+                    ))
+                    ->modelKeys();
 
-                $rows = $nations->map(function (Nation $nation) use (
-                    $treasureOwners,
-                    $allianceTreasureCounts,
-                    $colorBonuses,
-                    $timestamp
-                ): array {
-                    $ownBonus = $treasureOwners->get((int) $nation->id, collect())
-                        ->sum(fn (object $treasure): int => (int) ($treasure->bonus ?? 0));
-                    $isAllianceMember = $nation->alliance_id !== null
-                        && ! in_array($nation->alliance_position, ['NOALLIANCE', 'APPLICANT'], true);
-                    $allianceTreasureCount = $isAllianceMember
-                        ? (int) $allianceTreasureCounts->get((int) $nation->alliance_id, 0)
-                        : 0;
+                $processedCount += $nations->count() - count($staleNationIds);
 
-                    return [
-                        ...$nation->getAttributes(),
-                        'treasure_income_modifier' => round(
-                            ((sqrt($allianceTreasureCount * 4)) + $ownBonus) * 0.01,
-                            6
-                        ),
-                        'color_turn_bonus' => (int) $colorBonuses->get(
-                            strtolower((string) $nation->color),
-                            0
-                        ),
-                        'economy_context_synced_at' => $timestamp,
-                    ];
-                });
-
-                $rows->chunk(self::UPSERT_CHUNK_SIZE)->each(function ($chunk): void {
-                    DB::table('nations')->upsert(
-                        $chunk->all(),
-                        ['id'],
-                        ['treasure_income_modifier', 'color_turn_bonus', 'economy_context_synced_at']
+                foreach (array_chunk($staleNationIds, self::WRITE_CHUNK_SIZE) as $nationIds) {
+                    $processedCount += $this->writeChunk(
+                        $nationIds,
+                        $treasureOwners,
+                        $allianceTreasureCounts,
+                        $colorBonuses,
+                        $timestamp,
+                        $restampBefore
                     );
-                });
-
-                $processedCount += $rows->count();
+                }
             });
 
-            if ($processedCount !== $nationCount) {
-                throw new RuntimeException(
-                    "Economy context synchronization expected {$nationCount} nations and processed {$processedCount}."
-                );
+        return $processedCount;
+    }
+
+    /**
+     * Lock, re-read and write one bounded set of nations whose stored context is out of date.
+     *
+     * Only the rows that are about to change are locked, and only for the length of this short
+     * transaction. Re-reading the alliance and color under the lock means a concurrent nation sync
+     * that changed them either commits first (and the context is derived from the new values) or
+     * waits for this commit (and then clears the context itself), so the refresh never stamps
+     * context derived from source data that has since changed.
+     *
+     * @param  list<int>  $nationIds
+     * @param  Collection<int, Collection<int, object>>  $treasureOwners
+     * @param  Collection<int, int>  $allianceTreasureCounts
+     * @param  Collection<string, int>  $colorBonuses
+     * @return int The number of nations whose context is current after the write.
+     */
+    private function writeChunk(
+        array $nationIds,
+        Collection $treasureOwners,
+        Collection $allianceTreasureCounts,
+        Collection $colorBonuses,
+        string $timestamp,
+        CarbonInterface $restampBefore
+    ): int {
+        return DB::transaction(function () use (
+            $nationIds,
+            $treasureOwners,
+            $allianceTreasureCounts,
+            $colorBonuses,
+            $timestamp,
+            $restampBefore
+        ): int {
+            $nations = Nation::query()
+                ->select(self::CONTEXT_COLUMNS)
+                ->whereKey($nationIds)
+                ->orderBy('id')
+                ->lockForUpdate()
+                ->get();
+
+            $currentCount = 0;
+            $writes = [];
+
+            foreach ($nations as $nation) {
+                $context = $this->contextFor($nation, $treasureOwners, $allianceTreasureCounts, $colorBonuses);
+
+                if ($context === null) {
+                    continue;
+                }
+
+                $currentCount++;
+
+                if (! $this->needsWrite($nation, $context, $restampBefore)) {
+                    continue;
+                }
+
+                $key = $context['treasure_income_modifier'].'|'.$context['color_turn_bonus'];
+                $writes[$key]['context'] = $context;
+                $writes[$key]['ids'][] = (int) $nation->id;
             }
 
-            $verifiedCount = Nation::query()
-                ->whereKey($nationIds->all())
-                ->where('economy_context_synced_at', $timestamp)
-                ->count();
+            foreach ($writes as $write) {
+                $updated = DB::table('nations')
+                    ->whereIn('id', $write['ids'])
+                    ->update([
+                        ...$write['context'],
+                        'economy_context_synced_at' => $timestamp,
+                    ]);
 
-            if ($verifiedCount !== $nationCount) {
-                throw new RuntimeException(
-                    "Economy context verification expected {$nationCount} nations and found {$verifiedCount}."
-                );
+                if ($updated !== count($write['ids'])) {
+                    throw new RuntimeException(
+                        'Economy context synchronization expected to update '.count($write['ids'])
+                        ." nations and updated {$updated}."
+                    );
+                }
             }
 
-            return $nationCount;
+            return $currentCount;
         }, 3);
+    }
 
-        return $nationCount;
+    /**
+     * @param  Collection<string, int>  $colorBonuses
+     */
+    private function assertActiveNationColorsAreCovered(int $maxNationId, Collection $colorBonuses): void
+    {
+        if (
+            Nation::query()
+                ->where('id', '<=', $maxNationId)
+                ->where(function ($query): void {
+                    $query->whereNull('color')->orWhere('color', '');
+                })
+                ->exists()
+        ) {
+            throw new RuntimeException('One or more active nations are missing a color.');
+        }
+
+        $missingColors = Nation::query()
+            ->where('id', '<=', $maxNationId)
+            ->distinct()
+            ->pluck('color')
+            ->filter()
+            ->map(fn (mixed $color): string => strtolower((string) $color))
+            ->unique()
+            ->diff($colorBonuses->keys());
+
+        if ($missingColors->isNotEmpty()) {
+            throw new RuntimeException('Economy context response omitted active nation colors.');
+        }
+    }
+
+    /**
+     * Derive a nation's context, or null when its color changed mid-run to one the validated
+     * response does not cover. That nation is left alone and picked up by the next refresh.
+     *
+     * @param  Collection<int, Collection<int, object>>  $treasureOwners
+     * @param  Collection<int, int>  $allianceTreasureCounts
+     * @param  Collection<string, int>  $colorBonuses
+     * @return array{treasure_income_modifier: float, color_turn_bonus: int}|null
+     */
+    private function contextFor(
+        Nation $nation,
+        Collection $treasureOwners,
+        Collection $allianceTreasureCounts,
+        Collection $colorBonuses
+    ): ?array {
+        $color = strtolower((string) $nation->color);
+
+        if ($color === '' || ! $colorBonuses->has($color)) {
+            return null;
+        }
+
+        $ownBonus = $treasureOwners->get((int) $nation->id, collect())
+            ->sum(fn (object $treasure): int => (int) ($treasure->bonus ?? 0));
+        $isAllianceMember = $nation->alliance_id !== null
+            && ! in_array($nation->alliance_position, ['NOALLIANCE', 'APPLICANT'], true);
+        $allianceTreasureCount = $isAllianceMember
+            ? (int) $allianceTreasureCounts->get((int) $nation->alliance_id, 0)
+            : 0;
+
+        return [
+            'treasure_income_modifier' => round(((sqrt($allianceTreasureCount * 4)) + $ownBonus) * 0.01, 6),
+            'color_turn_bonus' => (int) $colorBonuses->get($color),
+        ];
+    }
+
+    /**
+     * A nation needs a write when its stored context differs from the derived one, or when the
+     * values still match but the stamp is old enough that it must be renewed to stay fresh.
+     *
+     * @param  array{treasure_income_modifier: float, color_turn_bonus: int}|null  $context
+     */
+    private function needsWrite(Nation $nation, ?array $context, CarbonInterface $restampBefore): bool
+    {
+        if ($context === null) {
+            return true;
+        }
+
+        return $nation->treasure_income_modifier === null
+            || $nation->color_turn_bonus === null
+            || $nation->economy_context_synced_at === null
+            || abs((float) $nation->treasure_income_modifier - $context['treasure_income_modifier']) > self::MODIFIER_TOLERANCE
+            || (int) $nation->color_turn_bonus !== $context['color_turn_bonus']
+            || $nation->economy_context_synced_at->lte($restampBefore);
     }
 
     /**

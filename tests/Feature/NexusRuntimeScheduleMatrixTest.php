@@ -23,7 +23,7 @@ class NexusRuntimeScheduleMatrixTest extends TestCase
         'raids:refresh-alliance-profiles@10 3 * * *',
         'raids:calibrate@40 3 * * 1',
         'raids:prune-loot-events@5 4 * * *',
-        'pw:health-check@* * * * *',
+        'pw:health-check@*/2 * * * *',
         'sync:nations:rolling --scope=highscore@15 0 * * *',
         'sync:nations:rolling --scope=all@30 0 * * 1',
         'sync:alliances@15 0,12 * * *',
@@ -43,7 +43,6 @@ class NexusRuntimeScheduleMatrixTest extends TestCase
         'account-statements:prune@25 1 * * *',
         'scheduler-lifecycle:prune@35 1 * * *',
         'milcom:prune-history@45 1 * * *',
-        'war-counters:archive-stale@0 * * * *',
         'App\\Jobs\\ReconcileMilcomLifecycleJob@* * * * *',
         'App\\Jobs\\EvaluateAlertSubscriptionsJob@25 * * * *',
         'App\\Jobs\\EvaluateResourceShortfallAlertsJob@*/10 * * * *',
@@ -52,11 +51,7 @@ class NexusRuntimeScheduleMatrixTest extends TestCase
         'App\\Jobs\\RollupAlertMetricsJob@20 0 * * *',
         'App\\Jobs\\PruneAlertHistoryJob@20 1 * * *',
         'App\\Jobs\\ReconcileBlockadeReliefRequests@35 * * * *',
-        'discord-queue:reap-leases@* * * * *',
-        'operations:reconcile@* * * * *',
-        'App\\Jobs\\SweepFederationOutboxJob@* * * * *',
-        'App\\Jobs\\ReconcileFederationLinksJob@*/15 * * * *',
-        'App\\Jobs\\ExpireFederationResourcesJob@*/5 * * * *',
+        'discord-queue:reap-leases@*/2 * * * *',
         'App\\Jobs\\PruneFederationMessagesJob@30 2 * * *',
         'discord:sync-city-tiers@20 * * * *',
         'raid:reconcile-predictions --days=30@*/10 * * * *',
@@ -72,7 +67,7 @@ class NexusRuntimeScheduleMatrixTest extends TestCase
         'auto:withdraw@54 1-23/2 * * *',
         'audits:run@30 * * * *',
         'App\\Jobs\\SendAuditRemindersJob@0 18 * * *',
-        'recruit:nations@* * * * *',
+        'recruit:nations@*/2 * * * *',
         'sync:treaties@10 * * * *',
         'trades:update@10 * * * *',
         'market-prices:refresh@12 * * * *',
@@ -84,6 +79,8 @@ class NexusRuntimeScheduleMatrixTest extends TestCase
         'App\\Jobs\\DispatchBeigeTurnAlertsJob@50 1-23/2 * * *',
         'App\\Jobs\\DispatchBeigeTurnAlertsJob@10 */2 * * *',
         'queue:prune-failed --hours=48@0 0 * * *',
+        'queue:prune-batches --hours=168@0 0 * * *',
+        'discord-queue:prune@45 1 * * *',
     ];
 
     private const HOSTED_TENANT_EVENTS = [
@@ -104,7 +101,6 @@ class NexusRuntimeScheduleMatrixTest extends TestCase
         'account-statements:prune@25 1 * * *',
         'scheduler-lifecycle:prune@35 1 * * *',
         'milcom:prune-history@45 1 * * *',
-        'war-counters:archive-stale@0 * * * *',
         'App\\Jobs\\ReconcileMilcomLifecycleJob@* * * * *',
         'App\\Jobs\\EvaluateAlertSubscriptionsJob@25 * * * *',
         'App\\Jobs\\EvaluateResourceShortfallAlertsJob@*/10 * * * *',
@@ -113,11 +109,7 @@ class NexusRuntimeScheduleMatrixTest extends TestCase
         'App\\Jobs\\RollupAlertMetricsJob@20 0 * * *',
         'App\\Jobs\\PruneAlertHistoryJob@20 1 * * *',
         'App\\Jobs\\ReconcileBlockadeReliefRequests@35 * * * *',
-        'discord-queue:reap-leases@* * * * *',
-        'operations:reconcile@* * * * *',
-        'App\\Jobs\\SweepFederationOutboxJob@* * * * *',
-        'App\\Jobs\\ReconcileFederationLinksJob@*/15 * * * *',
-        'App\\Jobs\\ExpireFederationResourcesJob@*/5 * * * *',
+        'discord-queue:reap-leases@*/2 * * * *',
         'App\\Jobs\\PruneFederationMessagesJob@30 2 * * *',
         'discord:sync-city-tiers@20 * * * *',
         'raid:reconcile-predictions --days=30@*/10 * * * *',
@@ -130,13 +122,15 @@ class NexusRuntimeScheduleMatrixTest extends TestCase
         'auto:withdraw@54 1-23/2 * * *',
         'audits:run@30 * * * *',
         'App\\Jobs\\SendAuditRemindersJob@0 18 * * *',
-        'recruit:nations@* * * * *',
+        'recruit:nations@*/2 * * * *',
         'profitability:refresh@20 * * * *',
         'build-recommendations:refresh@25 */2 * * *',
         'rebuilding:refresh-estimates@0 */2 * * *',
         'App\\Jobs\\DispatchBeigeTurnAlertsJob@50 1-23/2 * * *',
         'App\\Jobs\\DispatchBeigeTurnAlertsJob@10 */2 * * *',
         'queue:prune-failed --hours=48@0 0 * * *',
+        'queue:prune-batches --hours=168@0 0 * * *',
+        'discord-queue:prune@45 1 * * *',
     ];
 
     private const WORLD_WRITER_EVENTS = [
@@ -145,7 +139,7 @@ class NexusRuntimeScheduleMatrixTest extends TestCase
         'raids:refresh-alliance-profiles@10 3 * * *',
         'raids:calibrate@40 3 * * 1',
         'raids:prune-loot-events@5 4 * * *',
-        'pw:health-check@* * * * *',
+        'pw:health-check@*/2 * * * *',
         'sync:treaties@10 * * * *',
         'trades:update@10 * * * *',
         'market-prices:refresh@12 * * * *',
@@ -167,6 +161,12 @@ class NexusRuntimeScheduleMatrixTest extends TestCase
         NexusRuntime $runtime,
         array $expectedEvents,
     ): void {
+        config([
+            'federation.enabled' => false,
+            'milcom.v2_enabled' => true,
+            'operations.features.coordination' => false,
+        ]);
+
         $schedule = new Schedule;
         $registrar = new NexusScheduleRegistrar(
             new RuntimeCapabilities($runtime),

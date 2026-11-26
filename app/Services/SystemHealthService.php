@@ -669,12 +669,12 @@ final class SystemHealthService
             return $this->buildCheck(
                 key: 'pw-api',
                 name: 'Scheduler & P&W API',
-                description: 'Minute-by-minute scheduler heartbeat and authenticated P&W API probe.',
+                description: 'Two-minute scheduler heartbeat and authenticated P&W API probe.',
                 status: self::STATUS_CRITICAL,
                 statusLabel: 'No heartbeat',
                 lastActivityAt: null,
                 lastActivityLabel: 'Last successful probe',
-                cadence: 'Every minute · stale after 5 minutes',
+                cadence: 'Every 2 minutes · stale after 5 minutes',
                 detail: 'No scheduler heartbeat is available in the health cache.',
                 guidance: 'Confirm the scheduler is running and the shared cache is reachable.',
             );
@@ -684,12 +684,12 @@ final class SystemHealthService
             return $this->buildCheck(
                 key: 'pw-api',
                 name: 'Scheduler & P&W API',
-                description: 'Minute-by-minute scheduler heartbeat and authenticated P&W API probe.',
+                description: 'Two-minute scheduler heartbeat and authenticated P&W API probe.',
                 status: self::STATUS_CRITICAL,
                 statusLabel: 'API unavailable',
                 lastActivityAt: $checkedAt,
                 lastActivityLabel: 'Last probe',
-                cadence: 'Every minute · stale after 5 minutes',
+                cadence: 'Every 2 minutes · stale after 5 minutes',
                 detail: 'The latest authenticated P&W API probe failed.',
                 guidance: 'Check P&W availability, API credentials, and recent application logs.',
             );
@@ -698,10 +698,10 @@ final class SystemHealthService
         return $this->freshnessCheck(
             key: 'pw-api',
             name: 'Scheduler & P&W API',
-            description: 'Minute-by-minute scheduler heartbeat and authenticated P&W API probe.',
+            description: 'Two-minute scheduler heartbeat and authenticated P&W API probe.',
             lastActivityAt: $checkedAt,
-            cadence: 'Every minute · stale after 5 minutes',
-            warningAfterMinutes: 2,
+            cadence: 'Every 2 minutes · stale after 5 minutes',
+            warningAfterMinutes: 3,
             criticalAfterMinutes: 5,
             staleGuidance: 'Confirm the scheduler is running and the shared cache is reachable.',
             lastActivityLabel: 'Last successful probe',

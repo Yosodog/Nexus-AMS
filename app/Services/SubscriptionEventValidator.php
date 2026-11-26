@@ -38,7 +38,6 @@ final readonly class SubscriptionEventValidator
 
     /** @var list<string> */
     private const NON_NEGATIVE_INTEGER_FIELDS = [
-        'turns_left',
         'rank',
         'credits',
         'att_points',
@@ -246,7 +245,7 @@ final readonly class SubscriptionEventValidator
             'end_date' => ['nullable', 'date'],
             'reason' => ['nullable', 'string', 'max:255'],
             'war_type' => ['nullable', 'string', 'max:50'],
-            'turns_left' => ['nullable', 'integer', 'min:0'],
+            'turns_left' => ['nullable', 'integer'],
             'att_id' => ['nullable', 'integer', 'min:1'],
             'def_id' => ['nullable', 'integer', 'min:1'],
             'att_alliance_id' => ['nullable', 'integer', 'min:1'],
@@ -310,6 +309,10 @@ final readonly class SubscriptionEventValidator
             if (array_key_exists($field, $record) && $record[$field] !== null) {
                 $record[$field] = (int) $record[$field];
             }
+        }
+
+        if (array_key_exists('turns_left', $record) && $record['turns_left'] !== null) {
+            $record['turns_left'] = max(0, (int) $record['turns_left']);
         }
 
         foreach (self::BOOLEAN_FIELDS as $field) {
