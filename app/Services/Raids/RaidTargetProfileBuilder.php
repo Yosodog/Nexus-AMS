@@ -13,12 +13,16 @@ use App\Services\Economy\EconomyRules;
 use App\Services\Economy\MarketValuationService;
 use App\Services\RaidStockpileEstimator;
 use Carbon\CarbonImmutable;
+use Illuminate\Database\ConnectionInterface;
+use Illuminate\Support\Arr;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Log;
 use Throwable;
 
 /**
- * Builds raid target profiles for a batch of nations with a fixed number of queries.
+ * Builds raid target profiles for a batch of nations. Reads take a fixed number of queries;
+ * writes are one insert for new profiles plus one update per profile that changed or has a
+ * settled dirty mark to clear, all in one transaction.
  */
 final class RaidTargetProfileBuilder
 {
@@ -33,8 +37,15 @@ final class RaidTargetProfileBuilder
     ) {}
 
     /**
+     * Rebuild the profiles of the given nations and write only what changed.
+     *
+     * Existing profiles are read before nation data, so the dirty mark seen here is never
+     * newer than the data the profile is built from. The mark is cleared only when it has
+     * settled (see RaidProfileDirtyMarker::settledCutoff()) and is still the same value at
+     * write time; a mark placed while this build runs therefore keeps the profile dirty.
+     *
      * @param  list<int>  $nationIds
-     * @return int rows written
+     * @return int profiles rebuilt
      */
     public function build(array $nationIds): int
     {
@@ -45,6 +56,8 @@ final class RaidTargetProfileBuilder
         }
 
         $now = CarbonImmutable::now();
+        $settled = RaidProfileDirtyMarker::settledCutoff($now);
+        $existing = RaidTargetProfile::query()->whereIn('nation_id', $nationIds)->get()->keyBy('nation_id');
         $nations = Nation::query()
             ->with(['military', 'cities', 'accountProfile:nation_id,last_active'])
             ->whereIn('id', $nationIds)
@@ -62,7 +75,6 @@ final class RaidTargetProfileBuilder
 
         $radiation = RadiationSnapshot::query()->latest('snapshot_at')->first();
         $prices = $this->prices();
-        $existing = RaidTargetProfile::query()->whereIn('nation_id', $nations->keys()->all())->get()->keyBy('nation_id');
         $victories = RaidLootEvent::query()
             ->where('kind', RaidLootEvent::KIND_VICTORY)
             ->whereIn('loser_nation_id', $nations->keys()->all())
@@ -71,22 +83,112 @@ final class RaidTargetProfileBuilder
             ->get()
             ->groupBy('loser_nation_id');
 
-        $rows = $nations
-            ->map(fn (Nation $nation): array => $this->row(
-                $nation,
-                $existing->get($nation->id),
-                $victories->get($nation->id, collect()),
-                $radiation,
-                $prices,
-                $now,
-            ))
-            ->values()
-            ->all();
+        $rows = $nations->map(fn (Nation $nation): array => $this->row(
+            $nation,
+            $existing->get($nation->id),
+            $victories->get($nation->id, collect()),
+            $radiation,
+            $prices,
+            $now,
+        ));
 
-        $updateColumns = array_values(array_diff(array_keys($rows[0]), ['nation_id', 'created_at']));
-        RaidTargetProfile::query()->upsert($rows, ['nation_id'], $updateColumns);
+        $this->write($rows, $existing, $settled, $now);
 
-        return count($rows);
+        return $rows->count();
+    }
+
+    /**
+     * Insert new profiles and update existing ones with only their changed columns.
+     *
+     * An existing profile is written only when a profile column changed or its settled
+     * dirty mark has to be cleared. The bookkeeping columns ride along with that write.
+     *
+     * @param  Collection<int, array<string, mixed>>  $rows  keyed by nation id
+     * @param  Collection<int, RaidTargetProfile>  $existing  keyed by nation id
+     */
+    private function write(Collection $rows, Collection $existing, CarbonImmutable $settled, CarbonImmutable $now): void
+    {
+        $inserts = [];
+        $updates = [];
+
+        foreach ($rows as $nationId => $row) {
+            $profile = $existing->get($nationId);
+
+            if ($profile === null) {
+                $inserts[] = $row + ['projected_at' => $now, 'dirty_at' => null, 'computed_at' => $now, 'created_at' => $now, 'updated_at' => $now];
+
+                continue;
+            }
+
+            $changes = $this->changedColumns($profile, $row);
+            $settledMark = $profile->dirty_at !== null && $profile->dirty_at->lessThanOrEqualTo($settled) ? $profile->dirty_at : null;
+
+            if ($changes === [] && $settledMark === null) {
+                continue;
+            }
+
+            if (array_key_exists('projected_value', $changes)) {
+                $changes['projected_at'] = $now;
+            }
+
+            $updates[(int) $nationId] = [
+                'values' => $changes + ['computed_at' => $now, 'updated_at' => $now],
+                'clear' => $settledMark,
+            ];
+        }
+
+        if ($inserts !== []) {
+            RaidTargetProfile::query()->insertOrIgnore($inserts);
+        }
+
+        if ($updates === []) {
+            return;
+        }
+
+        $connection = (new RaidTargetProfile)->getConnection();
+        $connection->transaction(function () use ($connection, $updates): void {
+            foreach ($updates as $nationId => $update) {
+                $this->updateProfile($connection, $nationId, $update['values'], $update['clear']);
+            }
+        });
+    }
+
+    /**
+     * Profile columns whose rebuilt value differs from the stored one, compared through the
+     * model casts so a value that only differs in type or precision does not count.
+     *
+     * @param  array<string, mixed>  $row
+     * @return array<string, mixed>
+     */
+    private function changedColumns(RaidTargetProfile $profile, array $row): array
+    {
+        $profile->forceFill(Arr::except($row, ['nation_id']));
+
+        return array_intersect_key($row, $profile->getDirty());
+    }
+
+    /**
+     * Update one profile. A settled dirty mark is cleared only if it is still the value read
+     * before the build; a newer mark survives.
+     *
+     * @param  array<string, mixed>  $values
+     */
+    private function updateProfile(ConnectionInterface $connection, int $nationId, array $values, ?CarbonImmutable $clear): void
+    {
+        $grammar = $connection->getQueryGrammar();
+        $assignments = collect(array_keys($values))->map(fn (string $column): string => $grammar->wrap($column).' = ?');
+        $bindings = array_values($values);
+
+        if ($clear !== null) {
+            $dirtyAt = $grammar->wrap('dirty_at');
+            $assignments->push("{$dirtyAt} = CASE WHEN {$dirtyAt} = ? THEN NULL ELSE {$dirtyAt} END");
+            $bindings[] = $clear;
+        }
+
+        $connection->update(
+            'UPDATE '.$grammar->wrapTable((new RaidTargetProfile)->getTable()).' SET '.$assignments->implode(', ').' WHERE '.$grammar->wrap('nation_id').' = ?',
+            [...$bindings, $nationId],
+        );
     }
 
     /**
@@ -156,12 +258,7 @@ final class RaidTargetProfileBuilder
         return $attributes + [
             'projected_value' => $prices === null
                 ? (float) ($existing?->projected_value ?? 0.0)
-                : RaidResources::liquidationValue($projection, $prices),
-            'projected_at' => $now,
-            'dirty_at' => null,
-            'computed_at' => $now,
-            'created_at' => $now,
-            'updated_at' => $now,
+                : round(RaidResources::liquidationValue($projection, $prices), 2),
         ];
     }
 
