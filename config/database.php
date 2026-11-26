@@ -7,6 +7,21 @@ $mysqlSslCaOption = defined('Pdo\\Mysql::ATTR_SSL_CA')
     ? Mysql::ATTR_SSL_CA
     : PDO::MYSQL_ATTR_SSL_CA;
 
+$mysqlMultiStatementsOption = defined('Pdo\\Mysql::ATTR_MULTI_STATEMENTS')
+    ? Mysql::ATTR_MULTI_STATEMENTS
+    : PDO::MYSQL_ATTR_MULTI_STATEMENTS;
+
+$emulatePrepares = filter_var(env('DB_EMULATE_PREPARES', false), FILTER_VALIDATE_BOOL);
+
+$mysqlOptions = extension_loaded('pdo_mysql')
+    ? array_filter([
+        $mysqlSslCaOption => env('MYSQL_ATTR_SSL_CA'),
+    ]) + ($emulatePrepares ? [
+        PDO::ATTR_EMULATE_PREPARES => true,
+        $mysqlMultiStatementsOption => false,
+    ] : [])
+    : [];
+
 return [
 
     /*
@@ -67,9 +82,7 @@ return [
                 'useSingleTransaction' => true,
                 'skipLockTables' => true,
             ],
-            'options' => extension_loaded('pdo_mysql') ? array_filter([
-                $mysqlSslCaOption => env('MYSQL_ATTR_SSL_CA'),
-            ]) : [],
+            'options' => $mysqlOptions,
         ],
 
         'mariadb' => [
@@ -88,9 +101,7 @@ return [
             'strict' => true,
             'timezone' => env('DB_TIMEZONE', '+00:00'),
             'engine' => null,
-            'options' => extension_loaded('pdo_mysql') ? array_filter([
-                $mysqlSslCaOption => env('MYSQL_ATTR_SSL_CA'),
-            ]) : [],
+            'options' => $mysqlOptions,
         ],
 
         'pgsql' => [

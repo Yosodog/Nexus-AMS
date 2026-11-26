@@ -63,5 +63,7 @@ return [
 
     'reconciliation_page_size' => 100,
     'reconciliation_refresh_seconds' => 600,
+    'reconciliation_refresh_max_backoff_seconds' => 21600,
+    'reconciliation_max_refresh_attempts' => 6,
     'late_arrival_grace_seconds' => 3600,
 ];
