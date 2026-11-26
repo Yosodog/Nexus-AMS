@@ -96,7 +96,7 @@ class FinancePolicySettings
 
     public function getRebuildingCycleId(): int
     {
-        $value = $this->settings->get('rebuilding_cycle_id');
+        $value = $this->settings->getFresh('rebuilding_cycle_id');
 
         if (is_null($value)) {
             $this->settings->set('rebuilding_cycle_id', 1);
@@ -228,7 +228,7 @@ class FinancePolicySettings
 
     public function getLoanPaymentsPausedAt(): ?Carbon
     {
-        $value = $this->settings->get('loan_payments_paused_at');
+        $value = $this->settings->getFresh('loan_payments_paused_at');
 
         if (! is_string($value) || $value === '') {
             return null;

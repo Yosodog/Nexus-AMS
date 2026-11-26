@@ -15,14 +15,29 @@ use Illuminate\Console\Events\ScheduledTaskFinished;
 use Illuminate\Console\Events\ScheduledTaskSkipped;
 use Illuminate\Console\Events\ScheduledTaskStarting;
 use Illuminate\Console\Scheduling\Event as ScheduledEvent;
+use Illuminate\Log\Context\Repository as ContextRepository;
+use Illuminate\Support\Facades\Context;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use Throwable;
 
 class ScheduledTaskLifecycleRecorder
 {
+    /**
+     * Hidden context key that carries a background run's identity from the
+     * scheduler process to the separate `schedule:finish` process.
+     */
+    public const CONTEXT_KEY = 'scheduler_lifecycle.background_run';
+
     /** @var array<int, int> */
     private array $activeRuns = [];
+
+    /**
+     * The background run whose process is being launched right now, if any.
+     *
+     * @var array{task_mutex_hash: string, correlation_id: string}|null
+     */
+    private ?array $launchingBackgroundRun = null;
 
     private ?string $hostname = null;
 
@@ -36,24 +51,37 @@ class ScheduledTaskLifecycleRecorder
             return;
         }
 
+        $this->launchingBackgroundRun = null;
+
         $this->safely($event->task, 'starting', function () use ($event): void {
             $observedAt = now();
+            $mutexHash = $this->identifier->mutexHash($event->task);
+            $correlationId = (string) Str::uuid();
             $run = ScheduledTaskRun::query()->create([
                 'task_identifier' => $this->identifier->for($event->task),
-                'task_mutex_hash' => $this->identifier->mutexHash($event->task),
+                'task_mutex_hash' => $mutexHash,
                 'status' => ScheduledTaskRunStatus::Running,
                 'scheduled_at' => $this->scheduledAt($event->task, $observedAt),
                 'started_at' => $observedAt,
                 'hostname' => $this->hostname(),
-                'correlation_id' => (string) Str::uuid(),
+                'correlation_id' => $correlationId,
             ]);
 
             $this->activeRuns[$this->objectKey($event->task)] = $run->getKey();
+
+            if ($event->task->runInBackground) {
+                $this->launchingBackgroundRun = [
+                    'task_mutex_hash' => $mutexHash,
+                    'correlation_id' => $correlationId,
+                ];
+            }
         });
     }
 
     public function recordFinished(ScheduledTaskFinished $event): void
     {
+        $this->launchingBackgroundRun = null;
+
         if (! $this->isEnabled()) {
             return;
         }
@@ -91,6 +119,8 @@ class ScheduledTaskLifecycleRecorder
 
     public function recordFailed(ScheduledTaskFailed $event): void
     {
+        $this->launchingBackgroundRun = null;
+
         if (! $this->isEnabled()) {
             return;
         }
@@ -143,7 +173,45 @@ class ScheduledTaskLifecycleRecorder
                 ? ScheduledTaskRunStatus::Success
                 : ScheduledTaskRunStatus::Failure,
             phase: 'background-finished',
+            correlationId: $this->backgroundCorrelationId($event->task),
         );
+    }
+
+    /**
+     * Shape the context that is about to be serialized for a child process
+     * or a queued job.
+     *
+     * The scheduler spawns a background task with the dehydrated context in
+     * `__LARAVEL_CONTEXT`, and the `schedule:finish` process that follows the
+     * task inherits it. Only that launch carries the run identity; every other
+     * dehydration (queued jobs, nested processes) has it removed so it does
+     * not leak into queue payloads.
+     */
+    public function prepareContextForDehydration(ContextRepository $context): void
+    {
+        $context->forgetHidden(self::CONTEXT_KEY);
+
+        if ($this->launchingBackgroundRun !== null) {
+            $context->addHidden(self::CONTEXT_KEY, $this->launchingBackgroundRun);
+        }
+    }
+
+    private function backgroundCorrelationId(ScheduledEvent $task): ?string
+    {
+        try {
+            $carried = Context::getHidden(self::CONTEXT_KEY);
+            $correlationId = is_array($carried) ? ($carried['correlation_id'] ?? null) : null;
+
+            if (! is_string($correlationId) || ! Str::isUuid($correlationId)) {
+                return null;
+            }
+
+            return ($carried['task_mutex_hash'] ?? null) === $this->identifier->mutexHash($task)
+                ? $correlationId
+                : null;
+        } catch (Throwable) {
+            return null;
+        }
     }
 
     private function finalize(
@@ -154,6 +222,7 @@ class ScheduledTaskLifecycleRecorder
         bool $clearStartedAt = false,
         bool $clearExitCode = false,
         string $phase = 'finished',
+        ?string $correlationId = null,
     ): void {
         $runId = $this->activeRuns[$this->objectKey($task)] ?? null;
         unset($this->activeRuns[$this->objectKey($task)]);
@@ -166,6 +235,7 @@ class ScheduledTaskLifecycleRecorder
             $clearStartedAt,
             $clearExitCode,
             $runId,
+            $correlationId,
         ): void {
             $finishedAt = now();
             $hostname = $this->hostname();
@@ -180,26 +250,13 @@ class ScheduledTaskLifecycleRecorder
                 $clearStartedAt,
                 $clearExitCode,
                 $runId,
+                $correlationId,
                 $finishedAt,
                 $hostname,
                 $mutexHash,
             ): void {
                 $exitCode = $clearExitCode ? null : $task->exitCode;
-                $run = $runId === null
-                    ? null
-                    : ScheduledTaskRun::query()
-                        ->whereKey($runId)
-                        ->where('status', ScheduledTaskRunStatus::Running->value)
-                        ->lockForUpdate()
-                        ->first();
-
-                $run ??= ScheduledTaskRun::query()
-                    ->where('task_mutex_hash', $mutexHash)
-                    ->where('hostname', $hostname)
-                    ->where('status', ScheduledTaskRunStatus::Running->value)
-                    ->oldest('started_at')
-                    ->lockForUpdate()
-                    ->first();
+                $run = $this->findRunToClose($runId, $correlationId, $mutexHash, $hostname);
 
                 if ($run === null) {
                     ScheduledTaskRun::query()->create([
@@ -222,7 +279,9 @@ class ScheduledTaskLifecycleRecorder
                 $startedAt = $clearStartedAt ? null : $run->started_at;
                 $measuredDuration = $durationMs;
 
-                if ($measuredDuration === null && $startedAt !== null) {
+                if ($run->status === ScheduledTaskRunStatus::Abandoned) {
+                    $measuredDuration = null;
+                } elseif ($measuredDuration === null && $startedAt !== null) {
                     $measuredDuration = max(
                         0,
                         (int) round($startedAt->diffInMilliseconds($finishedAt)),
@@ -239,6 +298,54 @@ class ScheduledTaskLifecycleRecorder
                 ])->save();
             });
         });
+    }
+
+    /**
+     * Find the row this finish belongs to.
+     *
+     * A run identified by this process (foreground) or by the carried
+     * correlation id (background) closes only its own row, including one the
+     * reaper already marked abandoned. Without either, the newest open row on
+     * this host is the closest match: a lost finish can then never cascade
+     * onto older rows, and the computed duration can never exceed the time
+     * since that row started.
+     */
+    private function findRunToClose(
+        ?int $runId,
+        ?string $correlationId,
+        string $mutexHash,
+        string $hostname,
+    ): ?ScheduledTaskRun {
+        $closable = [
+            ScheduledTaskRunStatus::Running->value,
+            ScheduledTaskRunStatus::Abandoned->value,
+        ];
+
+        if ($runId !== null) {
+            return ScheduledTaskRun::query()
+                ->whereKey($runId)
+                ->whereIn('status', $closable)
+                ->lockForUpdate()
+                ->first();
+        }
+
+        if ($correlationId !== null) {
+            return ScheduledTaskRun::query()
+                ->where('correlation_id', $correlationId)
+                ->where('task_mutex_hash', $mutexHash)
+                ->whereIn('status', $closable)
+                ->lockForUpdate()
+                ->first();
+        }
+
+        return ScheduledTaskRun::query()
+            ->where('task_mutex_hash', $mutexHash)
+            ->where('hostname', $hostname)
+            ->where('status', ScheduledTaskRunStatus::Running->value)
+            ->latest('started_at')
+            ->latest('id')
+            ->lockForUpdate()
+            ->first();
     }
 
     private function runtimeToMilliseconds(float $runtime): ?int
