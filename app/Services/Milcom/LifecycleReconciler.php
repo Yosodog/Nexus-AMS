@@ -23,6 +23,7 @@ use App\Models\War;
 use App\Models\WarAttack;
 use App\Services\AllianceMembershipService;
 use App\Services\RaidPolicyService;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
@@ -392,12 +393,21 @@ class LifecycleReconciler
         }
     }
 
-    private function refreshStaleCounterRecommendations(): void
+    /**
+     * Counter objectives whose operation has no queued or running recommendation run.
+     *
+     * Operations with an active run are resolved through the status index first
+     * so the runs table is never scanned in full.
+     *
+     * @return Builder<MilcomObjective>
+     */
+    public function staleCounterObjectiveQuery(): Builder
     {
         $refreshCutoff = now()->subMinutes(
             (int) config('milcom.counters.review_refresh_minutes', 30),
         );
-        $objectiveIds = MilcomObjective::query()
+
+        return MilcomObjective::query()
             ->whereIn('status', [
                 ObjectiveStatus::Pending->value,
                 ObjectiveStatus::Review->value,
@@ -413,13 +423,21 @@ class LifecycleReconciler
             ->whereHas('incidents', fn ($query) => $query
                 ->where('status', IncidentStatus::Countering->value)
                 ->whereHas('war', fn ($warQuery) => $warQuery->active()))
-            ->whereDoesntHave('operation.recommendationRuns', fn ($query) => $query
+            ->whereNotIn('operation_id', MilcomRecommendationRun::query()
+                ->select('operation_id')
                 ->whereIn('status', [
                     RecommendationRunStatus::Queued->value,
                     RecommendationRunStatus::Running->value,
                 ]))
-            ->orderBy('id')
-            ->pluck('id');
+            ->orderBy('id');
+    }
+
+    private function refreshStaleCounterRecommendations(): void
+    {
+        $refreshCutoff = now()->subMinutes(
+            (int) config('milcom.counters.review_refresh_minutes', 30),
+        );
+        $objectiveIds = $this->staleCounterObjectiveQuery()->pluck('id');
 
         foreach ($objectiveIds as $objectiveId) {
             DB::transaction(function () use ($objectiveId, $refreshCutoff): void {

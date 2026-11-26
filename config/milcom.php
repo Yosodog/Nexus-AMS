@@ -69,4 +69,10 @@ return [
     'live' => [
         'first_hit_grace_minutes' => 15,
     ],
+
+    'retention' => [
+        'recommendation_run_days' => max(1, (int) env('MILCOM_RECOMMENDATION_RUN_RETENTION_DAYS', 60)),
+        'readiness_snapshot_days' => max(1, (int) env('MILCOM_READINESS_SNAPSHOT_RETENTION_DAYS', 14)),
+        'batch_size' => max(1, (int) env('MILCOM_PRUNE_BATCH_SIZE', 500)),
+    ],
 ];

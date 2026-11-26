@@ -222,6 +222,7 @@ final readonly class NexusScheduleRegistrar
             ->dailyAt('01:35')
             ->withoutOverlapping(60)
             ->onOneServer();
+        $schedule->command('milcom:prune-history')->dailyAt('01:45')->withoutOverlapping(60)->onOneServer();
         if (! (bool) config('milcom.v2_enabled', false)) {
             $schedule->command('war-counters:archive-stale')
                 ->hourly()
