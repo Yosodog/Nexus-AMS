@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Casts\IntegerFlagCast;
 use App\GraphQL\Models\Nation as NationGraphQL;
 use App\Services\PWHelperService;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -11,6 +12,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Notifications\Notifiable;
+use InvalidArgumentException;
 
 class Nation extends Model
 {
@@ -44,6 +46,8 @@ class Nation extends Model
             'treasure_income_modifier' => 'float',
             'color_turn_bonus' => 'integer',
             'economy_context_synced_at' => 'datetime',
+            'espionage_available' => IntegerFlagCast::class,
+            'vip' => IntegerFlagCast::class,
             'ground_capacity_research' => 'integer',
             'ground_cost_research' => 'integer',
             'air_capacity_research' => 'integer',
@@ -98,7 +102,16 @@ class Nation extends Model
         'nuclear_launch_facility',
     ];
 
-    public static function updateFromAPI(NationGraphQL $graphQLNationModel): self
+    /**
+     * Create or update a nation from an API payload.
+     *
+     * Callers that already loaded the stored nation (including soft-deleted rows) may pass it as
+     * $existingNation to skip the lookup; when it has its `military` relation loaded, that row is
+     * reused too. Passing null keeps the original behaviour of looking the nation up by ID.
+     *
+     * @throws InvalidArgumentException when $existingNation is not the nation in the payload
+     */
+    public static function updateFromAPI(NationGraphQL $graphQLNationModel, ?self $existingNation = null): self
     {
         $nationPayload = collect((array) $graphQLNationModel)
             ->only([
@@ -179,7 +192,11 @@ class Nation extends Model
         $nationId = $nationPayload['id'] ?? $graphQLNationModel->id;
         unset($nationPayload['id']);
 
-        $nation = $nationId ? self::withTrashed()->find($nationId) : null;
+        if ($existingNation !== null && (int) $existingNation->getKey() !== (int) $nationId) {
+            throw new InvalidArgumentException('The preloaded nation does not match the API payload.');
+        }
+
+        $nation = $existingNation ?? ($nationId ? self::withTrashed()->find($nationId) : null);
 
         if ($nation?->trashed()) {
             $nation->restore();
@@ -303,13 +320,20 @@ class Nation extends Model
             ->toArray();
 
         if (! empty($militaryData)) {
-            $military = $nation->military()->firstOrNew();
+            $militaryPreloaded = $nation->relationLoaded('military');
+            $military = $militaryPreloaded
+                ? ($nation->getRelation('military') ?? $nation->military()->make())
+                : $nation->military()->firstOrNew();
 
             if (! $military->exists) {
                 $military->forceFill(NationMilitary::DEFAULT_COUNTERS);
             }
 
             $military->fill($militaryData)->save();
+
+            if ($militaryPreloaded) {
+                $nation->setRelation('military', $military);
+            }
         }
 
         if (! is_null($graphQLNationModel->cities)) {

@@ -3,6 +3,8 @@
 return [
     'ingestion' => [
         'alliance_create_max_records' => 25,
+        // Records per queued job for bulk nation, city, war and alliance messages.
+        'bulk_job_chunk_size' => 25,
         'quarantine_file' => storage_path('logs/subscription-record-quarantine.jsonl'),
     ],
 

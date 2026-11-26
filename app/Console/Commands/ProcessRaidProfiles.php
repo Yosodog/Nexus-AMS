@@ -3,6 +3,7 @@
 namespace App\Console\Commands;
 
 use App\Models\RaidTargetProfile;
+use App\Services\Raids\RaidProfileDirtyMarker;
 use App\Services\Raids\RaidTargetProfileBuilder;
 use App\Services\RuntimeCapabilities;
 use Illuminate\Console\Attributes\Description;
@@ -32,7 +33,7 @@ final class ProcessRaidProfiles extends Command
         }
 
         $nationIds = RaidTargetProfile::query()
-            ->whereNotNull('dirty_at')
+            ->where('dirty_at', '<=', RaidProfileDirtyMarker::settledCutoff(now()))
             ->orderBy('dirty_at')
             ->limit($limit)
             ->pluck('nation_id')

@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Enums\DiscordQueueAction;
 use App\Enums\DiscordQueueLane;
 use App\Enums\DiscordQueueStatus;
+use App\Services\Discord\DiscordQueueClaimGate;
 use App\Services\Discord\DiscordQueueLeaseService;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
@@ -80,6 +81,12 @@ class DiscordQueue extends Model
                 || $command->dedupe_scope === ''
                 || $command->dedupe_scope === 'legacy') {
                 throw new LogicException('Discord queue commands must be bound to a relay-v2 connection when created.');
+            }
+        });
+
+        self::saved(function (self $command): void {
+            if ($command->status === DiscordQueueStatus::Pending) {
+                app(DiscordQueueClaimGate::class)->invalidateAfterCommit($command->getConnection());
             }
         });
     }

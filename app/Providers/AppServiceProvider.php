@@ -43,6 +43,7 @@ use App\Services\PWHealthService;
 use App\Services\PWMessageService;
 use App\Services\Raids\RaidModelParameters;
 use App\Services\RuntimeCapabilities;
+use App\Services\Settings\SettingValueStore;
 use App\Services\SettingService;
 use App\Services\StaffWorkQueue\OperationsReadStore;
 use App\Services\StaffWorkQueue\Sources\ApplicationWorkQueueSource;
@@ -58,8 +59,10 @@ use App\Services\StaffWorkQueue\StaffWorkQueueRegistry;
 use App\Services\TenantCallbacks\HttpTenantCallbackTransport;
 use App\Services\TenantControl\HttpBootstrapTokenIntrospector;
 use Illuminate\Cache\RateLimiting\Limit;
+use Illuminate\Database\Events\QueryExecuted;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\RateLimiter;
@@ -88,6 +91,7 @@ class AppServiceProvider extends ServiceProvider
         $this->app->bind(FederationTransport::class, DirectHttpTransport::class);
         $this->app->singleton(FederationOperationGuard::class);
         $this->app->singleton(AuditLogger::class);
+        $this->app->singleton(SettingValueStore::class);
         $this->app->scoped(RaidModelParameters::class);
         $this->app->singleton(StaffWorkQueueRegistry::class, fn ($app): StaffWorkQueueRegistry => new StaffWorkQueueRegistry([
             $app->make(ApplicationWorkQueueSource::class),
@@ -125,6 +129,12 @@ class AppServiceProvider extends ServiceProvider
         if ($this->app->environment('testing')) {
             Vite::useHotFile(storage_path('framework/vite-testing.hot'));
         }
+
+        DB::listen(function (QueryExecuted $query): void {
+            if (SettingValueStore::isSettingsWrite($query->sql)) {
+                $this->app->make(SettingValueStore::class)->noteWrite();
+            }
+        });
 
         if ($this->app->runningInConsole() && $this->app->make(RuntimeCapabilities::class)->runsPlatformBackups()) {
             $this->app->booted(fn () => $this->app->make(BackupRuntimeConfig::class)->applyIfDatabaseReady());

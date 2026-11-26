@@ -3748,7 +3748,7 @@
         "method": "GET|HEAD",
         "uri": "up",
         "name": null,
-        "action": "Closure",
+        "action": "Illuminate\\Foundation\\Http\\HealthCheck",
         "middleware": []
     },
     {

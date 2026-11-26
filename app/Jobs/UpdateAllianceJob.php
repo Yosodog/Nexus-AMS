@@ -20,7 +20,12 @@ class UpdateAllianceJob implements ShouldQueue
 {
     use Queueable;
 
-    public $timeout = 20;
+    public $timeout = 90;
+
+    public int $tries = 3;
+
+    /** @var list<int> */
+    public array $backoff = [10, 30];
 
     public array $alliancesData;
 

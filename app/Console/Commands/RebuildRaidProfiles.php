@@ -4,10 +4,8 @@ namespace App\Console\Commands;
 
 use App\Models\Nation;
 use App\Models\RaidLootEvent;
-use App\Models\RaidTargetProfile;
 use App\Services\Raids\RaidAllianceProfileBuilder;
 use App\Services\Raids\RaidLootFraction;
-use App\Services\Raids\RaidProfileDirtyMarker;
 use App\Services\Raids\RaidTargetProfileBuilder;
 use App\Services\RuntimeCapabilities;
 use App\Services\WarSimulator\Support\RaidLootFormula;
@@ -25,7 +23,6 @@ final class RebuildRaidProfiles extends Command
     public function handle(
         RuntimeCapabilities $capabilities,
         RaidLootFraction $fractions,
-        RaidProfileDirtyMarker $dirty,
         RaidTargetProfileBuilder $builder,
         RaidAllianceProfileBuilder $alliances,
     ): int {
@@ -39,18 +36,13 @@ final class RebuildRaidProfiles extends Command
             $this->components->info('Resolved '.$this->resolveFractions($fractions).' pending loot fractions.');
         }
 
-        Nation::query()->select('id')->chunkById(1000, function (Collection $nations) use ($dirty): void {
-            $dirty->mark($nations->pluck('id')->map(fn (mixed $id): int => (int) $id)->all());
-        });
-
-        $query = RaidTargetProfile::query()->whereNotNull('dirty_at');
-        $bar = $this->output->createProgressBar((clone $query)->count());
+        $bar = $this->output->createProgressBar(Nation::query()->count());
         $written = 0;
 
-        $query->select('nation_id')->chunkById(self::CHUNK, function (Collection $profiles) use ($builder, $bar, &$written): void {
-            $written += $builder->build($profiles->pluck('nation_id')->map(fn (mixed $id): int => (int) $id)->all());
-            $bar->advance($profiles->count());
-        }, 'nation_id');
+        Nation::query()->select('id')->chunkById(self::CHUNK, function (Collection $nations) use ($builder, $bar, &$written): void {
+            $written += $builder->build($nations->pluck('id')->map(fn (mixed $id): int => (int) $id)->all());
+            $bar->advance($nations->count());
+        });
 
         $bar->finish();
         $this->newLine();

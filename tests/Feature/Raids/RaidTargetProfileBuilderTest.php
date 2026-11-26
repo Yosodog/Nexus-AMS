@@ -10,17 +10,21 @@ use App\Models\RadiationSnapshot;
 use App\Models\RaidLootEvent;
 use App\Models\RaidTargetProfile;
 use App\Services\Economy\EconomyRules;
+use App\Services\Raids\RaidProfileDirtyMarker;
 use App\Services\Raids\RaidTargetProfileBuilder;
 use Carbon\CarbonImmutable;
 use Carbon\CarbonInterface;
+use Illuminate\Database\Events\QueryExecuted;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Tests\Concerns\BuildsRaidFixtures;
+use Tests\Concerns\RecordsDatabaseWrites;
 use Tests\TestCase;
 
 class RaidTargetProfileBuilderTest extends TestCase
 {
     use BuildsRaidFixtures;
+    use RecordsDatabaseWrites;
     use RefreshDatabase;
 
     protected function setUp(): void
@@ -156,6 +160,137 @@ class RaidTargetProfileBuilderTest extends TestCase
 
         $this->assertSame($singleQueries, $manyQueries);
         $this->assertSame(50, RaidTargetProfile::query()->whereIn('nation_id', $many)->whereNotNull('computed_at')->count());
+    }
+
+    public function test_rebuilding_an_unchanged_clean_profile_writes_nothing(): void
+    {
+        $nation = $this->nation();
+        $this->builder()->build([$nation->id]);
+        $before = RaidTargetProfile::query()->findOrFail($nation->id)->getAttributes();
+
+        $writes = $this->recordWrites('raid_target_profiles', fn () => $this->builder()->build([$nation->id]));
+
+        $this->assertSame(0, $writes['rows']);
+        $this->assertSame([], $writes['statements']);
+        $this->assertSame($before, RaidTargetProfile::query()->findOrFail($nation->id)->getAttributes());
+    }
+
+    public function test_rebuilding_an_unchanged_dirty_profile_writes_only_time_derived_columns_and_clears_the_mark(): void
+    {
+        $nation = $this->nation();
+        $this->builder()->build([$nation->id]);
+        app(RaidProfileDirtyMarker::class)->mark([$nation->id]);
+        $before = RaidTargetProfile::query()->findOrFail($nation->id);
+        $this->travel(RaidProfileDirtyMarker::SETTLE_SECONDS)->seconds();
+
+        $writes = $this->recordWrites('raid_target_profiles', fn () => $this->builder()->build([$nation->id]));
+
+        $after = RaidTargetProfile::query()->findOrFail($nation->id);
+        $this->assertSame(1, $writes['rows']);
+        $this->assertCount(1, $writes['statements']);
+        $this->assertStringStartsWith('update', strtolower($writes['statements'][0]->sql));
+        $this->assertNull($after->dirty_at);
+        $this->assertTrue($after->computed_at->equalTo(now()));
+        $this->assertEqualsCanonicalizing(
+            ['baseline_at', 'computed_at', 'updated_at', 'dirty_at'],
+            array_keys(array_diff_assoc($after->getAttributes(), $before->getAttributes())),
+        );
+    }
+
+    public function test_changed_nations_update_only_their_changed_columns(): void
+    {
+        $nation = $this->nation(['score' => 1_000]);
+        $this->builder()->build([$nation->id]);
+        $nation->update(['score' => 1_100.5]);
+
+        $writes = $this->recordWrites('raid_target_profiles', fn () => $this->builder()->build([$nation->id]));
+
+        $this->assertSame(1, $writes['rows']);
+        $this->assertCount(1, $writes['statements']);
+        $this->assertStringNotContainsString('insert', strtolower($writes['statements'][0]->sql));
+        $this->assertStringNotContainsString('nation_name', $writes['statements'][0]->sql);
+        $this->assertSame(1_100.5, RaidTargetProfile::query()->findOrFail($nation->id)->score);
+    }
+
+    public function test_write_statements_do_not_grow_with_the_number_of_settled_dirty_profiles(): void
+    {
+        $small = collect(range(1, 3))->map(fn (): int => $this->nation()->id)->all();
+        $large = collect(range(1, 30))->map(fn (): int => $this->nation()->id)->all();
+        $this->builder()->build([...$small, ...$large]);
+        app(RaidProfileDirtyMarker::class)->mark([...$small, ...$large]);
+        $this->travel(RaidProfileDirtyMarker::SETTLE_SECONDS)->seconds();
+
+        $smallWrites = $this->recordWrites('raid_target_profiles', fn () => $this->builder()->build($small));
+        $largeWrites = $this->recordWrites('raid_target_profiles', fn () => $this->builder()->build($large));
+
+        $this->assertCount(1, $smallWrites['statements']);
+        $this->assertCount(1, $largeWrites['statements']);
+        $this->assertSame(3, $smallWrites['rows']);
+        $this->assertSame(30, $largeWrites['rows']);
+        $this->assertSame(0, RaidTargetProfile::query()->whereNotNull('dirty_at')->count());
+    }
+
+    public function test_changed_profiles_are_written_in_one_bulk_update(): void
+    {
+        $nations = collect(range(1, 5))->map(fn (): Nation => $this->nation(['score' => 1_000]));
+        $this->builder()->build($nations->pluck('id')->all());
+        $nations->each(fn (Nation $nation, int $index) => $nation->update(['score' => 1_000 + ($index + 1) * 10.25]));
+        $unchanged = $this->nation();
+        $this->builder()->build([$unchanged->id]);
+
+        $writes = $this->recordWrites('raid_target_profiles', fn () => $this->builder()->build([...$nations->pluck('id')->all(), $unchanged->id]));
+
+        $this->assertCount(1, $writes['statements']);
+        $this->assertSame(5, $writes['rows']);
+        $nations->each(fn (Nation $nation, int $index) => $this->assertSame(
+            1_000 + ($index + 1) * 10.25,
+            RaidTargetProfile::query()->findOrFail($nation->id)->score,
+        ));
+    }
+
+    public function test_fresh_dirty_marks_are_not_cleared(): void
+    {
+        $nation = $this->nation();
+        $this->builder()->build([$nation->id]);
+        app(RaidProfileDirtyMarker::class)->mark([$nation->id]);
+        $this->travel(RaidProfileDirtyMarker::SETTLE_SECONDS - 1)->seconds();
+
+        $this->builder()->build([$nation->id]);
+
+        $this->assertNotNull(RaidTargetProfile::query()->findOrFail($nation->id)->dirty_at);
+    }
+
+    public function test_a_mark_placed_while_a_profile_is_rebuilding_keeps_it_dirty(): void
+    {
+        $nation = $this->nation(['score' => 1_000]);
+        $this->builder()->build([$nation->id]);
+        app(RaidProfileDirtyMarker::class)->mark([$nation->id]);
+        $this->travel(RaidProfileDirtyMarker::SETTLE_SECONDS + 5)->seconds();
+        $interleaved = false;
+
+        DB::listen(function (QueryExecuted $query) use ($nation, &$interleaved): void {
+            if ($interleaved || ! str_contains($query->sql, 'from "nations"')) {
+                return;
+            }
+
+            $interleaved = true;
+            Nation::query()->whereKey($nation->id)->update(['score' => 1_200]);
+            app(RaidProfileDirtyMarker::class)->mark([$nation->id]);
+        });
+
+        $this->builder()->build([$nation->id]);
+
+        $this->assertTrue($interleaved);
+        $racing = RaidTargetProfile::query()->findOrFail($nation->id);
+        $this->assertSame(1_000.0, $racing->score);
+        $this->assertTrue($racing->dirty_at?->equalTo(now()));
+
+        $this->travel(RaidProfileDirtyMarker::SETTLE_SECONDS)->seconds();
+        $this->artisan('raids:process-profiles')->assertSuccessful();
+
+        $settled = RaidTargetProfile::query()->findOrFail($nation->id);
+        $this->assertSame(1_200.0, $settled->score);
+        $this->assertNull($settled->dirty_at);
     }
 
     private function countQueries(callable $callback): int

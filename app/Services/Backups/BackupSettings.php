@@ -4,6 +4,7 @@ namespace App\Services\Backups;
 
 use App\Enums\BackupDestination;
 use App\Models\Setting;
+use App\Services\Settings\SettingValueStore;
 use App\Support\BackupSchedule;
 use Illuminate\Contracts\Encryption\DecryptException;
 use Illuminate\Support\Facades\Crypt;
@@ -17,6 +18,8 @@ use Illuminate\Support\Facades\Log;
  */
 class BackupSettings
 {
+    public function __construct(private readonly SettingValueStore $store) {}
+
     public const DESTINATION = 'backup_destination';
 
     public const SCHEDULE_CRON = 'backup_schedule_cron';
@@ -156,9 +159,9 @@ class BackupSettings
      */
     private function stored(): array
     {
-        return Setting::query()
-            ->whereIn('key', self::ALL_KEYS)
-            ->pluck('value', 'key')
+        return collect(self::ALL_KEYS)
+            ->mapWithKeys(fn (string $key): array => [$key => $this->store->get($key)])
+            ->reject(fn (mixed $value): bool => $value === null)
             ->map(fn (mixed $value): string => (string) $value)
             ->filter(fn (string $value, string $key): bool => $value !== '' || $key === self::S3_PATH_STYLE)
             ->map(fn (string $value, string $key): ?string => in_array($key, self::SECRET_KEYS, true) ? $this->decrypt($key, $value) : $value)

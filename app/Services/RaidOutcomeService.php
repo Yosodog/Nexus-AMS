@@ -25,12 +25,22 @@ use Throwable;
  */
 final class RaidOutcomeService
 {
+    private bool $evidenceQueryRejected = false;
+
     public function __construct(
         private readonly MilitaryCostCalculator $militaryCostCalculator,
         private readonly RuntimeCapabilities $runtimeCapabilities,
         private readonly QueryService $queries,
         private readonly RaidLootFraction $lootFractions,
     ) {}
+
+    /**
+     * Version of the terminal evidence refresh query. Attempts recorded under
+     * an older version are not counted, so a corrected query gets its full
+     * allowance again. Version 1 omitted `active`, which made the API return
+     * only active wars, so ended wars were never found.
+     */
+    private const EVIDENCE_QUERY_VERSION = 2;
 
     /** @var list<string> */
     private const LOOT_RESOURCES = [
@@ -46,6 +56,14 @@ final class RaidOutcomeService
         'aluminum',
         'food',
     ];
+
+    /**
+     * The API's attack type does not expose these per attack, so they are only
+     * reconciled against war totals when an attack row actually reports them.
+     *
+     * @var list<string>
+     */
+    private const UNOBSERVABLE_COST_RESOURCES = ['aluminum', 'steel'];
 
     /** @var list<string> */
     private const COST_RESOURCES = [
@@ -639,6 +657,11 @@ final class RaidOutcomeService
             'steel' => ['att_steel_used', 'def_steel_used'],
         ];
         foreach ($resources as $resource => [$attackerField, $defenderField]) {
+            if (in_array($resource, self::UNOBSERVABLE_COST_RESOURCES, true)
+                && ! $this->evidenceReportsCost($evidence, $resource)) {
+                continue;
+            }
+
             $add(
                 'attacker.costs.'.$resource,
                 $war->getAttribute($attackerField),
@@ -768,6 +791,26 @@ final class RaidOutcomeService
             'mismatches' => $mismatches,
             'missing' => [],
         ];
+    }
+
+    /**
+     * Whether any attack row carries a value for the cost resource. Rows
+     * recorded from the API never do for aluminum or steel, so a missing
+     * value is unknown rather than zero.
+     *
+     * @param  iterable<RaidOutcomeAttack>  $attacks
+     */
+    private function evidenceReportsCost(iterable $attacks, string $resource): bool
+    {
+        foreach ($attacks as $attack) {
+            foreach (['cost_resources', 'defender_cost_resources'] as $field) {
+                if (is_numeric(((array) ($attack->{$field} ?? []))[$resource] ?? null)) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
     }
 
     /** @param iterable<RaidOutcomeAttack> $attacks */
@@ -1004,14 +1047,37 @@ final class RaidOutcomeService
     private function shouldRefreshTerminalEvidence(RaidPrediction $prediction): bool
     {
         $metadata = is_array($prediction->outcome_metadata) ? $prediction->outcome_metadata : [];
+        $attempts = $this->refreshAttemptCount($metadata);
         $lastAttempt = $this->timestamp(data_get($metadata, 'evidence_refresh.attempted_at'));
         if ($lastAttempt === null) {
             return true;
         }
 
-        $cooldown = max(60, (int) config('raids.reconciliation_refresh_seconds', 600));
+        if ($attempts >= max(1, (int) config('raids.reconciliation_max_refresh_attempts', 6))) {
+            return false;
+        }
 
-        return $lastAttempt->diffInSeconds(CarbonImmutable::now()) >= $cooldown;
+        $cooldown = max(60, (int) config('raids.reconciliation_refresh_seconds', 600));
+        $maxCooldown = max($cooldown, (int) config('raids.reconciliation_refresh_max_backoff_seconds', 21600));
+        $backoff = min($maxCooldown, $cooldown * (2 ** max(0, $attempts - 1)));
+
+        return $lastAttempt->diffInSeconds(CarbonImmutable::now()) >= $backoff;
+    }
+
+    /**
+     * Attempts made with the current query version; attempts recorded without
+     * a version, or with an older one, were made with a query that could not
+     * find ended wars and do not count against the bound.
+     *
+     * @param  array<string, mixed>  $metadata
+     */
+    private function refreshAttemptCount(array $metadata): int
+    {
+        if ((int) data_get($metadata, 'evidence_refresh.query_version', 1) < self::EVIDENCE_QUERY_VERSION) {
+            return 0;
+        }
+
+        return max(0, (int) data_get($metadata, 'evidence_refresh.attempt_count', 0));
     }
 
     /**
@@ -1022,10 +1088,18 @@ final class RaidOutcomeService
      */
     private function refreshTerminalEvidence(?War $war, RaidPrediction $prediction): array
     {
+        if ($this->evidenceQueryRejected) {
+            return [];
+        }
+
         $attemptedAt = CarbonImmutable::now();
+        $previousMetadata = is_array($prediction->outcome_metadata) ? $prediction->outcome_metadata : [];
+        $attemptCount = $this->refreshAttemptCount($previousMetadata) + 1;
         $result = [
             'attempted' => true,
             'attempted_at' => $attemptedAt->toIso8601String(),
+            'attempt_count' => $attemptCount,
+            'query_version' => self::EVIDENCE_QUERY_VERSION,
             'status' => 'unavailable',
             'count' => 0,
         ];
@@ -1040,6 +1114,7 @@ final class RaidOutcomeService
                 ->setRootField('wars')
                 ->addArgument([
                     'id' => [(int) $war->getKey()],
+                    'active' => false,
                     'first' => $pageSize,
                     'page' => 1,
                 ])
@@ -1057,11 +1132,8 @@ final class RaidOutcomeService
                             'steel_looted', 'aluminum_looted', 'food_looted',
                             'infra_destroyed', 'infra_destroyed_value',
                             'att_mun_used', 'def_mun_used', 'att_gas_used', 'def_gas_used',
-                            'att_alum_used', 'def_alum_used', 'att_steel_used', 'def_steel_used',
                             'att_soldiers_lost', 'def_soldiers_lost', 'att_tanks_lost', 'def_tanks_lost',
                             'att_aircraft_lost', 'def_aircraft_lost', 'att_ships_lost', 'def_ships_lost',
-                            'att_infra_destroyed', 'def_infra_destroyed',
-                            'att_infra_destroyed_value', 'def_infra_destroyed_value',
                         ]);
                     });
                 });
@@ -1095,23 +1167,48 @@ final class RaidOutcomeService
                 }
             }
 
-            return $result + [
+            return [
+                ...$result,
                 'status' => $stored > 0 ? 'refreshed' : 'empty',
                 'count' => $stored,
             ];
         } catch (Throwable $exception) {
-            Log::warning('Terminal raid evidence refresh failed.', [
-                'prediction_id' => $prediction->id,
-                'war_id' => $war->getKey(),
-                'exception_class' => $exception::class,
-                'message' => $exception->getMessage(),
-            ]);
+            if ($this->isQueryRejection($exception)) {
+                $this->evidenceQueryRejected = true;
+                Log::error('Terminal raid evidence refresh query was rejected by the API; skipping further refreshes this run.', [
+                    'prediction_id' => $prediction->id,
+                    'war_id' => $war->getKey(),
+                    'exception_class' => $exception::class,
+                    'message' => $exception->getMessage(),
+                ]);
+            } else {
+                Log::warning('Terminal raid evidence refresh failed.', [
+                    'prediction_id' => $prediction->id,
+                    'war_id' => $war->getKey(),
+                    'exception_class' => $exception::class,
+                    'message' => $exception->getMessage(),
+                ]);
+            }
 
-            return $result + [
+            return [
+                ...$result,
                 'status' => 'failed',
                 'error' => 'The bounded terminal evidence refresh failed.',
             ];
         }
+    }
+
+    /**
+     * A schema-level rejection fails identically for every war, so the first
+     * one in a process stops the remaining refreshes instead of repeating it.
+     */
+    private function isQueryRejection(Throwable $exception): bool
+    {
+        $message = $exception->getMessage();
+
+        return str_contains($message, 'Cannot query field')
+            || str_contains($message, 'GRAPHQL_VALIDATION_FAILED')
+            || str_contains($message, 'Unknown argument');
     }
 
     /** @return array<string, mixed> */
@@ -1254,7 +1351,7 @@ final class RaidOutcomeService
     /** @param iterable<RaidOutcomeAttack> $attacks @return array<string, float> */
     private function sumCosts(iterable $attacks, int $participantId): array
     {
-        $costs = array_fill_keys(self::COST_RESOURCES, 0.0);
+        $costs = array_fill_keys(array_diff(self::COST_RESOURCES, self::UNOBSERVABLE_COST_RESOURCES), 0.0);
         foreach ($attacks as $attack) {
             $isAttacker = (int) $attack->attacker_nation_id === $participantId;
             $source = $isAttacker ? $attack->cost_resources : $attack->defender_cost_resources;
