@@ -9,6 +9,7 @@ use Illuminate\Console\Events\ScheduledTaskFinished;
 use Illuminate\Console\Events\ScheduledTaskSkipped;
 use Illuminate\Console\Events\ScheduledTaskStarting;
 use Illuminate\Contracts\Events\Dispatcher;
+use Illuminate\Log\Context\Events\ContextDehydrating;
 
 class ScheduledTaskLifecycleSubscriber
 {
@@ -41,6 +42,11 @@ class ScheduledTaskLifecycleSubscriber
         $this->recorder->recordFailed($event);
     }
 
+    public function handleContextDehydrating(ContextDehydrating $event): void
+    {
+        $this->recorder->prepareContextForDehydration($event->context);
+    }
+
     /**
      * @return array<class-string, string>
      */
@@ -52,6 +58,7 @@ class ScheduledTaskLifecycleSubscriber
             ScheduledBackgroundTaskFinished::class => 'handleBackgroundFinished',
             ScheduledTaskSkipped::class => 'handleSkipped',
             ScheduledTaskFailed::class => 'handleFailed',
+            ContextDehydrating::class => 'handleContextDehydrating',
         ];
     }
 }
