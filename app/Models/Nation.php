@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Casts\IntegerFlagCast;
 use App\GraphQL\Models\Nation as NationGraphQL;
 use App\Services\PWHelperService;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -44,6 +45,8 @@ class Nation extends Model
             'treasure_income_modifier' => 'float',
             'color_turn_bonus' => 'integer',
             'economy_context_synced_at' => 'datetime',
+            'espionage_available' => IntegerFlagCast::class,
+            'vip' => IntegerFlagCast::class,
             'ground_capacity_research' => 'integer',
             'ground_cost_research' => 'integer',
             'air_capacity_research' => 'integer',
