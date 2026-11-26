@@ -157,7 +157,7 @@ class RecruitmentSettings
 
     public function getCurrentCohortStartedAt(): ?Carbon
     {
-        $value = $this->settings->get('recruitment_current_cohort_started_at');
+        $value = $this->settings->getFresh('recruitment_current_cohort_started_at');
 
         if (is_null($value) || $value === '') {
             return null;
@@ -173,7 +173,7 @@ class RecruitmentSettings
 
     public function getCurrentCohortKey(): string
     {
-        $value = $this->settings->get('recruitment_current_cohort_key');
+        $value = $this->settings->getFresh('recruitment_current_cohort_key');
 
         if (! is_string($value) || $value === '') {
             $this->setCurrentCohortKey('initial');
