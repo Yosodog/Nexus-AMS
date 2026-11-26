@@ -30,6 +30,20 @@ return [
         'skipped_days' => (int) env('SCHEDULER_LIFECYCLE_SKIPPED_DAYS', 14),
         'overlap_days' => (int) env('SCHEDULER_LIFECYCLE_OVERLAP_DAYS', 30),
         'running_days' => (int) env('SCHEDULER_LIFECYCLE_RUNNING_DAYS', 90),
+        'abandoned_days' => (int) env('SCHEDULER_LIFECYCLE_ABANDONED_DAYS', 30),
         'batch_size' => (int) env('SCHEDULER_LIFECYCLE_PRUNE_BATCH_SIZE', 1000),
+    ],
+
+    /*
+     * A run still marked running after interval_multiple times its task's
+     * schedule interval (clamped to minimum_minutes..maximum_minutes) is
+     * marked abandoned by `scheduler-lifecycle:prune`. Recorded durations
+     * above the same bound are cleared as implausible.
+     */
+    'abandonment' => [
+        'interval_multiple' => (int) env('SCHEDULER_LIFECYCLE_ABANDON_INTERVAL_MULTIPLE', 10),
+        'minimum_minutes' => (int) env('SCHEDULER_LIFECYCLE_ABANDON_MINIMUM_MINUTES', 60),
+        'maximum_minutes' => (int) env('SCHEDULER_LIFECYCLE_ABANDON_MAXIMUM_MINUTES', 1440),
+        'max_rows_per_pass' => (int) env('SCHEDULER_LIFECYCLE_ABANDON_MAX_ROWS_PER_PASS', 10000),
     ],
 ];

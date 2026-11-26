@@ -4,21 +4,30 @@ namespace App\Console\Commands;
 
 use App\Enums\ScheduledTaskRunStatus;
 use App\Models\ScheduledTaskRun;
+use App\Services\Scheduling\ScheduledTaskRunReaper;
 use Illuminate\Console\Attributes\Description;
 use Illuminate\Console\Attributes\Signature;
 use Illuminate\Console\Command;
 use Illuminate\Database\Eloquent\Builder;
 
 #[Signature('scheduler-lifecycle:prune {--pretend : Report matching runs without deleting them}')]
-#[Description('Prune scheduled task lifecycle runs using the configured retention windows')]
+#[Description('Close abandoned scheduled task lifecycle runs and prune runs using the configured retention windows')]
 class PruneScheduledTaskRuns extends Command
 {
     /**
      * Execute the console command.
      */
-    public function handle(): int
+    public function handle(ScheduledTaskRunReaper $reaper): int
     {
         $pretend = (bool) $this->option('pretend');
+        $reaped = $reaper->reap($pretend);
+        $reapAction = $pretend ? 'would mark' : 'marked';
+
+        $this->components->info(
+            "{$reaped['abandoned']} stuck running records {$reapAction} abandoned; "
+            ."{$reaped['repaired']} implausible durations ".($pretend ? 'would be cleared' : 'cleared').'.',
+        );
+
         $batchSize = $this->positiveConfig('batch_size', 1000);
         $slowThresholdMs = $this->positiveConfig('slow_threshold_ms', 60000);
 
@@ -70,7 +79,16 @@ class PruneScheduledTaskRuns extends Command
                 $pretend,
                 $batchSize,
             ),
-            'abandoned running records' => $this->prune(
+            'abandoned records' => $this->prune(
+                ScheduledTaskRun::query()
+                    ->where('status', ScheduledTaskRunStatus::Abandoned->value)
+                    ->where('created_at', '<', now()->subDays(
+                        $this->positiveConfig('abandoned_days', 30),
+                    )),
+                $pretend,
+                $batchSize,
+            ),
+            'stale running records' => $this->prune(
                 ScheduledTaskRun::query()
                     ->where('status', ScheduledTaskRunStatus::Running->value)
                     ->where('created_at', '<', now()->subDays(
