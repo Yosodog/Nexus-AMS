@@ -2,11 +2,17 @@
 
 namespace Tests\Feature\Services\Economy;
 
+use App\Exceptions\ProfitabilityContextUnavailable;
 use App\Models\Nation;
+use App\Models\RadiationSnapshot;
 use App\Services\Economy\EconomyContextService;
+use App\Services\Economy\EconomyRules;
+use App\Services\NationProfitabilityService;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Events\QueryExecuted;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\Client\Request;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
@@ -152,10 +158,14 @@ class EconomyContextServiceTest extends TestCase
             $sql = strtolower($query->sql);
             $hasNationCount = preg_match('/select count\(\*\) as [`"]?aggregate[`"]? from [`"]?nations[`"]?/', $sql) === 1;
             $hasNationIdSnapshot = preg_match('/select [`"]?id[`"]? from [`"]?nations[`"]?/', $sql) === 1;
+            $hasMaxNationIdSnapshot = preg_match(
+                '/select max\([`"]?id[`"]?\) as [`"]?aggregate[`"]? from [`"]?nations[`"]?/',
+                $sql
+            ) === 1;
 
             if (
                 $inserted
-                || (! $hasNationCount && ! $hasNationIdSnapshot)
+                || (! $hasNationCount && ! $hasNationIdSnapshot && ! $hasMaxNationIdSnapshot)
             ) {
                 return;
             }
@@ -365,7 +375,7 @@ class EconomyContextServiceTest extends TestCase
         DB::listen(function (QueryExecuted $query) use (&$nationUpsertCount): void {
             $sql = strtolower($query->sql);
 
-            if (! str_contains($sql, 'insert into "nations"') || ! str_contains($sql, 'on conflict')) {
+            if (! str_contains($sql, 'update "nations"') || ! str_contains($sql, '"economy_context_synced_at"')) {
                 return;
             }
 
@@ -478,18 +488,275 @@ class EconomyContextServiceTest extends TestCase
         );
     }
 
+    #[Test]
+    public function it_only_rewrites_nations_whose_context_changed(): void
+    {
+        CarbonImmutable::setTestNow('2026-08-01 18:00:00 UTC');
+        config(['services.pw.api_key' => 'test-key']);
+        $previousStamp = CarbonImmutable::parse('2026-08-01 17:00:00 UTC');
+        $unchanged = Nation::factory()->create([
+            'alliance_id' => 77,
+            'alliance_position' => 'MEMBER',
+            'color' => 'blue',
+            'treasure_income_modifier' => 0,
+            'color_turn_bonus' => 125,
+            'economy_context_synced_at' => $previousStamp,
+        ]);
+        $changed = Nation::factory()->create([
+            'alliance_id' => 77,
+            'alliance_position' => 'MEMBER',
+            'color' => 'blue',
+            'treasure_income_modifier' => 0,
+            'color_turn_bonus' => 90,
+            'economy_context_synced_at' => $previousStamp,
+        ]);
+        $unchangedUpdatedAt = $unchanged->updated_at;
+        $this->fakeEconomyContextResponses(
+            treasures: [$this->unrelatedTreasure()],
+            colors: [['color' => 'blue', 'turn_bonus' => 125]],
+        );
+        $writtenNationIds = $this->recordContextWrites();
+
+        $count = app(EconomyContextService::class)->refresh();
+        $unchanged->refresh();
+        $changed->refresh();
+
+        $this->assertSame(2, $count);
+        $this->assertSame([(int) $changed->id], $writtenNationIds->all());
+        $this->assertTrue($unchanged->economy_context_synced_at->equalTo($previousStamp));
+        $this->assertTrue($unchanged->updated_at->equalTo($unchangedUpdatedAt));
+        $this->assertSame(125, $changed->color_turn_bonus);
+        $this->assertTrue($changed->economy_context_synced_at->equalTo(CarbonImmutable::now()));
+    }
+
+    #[Test]
+    public function it_restamps_unchanged_context_once_the_stamp_reaches_the_restamp_age(): void
+    {
+        CarbonImmutable::setTestNow('2026-08-01 18:00:00 UTC');
+        config(['services.pw.api_key' => 'test-key']);
+        $justUnderRestampAge = Nation::factory()->create([
+            'alliance_id' => 77,
+            'alliance_position' => 'MEMBER',
+            'color' => 'blue',
+            'treasure_income_modifier' => 0,
+            'color_turn_bonus' => 125,
+            'economy_context_synced_at' => now()
+                ->subHours(EconomyRules::ECONOMY_CONTEXT_RESTAMP_AFTER_HOURS)
+                ->addSecond(),
+        ]);
+        $atRestampAge = Nation::factory()->create([
+            'alliance_id' => 77,
+            'alliance_position' => 'MEMBER',
+            'color' => 'blue',
+            'treasure_income_modifier' => 0,
+            'color_turn_bonus' => 125,
+            'economy_context_synced_at' => now()->subHours(EconomyRules::ECONOMY_CONTEXT_RESTAMP_AFTER_HOURS),
+        ]);
+        $this->fakeEconomyContextResponses(
+            treasures: [$this->unrelatedTreasure()],
+            colors: [['color' => 'blue', 'turn_bonus' => 125]],
+        );
+        $writtenNationIds = $this->recordContextWrites();
+
+        $this->assertSame(2, app(EconomyContextService::class)->refresh());
+
+        $this->assertSame([(int) $atRestampAge->id], $writtenNationIds->all());
+        $this->assertTrue($atRestampAge->refresh()->economy_context_synced_at->equalTo(CarbonImmutable::now()));
+        $this->assertTrue(
+            $justUnderRestampAge->refresh()->economy_context_synced_at->equalTo(
+                CarbonImmutable::now()->subHours(EconomyRules::ECONOMY_CONTEXT_RESTAMP_AFTER_HOURS)->addSecond()
+            )
+        );
+    }
+
+    #[Test]
+    public function it_leaves_soft_deleted_nations_alone(): void
+    {
+        CarbonImmutable::setTestNow('2026-08-01 18:00:00 UTC');
+        config(['services.pw.api_key' => 'test-key']);
+        $oldTimestamp = CarbonImmutable::parse('2026-07-31 12:00:00 UTC');
+        $active = Nation::factory()->create([
+            'alliance_id' => 77,
+            'alliance_position' => 'MEMBER',
+            'color' => 'blue',
+        ]);
+        $deleted = Nation::factory()->create([
+            'alliance_id' => 77,
+            'alliance_position' => 'MEMBER',
+            'color' => 'purple',
+            'treasure_income_modifier' => 0.25,
+            'color_turn_bonus' => 90,
+            'economy_context_synced_at' => $oldTimestamp,
+        ]);
+        $deleted->delete();
+        $this->fakeEconomyContextResponses(
+            treasures: [$this->unrelatedTreasure()],
+            colors: [['color' => 'blue', 'turn_bonus' => 125]],
+        );
+        $writtenNationIds = $this->recordContextWrites();
+
+        $this->assertSame(1, app(EconomyContextService::class)->refresh());
+
+        $this->assertSame([(int) $active->id], $writtenNationIds->all());
+        $deleted = Nation::withTrashed()->findOrFail($deleted->id);
+        $this->assertSame(90, $deleted->color_turn_bonus);
+        $this->assertTrue($deleted->economy_context_synced_at->equalTo($oldTimestamp));
+    }
+
+    #[Test]
+    public function hourly_refreshes_keep_unchanged_context_fresh_without_rewriting_it_every_hour(): void
+    {
+        CarbonImmutable::setTestNow('2026-08-01 12:16:00 UTC');
+        config(['services.pw.api_key' => 'test-key']);
+        $nation = Nation::factory()->create([
+            'alliance_id' => 77,
+            'alliance_position' => 'MEMBER',
+            'color' => 'blue',
+            'treasure_income_modifier' => null,
+            'color_turn_bonus' => null,
+            'economy_context_synced_at' => null,
+        ]);
+        $this->fakeEconomyContextResponsesForEveryRefresh(
+            treasures: [$this->unrelatedTreasure()],
+            colors: [['color' => 'blue', 'turn_bonus' => 125]],
+        );
+        $writtenNationIds = $this->recordContextWrites();
+        $profitability = app(NationProfitabilityService::class);
+        $radiationSnapshot = $this->radiationSnapshot();
+
+        for ($hour = 0; $hour <= 12; $hour++) {
+            CarbonImmutable::setTestNow(CarbonImmutable::parse('2026-08-01 12:16:00 UTC')->addHours($hour));
+
+            $this->assertSame(1, app(EconomyContextService::class)->refresh());
+            $profitability->assertCalculationContextAvailable($nation->refresh(), $radiationSnapshot);
+        }
+
+        $this->assertSame(125, $nation->color_turn_bonus);
+        $this->assertCount(7, $writtenNationIds);
+        $this->assertTrue(
+            $nation->economy_context_synced_at->equalTo(CarbonImmutable::parse('2026-08-02 00:16:00 UTC'))
+        );
+    }
+
+    #[Test]
+    public function economy_context_goes_stale_when_the_refresh_stops_running(): void
+    {
+        CarbonImmutable::setTestNow('2026-08-01 12:16:00 UTC');
+        config(['services.pw.api_key' => 'test-key']);
+        $nation = Nation::factory()->create([
+            'alliance_id' => 77,
+            'alliance_position' => 'MEMBER',
+            'color' => 'blue',
+            'treasure_income_modifier' => null,
+            'color_turn_bonus' => null,
+            'economy_context_synced_at' => null,
+        ]);
+        $this->fakeEconomyContextResponsesForEveryRefresh(
+            treasures: [$this->unrelatedTreasure()],
+            colors: [['color' => 'blue', 'turn_bonus' => 125]],
+        );
+        $profitability = app(NationProfitabilityService::class);
+        $radiationSnapshot = $this->radiationSnapshot();
+
+        app(EconomyContextService::class)->refresh();
+        CarbonImmutable::setTestNow('2026-08-01 13:16:00 UTC');
+        app(EconomyContextService::class)->refresh();
+
+        CarbonImmutable::setTestNow('2026-08-01 18:16:00 UTC');
+        $profitability->assertCalculationContextAvailable($nation->refresh(), $radiationSnapshot);
+
+        CarbonImmutable::setTestNow('2026-08-01 18:16:01 UTC');
+        $this->expectException(ProfitabilityContextUnavailable::class);
+        $this->expectExceptionMessage("Economy context is stale for nation {$nation->id}.");
+
+        $profitability->assertCalculationContextAvailable($nation->refresh(), $radiationSnapshot);
+    }
+
+    /**
+     * @return Collection<int, int>
+     */
+    private function recordContextWrites(): Collection
+    {
+        $writtenNationIds = collect();
+
+        DB::listen(function (QueryExecuted $query) use ($writtenNationIds): void {
+            $sql = strtolower($query->sql);
+
+            if (! str_starts_with($sql, 'update "nations"') || ! str_contains($sql, '"economy_context_synced_at"')) {
+                return;
+            }
+
+            foreach (array_slice($query->bindings, 3) as $nationId) {
+                $writtenNationIds->push((int) $nationId);
+            }
+        });
+
+        return $writtenNationIds;
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function unrelatedTreasure(): array
+    {
+        return [
+            'name' => 'Unrelated',
+            'bonus' => 1,
+            'nation_id' => 999999,
+            'nation' => ['alliance_id' => 999],
+        ];
+    }
+
+    private function radiationSnapshot(): RadiationSnapshot
+    {
+        return RadiationSnapshot::query()->create([
+            'snapshot_at' => now(),
+            'game_date' => '2126-09-21',
+            'global' => 0,
+            'north_america' => 0,
+            'south_america' => 0,
+            'europe' => 0,
+            'africa' => 0,
+            'asia' => 0,
+            'australia' => 0,
+            'antarctica' => 0,
+        ]);
+    }
+
+    /**
+     * @param  list<array<string, mixed>>  $treasures
+     * @param  list<array<string, mixed>>  $colors
+     */
+    private function fakeEconomyContextResponsesForEveryRefresh(array $treasures, array $colors): void
+    {
+        $treasures = $this->withTreasureOwners($treasures);
+
+        Http::fake(fn (Request $request) => str_contains($request->body(), 'treasures')
+            ? Http::response(['data' => ['treasures' => $treasures]])
+            : Http::response(['data' => ['colors' => $colors]]));
+    }
+
+    /**
+     * @param  list<array<string, mixed>>  $treasures
+     * @return list<array<string, mixed>>
+     */
+    private function withTreasureOwners(array $treasures): array
+    {
+        return collect($treasures)->map(function (array $treasure): array {
+            $treasure['nation'] ??= [];
+            $treasure['nation']['id'] ??= $treasure['nation_id'] ?? null;
+
+            return $treasure;
+        })->all();
+    }
+
     /**
      * @param  list<array<string, mixed>>  $treasures
      * @param  list<array<string, mixed>>  $colors
      */
     private function fakeEconomyContextResponses(array $treasures, array $colors): void
     {
-        $treasures = collect($treasures)->map(function (array $treasure): array {
-            $treasure['nation'] ??= [];
-            $treasure['nation']['id'] ??= $treasure['nation_id'] ?? null;
-
-            return $treasure;
-        })->all();
+        $treasures = $this->withTreasureOwners($treasures);
 
         Http::fake([
             '*' => Http::sequence()
