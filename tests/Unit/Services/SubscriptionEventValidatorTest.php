@@ -282,4 +282,38 @@ class SubscriptionEventValidatorTest extends TestCase
         yield 'malformed city date is not a sentinel' => ['city', ['id' => 201, 'nuke_date' => '2026-99-99']];
         yield 'near-match city zero date is not a sentinel' => ['city', ['id' => 201, 'nuke_date' => '0000-00-00T00:00:00']];
     }
+
+    public function test_it_clamps_a_negative_war_turns_left_to_zero_without_quarantining_it(): void
+    {
+        $validated = app(SubscriptionEventValidator::class)->validateAndNormalize('war', 'update', [
+            ['id' => 301, 'turns_left' => -3, 'end_date' => '2026-11-20 00:00:00'],
+            ['id' => 302, 'turns_left' => '-1'],
+            ['id' => 303, 'turns_left' => null],
+        ]);
+
+        $this->assertSame([0, 0, null], array_column($validated->records, 'turns_left'));
+        $this->assertFileDoesNotExist($this->quarantineFile);
+    }
+
+    public function test_it_still_quarantines_a_war_record_with_other_invalid_fields(): void
+    {
+        $validated = app(SubscriptionEventValidator::class)->validateAndNormalize('war', 'update', [
+            ['id' => 301, 'turns_left' => -3],
+            ['id' => 302, 'turns_left' => 'soon'],
+            ['id' => 303, 'turns_left' => 4, 'att_resistance' => -1],
+        ]);
+
+        $this->assertSame([301], array_column($validated->records, 'id'));
+        $this->assertCount(2, file($this->quarantineFile, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES));
+    }
+
+    public function test_an_all_invalid_payload_throws_but_an_all_valid_payload_does_not(): void
+    {
+        $validator = app(SubscriptionEventValidator::class);
+
+        $this->assertCount(1, $validator->validateAndNormalize('war', 'update', [['id' => 1, 'turns_left' => -9]])->records);
+
+        $this->expectException(InvalidArgumentException::class);
+        $validator->validateAndNormalize('war', 'update', [['id' => 2, 'turns_left' => 'x']]);
+    }
 }
