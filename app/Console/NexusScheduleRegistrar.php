@@ -48,7 +48,7 @@ final readonly class NexusScheduleRegistrar
         }
 
         if ($this->capabilities->runsPublicWorldSchedules()) {
-            $schedule->command('raids:process-profiles --limit=1000')->everyMinute()->withoutOverlapping(5)->onOneServer();
+            $schedule->command('raids:process-profiles --limit=1000')->everyMinute()->runInBackground()->withoutOverlapping(15)->onOneServer();
             $schedule->command('raids:project-profiles')->hourlyAt(7)->withoutOverlapping(55)->onOneServer();
             $schedule->command('raids:refresh-alliance-profiles')->dailyAt('03:10')->withoutOverlapping(60)->onOneServer();
             $schedule->command('raids:calibrate')->weeklyOn(1, '03:40')->withoutOverlapping(60)->onOneServer();
@@ -63,7 +63,7 @@ final readonly class NexusScheduleRegistrar
         if ($this->capabilities->runsTenantSchedules()) {
             $this->registerTenantFinancialSchedules($schedule, $whenPWUp);
             $this->registerTenantOperationalSchedules($schedule);
-            $schedule->command('raid:reconcile-predictions --days=30')->everyTenMinutes()->withoutOverlapping(10)->onOneServer();
+            $schedule->command('raid:reconcile-predictions --days=30')->everyTenMinutes()->runInBackground()->withoutOverlapping(30)->onOneServer();
             $schedule->command('raids:expire-claims')->everyMinute()->withoutOverlapping(2)->onOneServer();
             $schedule->command('raids:prune-finder-impressions')->dailyAt('04:20')->withoutOverlapping(30)->onOneServer();
         }
@@ -128,7 +128,7 @@ final readonly class NexusScheduleRegistrar
     private function registerPublicDependencySchedule(Schedule $schedule): void
     {
         $schedule->command('pw:health-check')
-            ->everyMinute()
+            ->everyTwoMinutes()
             ->runInBackground()
             ->withoutOverlapping(2)
             ->onOneServer();
@@ -222,14 +222,16 @@ final readonly class NexusScheduleRegistrar
             ->dailyAt('01:35')
             ->withoutOverlapping(60)
             ->onOneServer();
-        $schedule->command('war-counters:archive-stale')
-            ->hourly()
-            ->withoutOverlapping(55)
-            ->when(fn (): bool => ! (bool) config('milcom.v2_enabled', false));
-        $schedule->job(new ReconcileMilcomLifecycleJob, 'default')
-            ->everyMinute()
-            ->withoutOverlapping(1)
-            ->onOneServer();
+        if (! (bool) config('milcom.v2_enabled', false)) {
+            $schedule->command('war-counters:archive-stale')
+                ->hourly()
+                ->withoutOverlapping(55);
+        } else {
+            $schedule->job(new ReconcileMilcomLifecycleJob, 'default')
+                ->everyMinute()
+                ->withoutOverlapping(1)
+                ->onOneServer();
+        }
         $schedule->job(new EvaluateAlertSubscriptionsJob, 'sync')
             ->hourlyAt(25)
             ->withoutOverlapping(55)
@@ -262,26 +264,29 @@ final readonly class NexusScheduleRegistrar
             ->withoutOverlapping(55)
             ->onOneServer();
         $schedule->command('discord-queue:reap-leases')
-            ->everyMinute()
-            ->withoutOverlapping(1)
+            ->everyTwoMinutes()
+            ->withoutOverlapping(2)
             ->onOneServer();
-        $schedule->command('operations:reconcile')
-            ->everyMinute()
-            ->withoutOverlapping(1)
-            ->onOneServer()
-            ->when(fn (): bool => (bool) config('operations.features.coordination', false));
-        $schedule->job(new SweepFederationOutboxJob, 'default')
-            ->everyMinute()
-            ->withoutOverlapping(1)
-            ->onOneServer();
-        $schedule->job(new ReconcileFederationLinksJob, 'default')
-            ->everyFifteenMinutes()
-            ->withoutOverlapping(14)
-            ->onOneServer();
-        $schedule->job(new ExpireFederationResourcesJob, 'default')
-            ->everyFiveMinutes()
-            ->withoutOverlapping(4)
-            ->onOneServer();
+        if ((bool) config('operations.features.coordination', false)) {
+            $schedule->command('operations:reconcile')
+                ->everyMinute()
+                ->withoutOverlapping(1)
+                ->onOneServer();
+        }
+        if ((bool) config('federation.enabled', false)) {
+            $schedule->job(new SweepFederationOutboxJob, 'default')
+                ->everyMinute()
+                ->withoutOverlapping(1)
+                ->onOneServer();
+            $schedule->job(new ReconcileFederationLinksJob, 'default')
+                ->everyFifteenMinutes()
+                ->withoutOverlapping(14)
+                ->onOneServer();
+            $schedule->job(new ExpireFederationResourcesJob, 'default')
+                ->everyFiveMinutes()
+                ->withoutOverlapping(4)
+                ->onOneServer();
+        }
         $schedule->job(new PruneFederationMessagesJob, 'default')
             ->dailyAt('02:30')
             ->withoutOverlapping(120)
@@ -347,8 +352,10 @@ final readonly class NexusScheduleRegistrar
             ->onOneServer();
 
         $schedule->command('recruit:nations')
-            ->everyMinute()
+            ->everyTwoMinutes()
             ->runInBackground()
+            ->withoutOverlapping(10)
+            ->onOneServer()
             ->when($whenPWUp);
     }
 
