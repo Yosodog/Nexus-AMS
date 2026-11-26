@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Casts\IntegerFlagCast;
 use App\GraphQL\Models\Alliance as AllianceGraphQL;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -14,6 +15,16 @@ class Alliance extends Model
     public $table = 'alliances';
 
     protected $guarded = [];
+
+    /**
+     * @return array<string, class-string>
+     */
+    protected function casts(): array
+    {
+        return [
+            'accept_members' => IntegerFlagCast::class,
+        ];
+    }
 
     /**
      * Create or update an Alliance model from GraphQL Alliance data.
