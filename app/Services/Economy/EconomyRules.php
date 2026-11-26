@@ -18,6 +18,14 @@ final class EconomyRules
 
     public const ECONOMY_CONTEXT_MAX_AGE_HOURS = 6;
 
+    /**
+     * A refresh that finds a nation's stored economy context unchanged only rewrites its
+     * `economy_context_synced_at` once the stamp is at least this old. The stamp therefore never
+     * claims more freshness than the last verification, and it stays well inside
+     * ECONOMY_CONTEXT_MAX_AGE_HOURS while the hourly refresh keeps succeeding.
+     */
+    public const ECONOMY_CONTEXT_RESTAMP_AFTER_HOURS = 2;
+
     public const RESOURCE_KEYS = [
         'money',
         'coal',
