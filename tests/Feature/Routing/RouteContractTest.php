@@ -19,7 +19,7 @@ class RouteContractTest extends TestCase
 {
     use RefreshDatabase;
 
-    private const ENHANCED_ROUTE_CONTRACT_SHA256 = '522313e96bee67fb58a93e7a87df5e86c51c116c1b1a2c85f56cc2d6811cc297';
+    private const ENHANCED_ROUTE_CONTRACT_SHA256 = 'edc62f2ce9d3bcb5da1c53642743077f74b63829ad7ce64f9ad3193eacc458ce';
 
     public function createApplication(): Application
     {
