@@ -409,6 +409,22 @@ class NationProfitabilityService
         NationProfitabilitySnapshot::query()->where('nation_id', $nationId)->delete();
     }
 
+    /**
+     * Delete the stored snapshots of several nations with one query.
+     *
+     * @param  list<int>  $nationIds
+     */
+    public function deleteStoredSnapshotsForNationIds(array $nationIds): void
+    {
+        $nationIds = array_values(array_unique(array_map('intval', $nationIds)));
+
+        if ($nationIds === []) {
+            return;
+        }
+
+        NationProfitabilitySnapshot::query()->whereIn('nation_id', $nationIds)->delete();
+    }
+
     public function shouldStoreSnapshotForNation(Nation $nation): bool
     {
         return $this->isEligibleNation($nation);
