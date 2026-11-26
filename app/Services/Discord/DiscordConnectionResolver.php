@@ -4,30 +4,41 @@ namespace App\Services\Discord;
 
 use App\Enums\DiscordConnectionMode;
 use App\Models\DiscordConnection;
+use Illuminate\Contracts\Cache\Repository;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
+use Throwable;
 
 class DiscordConnectionResolver
 {
+    public const TABLE_PRESENT_CACHE_KEY = 'discord:connections-table-present';
+
+    public function __construct(private readonly Repository $cache) {}
+
     public function hasActiveV2Connection(): bool
     {
-        return Schema::hasTable('discord_connections')
+        return $this->hasConnectionsTable()
             && DiscordConnection::query()->active()->where('protocol_version', '>=', 2)->exists();
     }
 
     public function resolveForVerification(string $connectionId): DiscordConnectionContext
     {
-        $hasPersistedConnections = Schema::hasTable('discord_connections')
-            && DiscordConnection::query()->active()->exists();
-        $matches = $hasPersistedConnections
-            ? DiscordConnection::query()->active()->whereKey($connectionId)->limit(2)->get()
-            : collect();
+        $persisted = $this->hasConnectionsTable()
+            ? DiscordConnection::query()
+                ->active()
+                ->select('*')
+                ->selectRaw('case when id = ? then 1 else 0 end as is_requested_connection', [$connectionId])
+                ->orderByDesc('is_requested_connection')
+                ->limit(1)
+                ->first()
+            : null;
 
-        if ($matches->count() === 1) {
-            return $this->fromModel($matches->first());
+        if ($persisted !== null && (int) $persisted->getAttribute('is_requested_connection') === 1) {
+            return $this->fromModel($persisted);
         }
 
-        $configured = $hasPersistedConnections ? null : $this->configuredContext();
+        $configured = $persisted !== null ? null : $this->configuredContext();
         if ($configured !== null && hash_equals($configured->connectionId, $connectionId)) {
             return $configured;
         }
@@ -46,7 +57,7 @@ class DiscordConnectionResolver
             return $this->resolveForVerification($connectionId);
         }
 
-        $hasPersistedConnections = Schema::hasTable('discord_connections')
+        $hasPersistedConnections = $this->hasConnectionsTable()
             && DiscordConnection::query()->active()->exists();
         $matches = $hasPersistedConnections
             ? DiscordConnection::query()
@@ -86,7 +97,7 @@ class DiscordConnectionResolver
         string $guildId,
         int $generation,
     ): DiscordConnectionContext {
-        $hasPersistedConnections = Schema::hasTable('discord_connections')
+        $hasPersistedConnections = $this->hasConnectionsTable()
             && DiscordConnection::query()->active()->exists();
         $matches = $hasPersistedConnections
             ? DiscordConnection::query()
@@ -146,7 +157,7 @@ class DiscordConnectionResolver
     public function resolveLegacy(string $guildId): DiscordConnectionContext
     {
         /** @var Collection<int, DiscordConnection> $matches */
-        $hasPersistedConnections = Schema::hasTable('discord_connections')
+        $hasPersistedConnections = $this->hasConnectionsTable()
             && DiscordConnection::query()->active()->exists();
         $matches = $hasPersistedConnections
             ? DiscordConnection::query()
@@ -237,6 +248,39 @@ class DiscordConnectionResolver
             v1ReaderEnabled: (bool) config('services.discord.v1_reader_enabled', false),
             persisted: false,
         );
+    }
+
+    /**
+     * Whether the `discord_connections` table exists, remembering only a positive answer.
+     *
+     * Once the table is known to exist, a later drop makes connection queries fail closed, so
+     * caching the positive answer never widens which relay proofs are accepted.
+     */
+    private function hasConnectionsTable(): bool
+    {
+        try {
+            if ($this->cache->get(self::TABLE_PRESENT_CACHE_KEY) === true) {
+                return true;
+            }
+        } catch (Throwable $exception) {
+            Log::warning('Discord connection resolver could not read the cache.', [
+                'exception' => $exception->getMessage(),
+            ]);
+        }
+
+        if (! Schema::hasTable('discord_connections')) {
+            return false;
+        }
+
+        try {
+            $this->cache->forever(self::TABLE_PRESENT_CACHE_KEY, true);
+        } catch (Throwable $exception) {
+            Log::warning('Discord connection resolver could not cache the connections table check.', [
+                'exception' => $exception->getMessage(),
+            ]);
+        }
+
+        return true;
     }
 
     private function fromModel(DiscordConnection $connection): DiscordConnectionContext

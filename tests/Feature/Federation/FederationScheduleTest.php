@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Federation;
 
+use App\Console\NexusScheduleRegistrar;
 use App\Jobs\ExpireFederationResourcesJob;
 use App\Jobs\PruneFederationMessagesJob;
 use App\Jobs\ReconcileFederationLinksJob;
@@ -16,7 +17,8 @@ class FederationScheduleTest extends TestCase
 {
     public function test_federation_recovery_and_maintenance_jobs_are_scheduled_with_cluster_locks(): void
     {
-        $events = collect(app(Schedule::class)->events());
+        config(['federation.enabled' => true]);
+        $events = $this->registeredEvents();
 
         $this->assertFederationSchedule(
             $events,
@@ -42,6 +44,37 @@ class FederationScheduleTest extends TestCase
             '30 2 * * *',
             120,
         );
+    }
+
+    public function test_federation_recovery_jobs_are_not_registered_while_federation_is_disabled(): void
+    {
+        config(['federation.enabled' => false]);
+        $events = $this->registeredEvents();
+
+        foreach ([SweepFederationOutboxJob::class, ReconcileFederationLinksJob::class, ExpireFederationResourcesJob::class] as $job) {
+            $this->assertFalse(
+                $events->contains(fn (Event $event): bool => $event->description === $job),
+                "Expected {$job} to be absent while federation is disabled.",
+            );
+        }
+
+        $this->assertFederationSchedule(
+            $events,
+            PruneFederationMessagesJob::class,
+            '30 2 * * *',
+            120,
+        );
+    }
+
+    /**
+     * @return Collection<int, Event>
+     */
+    private function registeredEvents(): Collection
+    {
+        $schedule = new Schedule;
+        app(NexusScheduleRegistrar::class)->register($schedule);
+
+        return collect($schedule->events());
     }
 
     /**

@@ -33,25 +33,38 @@ final class ProjectRaidProfiles extends Command
         $prices = $valuation->current();
         $now = CarbonImmutable::now();
         $count = 0;
+        $changed = 0;
 
         RaidTargetProfile::query()
             ->whereNotNull('computed_at')
-            ->chunkById(self::CHUNK, function (Collection $profiles) use ($estimator, $prices, $now, &$count): void {
-                $values = $profiles->mapWithKeys(fn (RaidTargetProfile $profile): array => [
-                    (int) $profile->nation_id => RaidResources::liquidationValue($estimator->project($profile, $now)['resources'], $prices),
+            ->chunkById(self::CHUNK, function (Collection $profiles) use ($estimator, $prices, $now, &$count, &$changed): void {
+                $stored = $profiles->mapWithKeys(fn (RaidTargetProfile $profile): array => [
+                    (int) $profile->nation_id => round((float) $profile->projected_value, 2),
                 ]);
+                $values = $profiles
+                    ->mapWithKeys(fn (RaidTargetProfile $profile): array => [
+                        (int) $profile->nation_id => round(RaidResources::liquidationValue($estimator->project($profile, $now)['resources'], $prices), 2),
+                    ])
+                    ->reject(fn (float $value, int $nationId): bool => $value === $stored->get($nationId));
 
-                $this->writeProjections($values, $now);
-                $count += $values->count();
+                if ($values->isNotEmpty()) {
+                    $this->writeProjections($values, $now);
+                }
+
+                $count += $profiles->count();
+                $changed += $values->count();
             }, 'nation_id');
 
-        $this->components->info("Projected {$count} raid target profiles.");
+        $this->components->info("Projected {$count} raid target profiles; {$changed} values changed.");
 
         return self::SUCCESS;
     }
 
     /**
-     * Write projected values for a chunk with one bulk UPDATE.
+     * Write changed projected values for a chunk with one bulk UPDATE.
+     *
+     * Profiles whose value did not change are left out, so projected_at records when the
+     * value last changed rather than when it was last checked.
      *
      * @param  Collection<int, float>  $values  keyed by nation id
      */

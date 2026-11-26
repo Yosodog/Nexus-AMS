@@ -38,6 +38,7 @@ class DiscordQueueLeaseService
         private readonly FederationOperationGuard $federationGuard,
         private readonly AlertDeliveryReceiptService $receipts,
         private readonly WarMapAlertService $warMapAlerts,
+        private readonly DiscordQueueClaimGate $claimGate,
     ) {}
 
     /** @param list<DiscordQueueLane> $lanes */
@@ -62,6 +63,12 @@ class DiscordQueueLeaseService
             );
         }
 
+        if ($this->claimGate->isKnownEmpty($lanes, $connection, $requestId)) {
+            return null;
+        }
+
+        $epoch = $this->claimGate->currentEpoch();
+        $checkedAt = Carbon::now();
         $heldExisting = false;
 
         try {
@@ -150,9 +157,19 @@ class DiscordQueueLeaseService
                 throw $this->heldException();
             }
 
-            if ($claimed !== null) {
-                $this->receipts->beginAttempt($claimed);
+            if ($claimed === null) {
+                $this->claimGate->rememberEmpty(
+                    $lanes,
+                    $connection,
+                    $epoch,
+                    $this->nextAvailableAt($lanes, $connection, $checkedAt),
+                );
+
+                return null;
             }
+
+            $this->claimGate->rememberClaimRequest($requestId);
+            $this->receipts->beginAttempt($claimed);
 
             return $claimed;
         } catch (QueryException $exception) {
@@ -173,6 +190,7 @@ class DiscordQueueLeaseService
                     throw $this->heldException();
                 }
 
+                $this->claimGate->rememberClaimRequest($requestId);
                 $this->receipts->beginAttempt($existing);
 
                 return $existing;
@@ -183,6 +201,30 @@ class DiscordQueueLeaseService
                 'This claim request ID no longer identifies an active lease.',
             );
         }
+    }
+
+    /**
+     * Earliest future availability among pending commands the claim could not take yet.
+     *
+     * @param  list<DiscordQueueLane>  $lanes
+     */
+    private function nextAvailableAt(
+        array $lanes,
+        DiscordConnectionContext $connection,
+        Carbon $checkedAt,
+    ): ?Carbon {
+        $nextAvailableAt = DiscordQueue::query()
+            ->where('status', DiscordQueueStatus::Pending->value)
+            ->where('attempts', '<', self::MAX_ATTEMPTS)
+            ->where('available_at', '>', $checkedAt)
+            ->whereIn('lane', array_map(fn (DiscordQueueLane $lane): string => $lane->value, $lanes))
+            ->where('guild_id', $connection->guildId)
+            ->where('connection_id', $connection->connectionId)
+            ->where('application_id', $connection->applicationId)
+            ->where('connection_generation', $connection->generation)
+            ->min('available_at');
+
+        return $nextAvailableAt === null ? null : Carbon::parse($nextAvailableAt);
     }
 
     public function renew(
