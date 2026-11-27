@@ -75,6 +75,10 @@ final class ReconcileRaidPredictions extends Command
             return true;
         }
 
+        if (data_get($prediction->outcome_metadata, 'evidence_status') === 'incomplete') {
+            return true;
+        }
+
         $finalizedAt = $prediction->outcome_finalized_at;
         $graceSeconds = max(60, (int) config('raids.late_arrival_grace_seconds', 3600));
         if ($finalizedAt->greaterThan(CarbonImmutable::now()->subSeconds($graceSeconds))) {
