@@ -423,7 +423,7 @@ final readonly class NexusScheduleRegistrar
             ->onOneServer()
             ->when($whenPWUp);
         $schedule->command('build-recommendations:refresh')
-            ->cron('25 */2 * * *')
+            ->everyOddHour(25)
             ->runInBackground()
             ->withoutOverlapping(110)
             ->onOneServer()

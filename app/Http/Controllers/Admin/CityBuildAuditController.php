@@ -6,6 +6,7 @@ use App\Exceptions\ProfitabilityContextUnavailable;
 use App\Exceptions\ProfitabilityPricingUnavailable;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\RegenerateMemberBuildRecommendationRequest;
+use App\Jobs\RefreshBuildRecommendationBatchJob;
 use App\Jobs\RefreshNationBuildRecommendationJob;
 use App\Models\Nation;
 use App\Services\CityBuildAuditService;
@@ -112,13 +113,11 @@ class CityBuildAuditController extends Controller
             $this->recommendationService->assertBatchCalculationContextAvailable($nationIds, $radiationSnapshot);
             $this->recommendationService->pruneIneligibleRecommendations($nationIds);
 
-            foreach ($nationIds as $nationId) {
-                RefreshNationBuildRecommendationJob::dispatch(
-                    $nationId,
-                    $prices->snapshotId,
-                    $radiationSnapshot->id,
-                );
-            }
+            RefreshBuildRecommendationBatchJob::start(
+                $nationIds,
+                $prices->snapshotId,
+                (int) $radiationSnapshot->id,
+            );
         } catch (Throwable $exception) {
             Log::warning('Admin alliance build recommendations could not be queued', [
                 'actor_id' => $request->user()?->id,

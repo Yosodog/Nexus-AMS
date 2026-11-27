@@ -4,6 +4,7 @@ namespace Tests\Feature\Console;
 
 use App\DataTransferObjects\MarketPriceSet;
 use App\Exceptions\ProfitabilityContextUnavailable;
+use App\Jobs\RefreshBuildRecommendationBatchJob;
 use App\Jobs\RefreshNationBuildRecommendationJob;
 use App\Models\RadiationSnapshot;
 use App\Services\NationBuildRecommendationService;
@@ -15,7 +16,7 @@ use Tests\TestCase;
 class RefreshBuildRecommendationsCommandTest extends TestCase
 {
     #[Test]
-    public function it_queues_each_nation_with_fixed_input_snapshot_ids(): void
+    public function it_queues_one_sequential_batch_with_fixed_input_snapshot_ids(): void
     {
         Queue::fake();
         $service = Mockery::mock(NationBuildRecommendationService::class);
@@ -37,12 +38,14 @@ class RefreshBuildRecommendationsCommandTest extends TestCase
             ->expectsOutput('Queued build recommendations for 2 nations.')
             ->assertSuccessful();
 
-        Queue::assertPushed(RefreshNationBuildRecommendationJob::class, 2);
+        Queue::assertNotPushed(RefreshNationBuildRecommendationJob::class);
+        Queue::assertPushed(RefreshBuildRecommendationBatchJob::class, 1);
         Queue::assertPushed(
-            RefreshNationBuildRecommendationJob::class,
-            fn (RefreshNationBuildRecommendationJob $job): bool => $job->nationId === 1001
+            RefreshBuildRecommendationBatchJob::class,
+            fn (RefreshBuildRecommendationBatchJob $job): bool => $job->nationIds === [1001, 1002]
                 && $job->marketPriceSnapshotId === 42
                 && $job->radiationSnapshotId === 7
+                && $job->queue === 'default'
         );
     }
 

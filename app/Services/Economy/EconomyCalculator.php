@@ -858,7 +858,9 @@ final class EconomyCalculator
 
     private function projectChecker(Nation $nation): callable
     {
-        return fn (string $project): bool => (bool) data_get($nation->projects, $project, false);
+        $projects = $nation->projects;
+
+        return fn (string $project): bool => (bool) data_get($projects, $project, false);
     }
 
     /**

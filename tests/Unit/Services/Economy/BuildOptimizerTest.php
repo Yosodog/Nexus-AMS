@@ -9,7 +9,9 @@ use App\Models\RadiationSnapshot;
 use App\Services\Economy\BuildOptimizer;
 use App\Services\Economy\EconomyCalculator;
 use App\Services\Economy\EconomyRules;
+use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Collection;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Test;
 use Tests\TestCase;
 
@@ -121,34 +123,7 @@ class BuildOptimizerTest extends TestCase
                 'date' => now()->subDays(365 + $index)->toDateString(),
             ]));
         }
-        $prices = new MarketPriceSet(
-            acquisitionPrices: [
-                'coal' => 250,
-                'oil' => 300,
-                'uranium' => 3200,
-                'iron' => 2200,
-                'bauxite' => 2100,
-                'lead' => 2000,
-                'gasoline' => 3400,
-                'munitions' => 3200,
-                'steel' => 4200,
-                'aluminum' => 3800,
-                'food' => 110,
-            ],
-            liquidationPrices: [
-                'coal' => 225,
-                'oil' => 275,
-                'uranium' => 3000,
-                'iron' => 2000,
-                'bauxite' => 1900,
-                'lead' => 1800,
-                'gasoline' => 3200,
-                'munitions' => 3000,
-                'steel' => 4000,
-                'aluminum' => 3600,
-                'food' => 100,
-            ],
-        );
+        $prices = $this->highInfrastructurePrices();
         $startedAt = hrtime(true);
 
         $result = $this->optimizer->optimize(
@@ -163,6 +138,141 @@ class BuildOptimizerTest extends TestCase
         $this->assertNotNull($result);
         $this->assertLessThan(self::HIGH_INFRASTRUCTURE_RUNTIME_BUDGET_SECONDS, $elapsedSeconds);
         $this->assertLessThan(256 * 1024 * 1024, memory_get_peak_usage(true));
+    }
+
+    /**
+     * Builds chosen by the search before its civil-option bound was added. The bound only skips
+     * candidates that provably lose, so the chosen build must not change.
+     *
+     * @return array<string, array{0: string, 1: string, 2: int, 3: int, 4: array{0: int, 1: int, 2: int, 3: int}, 5: array<string, int>, 6: int, 7: float}>
+     */
+    public static function multiCityReferenceBuilds(): array
+    {
+        return [
+            'twenty cities with commerce and civil projects' => [
+                'AS',
+                '57671728',
+                20,
+                2500,
+                [5, 5, 5, 3],
+                [
+                    'coal_power' => 1,
+                    'nuclear_power' => 1,
+                    'munitions_factory' => 5,
+                    'steel_mill' => 5,
+                    'police_station' => 1,
+                    'hospital' => 1,
+                    'recycling_center' => 3,
+                    'subway' => 1,
+                    'bank' => 6,
+                    'shopping_mall' => 5,
+                    'stadium' => 3,
+                    'barracks' => 5,
+                    'factory' => 5,
+                    'hangar' => 5,
+                    'drydock' => 3,
+                ],
+                50,
+                1199266.8,
+            ],
+            'twenty four cities without projects' => [
+                'EU',
+                '0',
+                24,
+                3000,
+                [0, 2, 5, 0],
+                [
+                    'oil_power' => 2,
+                    'nuclear_power' => 1,
+                    'farm' => 5,
+                    'oil_refinery' => 5,
+                    'aluminum_refinery' => 5,
+                    'munitions_factory' => 5,
+                    'steel_mill' => 5,
+                    'police_station' => 2,
+                    'hospital' => 5,
+                    'recycling_center' => 3,
+                    'subway' => 1,
+                    'supermarket' => 4,
+                    'bank' => 4,
+                    'shopping_mall' => 4,
+                    'stadium' => 2,
+                    'factory' => 2,
+                    'hangar' => 5,
+                ],
+                60,
+                1362140.31,
+            ],
+        ];
+    }
+
+    /**
+     * @param  array{0: int, 1: int, 2: int, 3: int}  $military
+     * @param  array<string, int>  $expectedBuild
+     */
+    #[Test]
+    #[DataProvider('multiCityReferenceBuilds')]
+    public function multi_city_optimization_keeps_the_reference_build(
+        string $continent,
+        string $projectBits,
+        int $cityCount,
+        int $infrastructure,
+        array $military,
+        array $expectedBuild,
+        int $expectedUsedSlots,
+        float $expectedProfit,
+    ): void {
+        CarbonImmutable::setTestNow('2026-08-02 18:00:00 UTC');
+
+        try {
+            $nation = new Nation([
+                'id' => 1,
+                'leader_name' => 'Leader',
+                'nation_name' => 'Nation',
+                'continent' => $continent,
+                'domestic_policy' => 'MANIFEST_DESTINY',
+                'num_cities' => $cityCount,
+                'project_bits' => $projectBits,
+                'offensive_wars_count' => 0,
+                'defensive_wars_count' => 0,
+            ]);
+            $cities = new Collection;
+
+            foreach (range(1, $cityCount) as $index) {
+                $cities->push($this->city([
+                    'date' => CarbonImmutable::parse('2026-08-02')->subDays(60 + ($index * 25))->toDateString(),
+                    'infrastructure' => $infrastructure - (($index % 3) * 50),
+                    'land' => ($infrastructure * 0.8) + ($index * 15),
+                ]));
+            }
+
+            $minimum = array_fill_keys(EconomyRules::BUILD_FIELDS, 0);
+            [$minimum['barracks'], $minimum['factory'], $minimum['hangar'], $minimum['drydock']] = $military;
+            $result = $this->optimizer->optimize(
+                $nation,
+                $cities,
+                $minimum,
+                new RadiationSnapshot([
+                    'game_date' => '2126-09-21',
+                    'global' => 50,
+                    'north_america' => 60,
+                    'south_america' => 40,
+                    'europe' => 70,
+                    'africa' => 30,
+                    'asia' => 80,
+                    'australia' => 20,
+                    'antarctica' => 10,
+                ]),
+                $this->highInfrastructurePrices()
+            );
+        } finally {
+            CarbonImmutable::setTestNow();
+        }
+
+        $this->assertNotNull($result);
+        $this->assertSame($expectedBuild, array_filter($result['build']));
+        $this->assertSame($expectedUsedSlots, $result['used_slots']);
+        $this->assertEqualsWithDelta($expectedProfit, $result['metrics']['converted_profit_per_day'], 0.01);
     }
 
     #[Test]
@@ -353,6 +463,38 @@ class BuildOptimizerTest extends TestCase
         }
 
         return $best;
+    }
+
+    private function highInfrastructurePrices(): MarketPriceSet
+    {
+        return new MarketPriceSet(
+            acquisitionPrices: [
+                'coal' => 250,
+                'oil' => 300,
+                'uranium' => 3200,
+                'iron' => 2200,
+                'bauxite' => 2100,
+                'lead' => 2000,
+                'gasoline' => 3400,
+                'munitions' => 3200,
+                'steel' => 4200,
+                'aluminum' => 3800,
+                'food' => 110,
+            ],
+            liquidationPrices: [
+                'coal' => 225,
+                'oil' => 275,
+                'uranium' => 3000,
+                'iron' => 2000,
+                'bauxite' => 1900,
+                'lead' => 1800,
+                'gasoline' => 3200,
+                'munitions' => 3000,
+                'steel' => 4000,
+                'aluminum' => 3600,
+                'food' => 100,
+            ],
+        );
     }
 
     private function nation(): Nation

@@ -5,6 +5,7 @@ namespace Tests\Feature\Admin;
 use App\Http\Middleware\DiscordVerifiedMiddleware;
 use App\Http\Middleware\EnsureMfaConfigured;
 use App\Http\Middleware\EnsureUserIsVerified;
+use App\Jobs\RefreshBuildRecommendationBatchJob;
 use App\Jobs\RefreshNationBuildRecommendationJob;
 use App\Models\City;
 use App\Models\MarketPriceSnapshot;
@@ -140,14 +141,12 @@ class CityBuildAuditTest extends TestCase
             ->assertRedirect()
             ->assertSessionHas('alert-message', 'Queued build recommendations for 2 members.');
 
-        Queue::assertPushed(RefreshNationBuildRecommendationJob::class, 2);
+        Queue::assertNotPushed(RefreshNationBuildRecommendationJob::class);
+        Queue::assertPushed(RefreshBuildRecommendationBatchJob::class, 1);
         Queue::assertPushed(
-            RefreshNationBuildRecommendationJob::class,
-            fn (RefreshNationBuildRecommendationJob $job): bool => $job->nationId === $firstNation->id,
-        );
-        Queue::assertPushed(
-            RefreshNationBuildRecommendationJob::class,
-            fn (RefreshNationBuildRecommendationJob $job): bool => $job->nationId === $secondNation->id,
+            RefreshBuildRecommendationBatchJob::class,
+            fn (RefreshBuildRecommendationBatchJob $job): bool => collect($job->nationIds)->sort()->values()->all()
+                === collect([$firstNation->id, $secondNation->id])->sort()->values()->all(),
         );
     }
 
