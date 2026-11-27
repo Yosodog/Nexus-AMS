@@ -425,7 +425,9 @@ final class RaidOutcomeService
         }
         $outcomeComplete = ! $terminal || in_array($evidenceCompleteness['status'], ['complete', 'preserved'], true);
         $finalizedAt = $prediction->outcome_finalized_at;
-        if ($terminal && $outcomeComplete && $finalizedAt === null) {
+        $wasIncomplete = data_get($prediction->outcome_metadata, 'evidence_status') === 'incomplete';
+        if ($terminal && $outcomeComplete && ($finalizedAt === null
+            || ($wasIncomplete && $evidenceCompleteness['status'] === 'complete'))) {
             $finalizedAt = CarbonImmutable::now();
         }
 
@@ -721,16 +723,30 @@ final class RaidOutcomeService
             $war->getAttribute('def_infra_destroyed_value'),
             $this->sumInfrastructureDamage($defenderEvidence),
         );
-        $add(
-            'attacker.money_looted',
-            $war->getAttribute('att_money_looted'),
-            (float) $attackerEvidence->sum(fn (RaidOutcomeAttack $attack): float => (float) $attack->money_looted),
-        );
-        $add(
-            'defender.money_looted',
-            $war->getAttribute('def_money_looted'),
-            (float) $defenderEvidence->sum(fn (RaidOutcomeAttack $attack): float => (float) $attack->money_looted),
-        );
+        $attackerMoneyLooted = $war->getAttribute('att_money_looted');
+        $defenderMoneyLooted = $war->getAttribute('def_money_looted');
+        if (is_numeric($attackerMoneyLooted) && is_numeric($defenderMoneyLooted)
+            && abs((float) $attackerMoneyLooted - (float) $defenderMoneyLooted) < 0.005) {
+            // The API reports one war-level money total on both sides, so
+            // the two figures are the same number rather than what each
+            // participant looted. Compare it once against every attack.
+            $add(
+                'war.money_looted',
+                $attackerMoneyLooted,
+                (float) $evidence->sum(fn (RaidOutcomeAttack $attack): float => $this->moneyTaken($attack)),
+            );
+        } else {
+            $add(
+                'attacker.money_looted',
+                $attackerMoneyLooted,
+                (float) $attackerEvidence->sum(fn (RaidOutcomeAttack $attack): float => $this->moneyTaken($attack)),
+            );
+            $add(
+                'defender.money_looted',
+                $defenderMoneyLooted,
+                (float) $defenderEvidence->sum(fn (RaidOutcomeAttack $attack): float => $this->moneyTaken($attack)),
+            );
+        }
 
         if ($evidence->isEmpty()) {
             return [
@@ -811,6 +827,23 @@ final class RaidOutcomeService
         }
 
         return false;
+    }
+
+    /**
+     * Money an attack row took, as the war's money total counts it: victory
+     * loot in `money_looted` plus the money of an alliance loot, which the
+     * ledger stores in `bank_loot`. Cash stolen by ground attacks is not part
+     * of the war total.
+     */
+    private function moneyTaken(RaidOutcomeAttack $attack): float
+    {
+        $money = (float) $attack->money_looted;
+        if (strtoupper((string) ($attack->attack_type ?? '')) === 'ALLIANCELOOT') {
+            $bankMoney = ((array) ($attack->bank_loot ?? []))['money'] ?? null;
+            $money += is_numeric($bankMoney) ? (float) $bankMoney : 0.0;
+        }
+
+        return $money;
     }
 
     /** @param iterable<RaidOutcomeAttack> $attacks */
