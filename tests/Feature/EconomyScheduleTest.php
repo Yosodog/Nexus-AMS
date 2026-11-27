@@ -18,7 +18,7 @@ class EconomyScheduleTest extends TestCase
             'economy-context:refresh' => '16 * * * *',
             'pw:sync-radiation' => '18 * * * *',
             'profitability:refresh' => '20 * * * *',
-            'build-recommendations:refresh' => '25 */2 * * *',
+            'build-recommendations:refresh' => '25 1-23/2 * * *',
         ];
 
         foreach ($expected as $command => $expression) {

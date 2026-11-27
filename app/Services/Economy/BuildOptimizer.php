@@ -194,9 +194,26 @@ final class BuildOptimizer
             'disease_adjusted' => [],
             'crime_deaths' => [],
         ];
+        $civilBoundCache = [];
+        $civilBoundPopulationCache = [
+            'disease' => [],
+            'crime' => [],
+        ];
+        $bestSupportBound = max(array_map(
+            fn (array $state, float $civilBound): float => $state['value'] + $civilBound,
+            $supportStates,
+            $maximumCivilContributions,
+        ));
         $bestChoice = null;
 
         foreach ($states as $resourceIndex => $resourceState) {
+            if (
+                $bestChoice !== null
+                && $resourceState['value'] + $bestSupportBound < $bestChoice['converted'] - 0.000001
+            ) {
+                break;
+            }
+
             foreach ($supportStates as $supportIndex => $supportState) {
                 $baseSlots = $resourceState['slots'] + $supportState['slots'];
 
@@ -218,7 +235,26 @@ final class BuildOptimizer
                     $hospitalCap + $policeCap,
                     $availableSlots - $baseSlots
                 );
-                $cacheKey = implode(':', [$basePollution, $baseCommerce]);
+                $cacheKey = $basePollution.':'.$baseCommerce;
+
+                if ($bestChoice !== null) {
+                    $civilBoundCache[$cacheKey] ??= $this->civilUpperBounds(
+                        $populationContext,
+                        $basePollution,
+                        $baseCommerce,
+                        $hospitalCap,
+                        $policeCap,
+                        $civilBoundPopulationCache
+                    );
+
+                    if (
+                        $resourceState['value'] + $supportState['value'] + $civilBoundCache[$cacheKey][$remainingSlots]
+                            < $bestChoice['converted'] - 0.000001
+                    ) {
+                        continue;
+                    }
+                }
+
                 $civilCache[$cacheKey] ??= $this->civilOptions(
                     $populationContext,
                     $civilBuildKeys,
@@ -877,6 +913,109 @@ final class BuildOptimizer
         return $commerceIncomeFactor * $averagePopulation * $context['income_multiplier'];
     }
 
+    /**
+     * Upper bounds of the best civil contribution per hospital and police slot capacity.
+     *
+     * Each city's population is (disease-adjusted - crime deaths) * age bonus, floored at 10 and
+     * rounded. Summing the disease and crime parts separately gives the unrounded total in O(1)
+     * per option; rounding adds at most half a person per city. When the floor could apply, the
+     * floored disease part alone bounds the total. The optimizer only skips the exact
+     * civilOptions() evaluation when this bound already loses, so the chosen build is unchanged.
+     *
+     * @param  array<string, mixed>  $context
+     * @param  array{disease: array<string, array{0: float, 1: float, 2: float}>, crime: array<string, array{0: float, 1: float}>}  $populationCache
+     * @return list<float>
+     */
+    private function civilUpperBounds(
+        array $context,
+        int $basePollution,
+        int $baseCommerce,
+        int $hospitalCap,
+        int $policeCap,
+        array &$populationCache
+    ): array {
+        $capacity = $hospitalCap + $policeCap;
+        $commerce = min(
+            $context['maximum_commerce'],
+            $baseCommerce + $context['commerce_bonus']
+        );
+        $incomePerPerson = ((($commerce * 0.02) * 0.725) + 0.725)
+            * $context['income_multiplier']
+            / max(1, count($context['profiles']));
+
+        if ($incomePerPerson < 0) {
+            return array_fill(0, $capacity + 1, INF);
+        }
+
+        $roundingSlack = (0.5 * count($context['profiles'])) + 1.0;
+        $bounds = array_fill(0, $capacity + 1, -INF);
+
+        for ($hospitals = 0; $hospitals <= $hospitalCap; $hospitals++) {
+            for ($policeStations = 0; $policeStations <= $policeCap; $policeStations++) {
+                $pollution = max(0, $basePollution + ($hospitals * 4) + $policeStations);
+                $diseaseKey = $pollution.':'.$hospitals;
+                $crimeKey = $commerce.':'.$policeStations;
+
+                if (! isset($populationCache['disease'][$diseaseKey])) {
+                    $sum = 0.0;
+                    $minimum = INF;
+                    $flooredSum = 0.0;
+
+                    foreach ($context['profiles'] as $profile) {
+                        $disease = max(
+                            0.0,
+                            $profile['disease_base']
+                                - ($hospitals * $context['hospital_modifier'])
+                                + ($pollution * 0.05)
+                        );
+                        $weighted = ($profile['infra_cents'] - (($disease * 0.01) * $profile['infra_cents']))
+                            * $profile['age_bonus'];
+                        $sum += $weighted;
+                        $minimum = min($minimum, $weighted);
+                        $flooredSum += max(10, $weighted);
+                    }
+
+                    $populationCache['disease'][$diseaseKey] = [$sum, $minimum, $flooredSum];
+                }
+
+                if (! isset($populationCache['crime'][$crimeKey])) {
+                    $sum = 0.0;
+                    $maximum = 0.0;
+                    $commerceCrime = (103 - $commerce) ** 2;
+
+                    foreach ($context['profiles'] as $profile) {
+                        $crime = max(
+                            0.0,
+                            (($commerceCrime + $profile['infra_cents']) * 0.000009)
+                                - ($policeStations * $context['police_modifier'])
+                        );
+                        $weighted = max(($crime * 0.1) * $profile['infra_cents'] - 25, 0) * $profile['age_bonus'];
+                        $sum += $weighted;
+                        $maximum = max($maximum, $weighted);
+                    }
+
+                    $populationCache['crime'][$crimeKey] = [$sum, $maximum];
+                }
+
+                [$diseaseSum, $diseaseMinimum, $diseaseFlooredSum] = $populationCache['disease'][$diseaseKey];
+                [$crimeSum, $crimeMaximum] = $populationCache['crime'][$crimeKey];
+                $population = ($diseaseMinimum - $crimeMaximum >= 10
+                    ? $diseaseSum - $crimeSum
+                    : $diseaseFlooredSum) + $roundingSlack;
+                $contribution = ($incomePerPerson * $population)
+                    - ((1000.0 * $hospitals) + (750.0 * $policeStations));
+                $slots = $hospitals + $policeStations;
+                $bounds[$slots] = max($bounds[$slots], $contribution);
+            }
+        }
+
+        for ($slots = 1; $slots <= $capacity; $slots++) {
+            $bounds[$slots] = max($bounds[$slots], $bounds[$slots - 1]);
+        }
+
+        return $bounds;
+    }
+
     private function civilOptions(
         array $context,
         array $civilBuildKeys,
@@ -1143,6 +1282,8 @@ final class BuildOptimizer
 
     private function projectChecker(Nation $nation): callable
     {
-        return fn (string $project): bool => (bool) data_get($nation->projects, $project, false);
+        $projects = $nation->projects;
+
+        return fn (string $project): bool => (bool) data_get($projects, $project, false);
     }
 }

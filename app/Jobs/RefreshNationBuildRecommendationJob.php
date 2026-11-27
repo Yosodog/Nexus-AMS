@@ -14,7 +14,18 @@ class RefreshNationBuildRecommendationJob implements ShouldBeUnique, ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
-    public $timeout = 60;
+    /**
+     * Fits one recommendation on a contended single CPU and stays below the Redis queue
+     * retry_after (150 seconds), so a slow job times out before it could run twice.
+     */
+    public $timeout = 120;
+
+    public int $tries = 3;
+
+    /**
+     * @var list<int>
+     */
+    public array $backoff = [30, 120];
 
     public int $uniqueFor = 300;
 

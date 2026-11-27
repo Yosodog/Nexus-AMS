@@ -3,7 +3,7 @@
 namespace App\Console\Commands;
 
 use App\Exceptions\ProfitabilityPricingUnavailable;
-use App\Jobs\RefreshNationBuildRecommendationJob;
+use App\Jobs\RefreshBuildRecommendationBatchJob;
 use App\Services\NationBuildRecommendationService;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Log;
@@ -31,13 +31,11 @@ class RefreshNationBuildRecommendations extends Command
             $recommendationService->assertBatchCalculationContextAvailable($nationIds, $radiationSnapshot);
             $recommendationService->pruneIneligibleRecommendations($nationIds);
 
-            foreach ($nationIds as $nationId) {
-                RefreshNationBuildRecommendationJob::dispatch(
-                    $nationId,
-                    $prices->snapshotId,
-                    $radiationSnapshot->id
-                );
-            }
+            RefreshBuildRecommendationBatchJob::start(
+                $nationIds,
+                $prices->snapshotId,
+                (int) $radiationSnapshot->id
+            );
 
             $this->info('Queued build recommendations for '.count($nationIds).' nations.');
 
